@@ -71,7 +71,7 @@ abstract class ConfigTest {
     abstract fun createConfig(): TestConfig
 }
 
-private class TestYamlConfig : ConfigTest() {
+class TestYamlConfig : ConfigTest() {
 
     override val file: File = createTempFile(suffix = "").toFile()
 

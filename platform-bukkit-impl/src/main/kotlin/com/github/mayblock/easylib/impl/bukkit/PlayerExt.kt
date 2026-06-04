@@ -7,7 +7,7 @@ import org.bukkit.inventory.Inventory
 import org.bukkit.inventory.ItemStack
 
 fun Player.setProgressbar(float: Float) {
-    this.exp = (0.99f * float)
+    this.exp = 0.99f * float
 }
 
 fun Collection<Player>.sendMessage(text: String) {

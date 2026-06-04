@@ -60,7 +60,7 @@ class SpectatorFeature<T : BukkitArena<*, *>>(
     }
 
     private fun onPacketListener(service: SpectatorService<*>): Disposable {
-        val listener = (object : PacketListener {
+        val listener = object : PacketListener {
             override fun onPacketReceive(e: PacketReceiveEvent) {
                 val type = e.packetType
                 if (type != PacketType.Play.Client.ATTACK) {
@@ -76,9 +76,7 @@ class SpectatorFeature<T : BukkitArena<*, *>>(
                     stay = 60,
                 )
             }
-        }).let {
-            manager.registerListener(it)
-        }
+        }.let(manager::registerListener)
         return Disposable { manager.unregisterListeners(listener) }
     }
 
