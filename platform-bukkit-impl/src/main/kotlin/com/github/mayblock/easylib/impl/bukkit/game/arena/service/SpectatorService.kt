@@ -2,26 +2,23 @@ package com.github.mayblock.easylib.impl.bukkit.game.arena.service
 
 import com.github.mayblock.easylib.api.bukkit.game.arena.BukkitArena
 import com.github.mayblock.easylib.api.bukkit.game.arena.BukkitArenaPlayer
-import com.github.mayblock.easylib.api.bukkit.snapshot.PlayerRestoreFlag
-import com.github.mayblock.easylib.api.bukkit.snapshot.PlayerSnapshot
+import com.github.mayblock.easylib.api.bukkit.menu.MenuBuilder
+import com.github.mayblock.easylib.api.bukkit.menu.VirtualPlayerInventoryMenu
 import com.github.mayblock.easylib.api.service.Service
 import com.github.mayblock.easylib.api.service.ServiceKey
-import com.github.mayblock.easylib.impl.bukkit.PlayerInventoryBuilder
-import com.github.mayblock.easylib.impl.bukkit.setInventory
-import com.github.mayblock.easylib.impl.bukkit.snapshot.createPlayerSnapshot
-import com.github.mayblock.easylib.impl.bukkit.snapshot.restorePlayerSnapshot
+import com.github.mayblock.easylib.impl.bukkit.BukkitEasyLib.Companion.api
 import com.github.mayblock.easylib.impl.bukkit.util.gameMode
 import com.github.mayblock.easylib.impl.bukkit.util.sendPackets
-import com.github.mayblock.easylib.packetevents.PacketManager
 import org.bukkit.GameMode
 import org.bukkit.entity.Player
 import java.util.*
 
 class SpectatorService<A : BukkitArena<out BukkitArenaPlayer, *>>(
     private val arena: A,
-    private val manager: PacketManager<Player>,
-    private val playerInventory: (PlayerInventoryBuilder.() -> Unit)? = null,
+    playerInventory: (MenuBuilder<VirtualPlayerInventoryMenu>.() -> Unit)? = null,
 ) : Service {
+
+    val virtualPlayerInventory = api.createVirtualPlayerInventory(playerInventory ?: {})
 
     companion object Key : ServiceKey<SpectatorService<*>>("SpectatorService")
 
@@ -55,14 +52,13 @@ class SpectatorService<A : BukkitArena<out BukkitArenaPlayer, *>>(
     inner class Spectator internal constructor(
         val arenaPlayer: BukkitArenaPlayer
     ) {
-        private var snapshot: PlayerSnapshot? = null
         var watching: Player? = null
             private set
 
         internal fun watch(target: Player): Boolean {
             if (!target.isOnline) return false
             val player = arenaPlayer.bukkitPlayer ?: return false
-            player.sendPackets(manager) {
+            player.sendPackets {
                 forPlayer {
                     camera(target.entityId)
                 }
@@ -74,7 +70,7 @@ class SpectatorService<A : BukkitArena<out BukkitArenaPlayer, *>>(
         internal fun stopWatching() {
             if (watching == null) return
             val player = arenaPlayer.bukkitPlayer
-            player?.sendPackets(manager) {
+            player?.sendPackets {
                 forPlayer {
                     camera(player.entityId)
                 }
@@ -84,10 +80,9 @@ class SpectatorService<A : BukkitArena<out BukkitArenaPlayer, *>>(
 
         fun apply() {
             val player = arenaPlayer.bukkitPlayer ?: return
-            snapshot = player.createPlayerSnapshot()
             player.apply {
                 gameMode = GameMode.SPECTATOR
-                sendPackets(manager) {
+                sendPackets {
                     forPlayer {
                         gameMode(GameMode.ADVENTURE)
                     }
@@ -95,9 +90,7 @@ class SpectatorService<A : BukkitArena<out BukkitArenaPlayer, *>>(
                 isFlying = true
                 allowFlight = true
             }
-            playerInventory?.let(player::setInventory) ?: run {
-                player.inventory.clear()
-            }
+            virtualPlayerInventory.activate(player)
         }
 
         fun restore() {
@@ -105,14 +98,7 @@ class SpectatorService<A : BukkitArena<out BukkitArenaPlayer, *>>(
             if (watching != null) {
                 stopWatching()
             }
-            snapshot?.let {
-                player.restorePlayerSnapshot(
-                    it, setOf(
-                        PlayerRestoreFlag.STATS,
-                        PlayerRestoreFlag.INVENTORY
-                    )
-                )
-            }
+            virtualPlayerInventory.deactivate(player)
         }
     }
 }

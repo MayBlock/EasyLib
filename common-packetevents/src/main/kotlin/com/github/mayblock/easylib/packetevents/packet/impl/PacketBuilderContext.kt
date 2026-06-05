@@ -8,12 +8,13 @@ import com.github.mayblock.easylib.packetevents.util.toVector3d
 import com.github.mayblock.easylib.packetevents.util.toVector3i
 import com.github.retrooper.packetevents.protocol.entity.data.EntityData
 import com.github.retrooper.packetevents.protocol.entity.data.EntityMetadataProvider
+import com.github.retrooper.packetevents.protocol.item.ItemStack
 import com.github.retrooper.packetevents.protocol.nbt.NBTCompound
-import com.github.retrooper.packetevents.protocol.nbt.NBTString
 import com.github.retrooper.packetevents.protocol.player.Equipment
 import com.github.retrooper.packetevents.protocol.world.Location
 import com.github.retrooper.packetevents.protocol.world.blockentity.BlockEntityType
-import com.github.retrooper.packetevents.protocol.world.blockentity.BlockEntityTypes
+import com.github.retrooper.packetevents.protocol.world.states.WrappedBlockState
+import com.github.retrooper.packetevents.util.Vector3i
 import com.github.retrooper.packetevents.wrapper.PacketWrapper
 import com.github.retrooper.packetevents.wrapper.play.server.*
 
@@ -35,16 +36,11 @@ class PacketBuilderContext : PacketCollector, PacketBuilderScope {
         EntityPacketFactory(entityId) { this.collect() }.apply(block)
     }
 
-    override fun forSign(position: Vector<Int>, block: PacketScope.SignPacketScope.() -> Unit) {
-        SignPacketFactory(position) { this.collect() }.apply(block)
-    }
+    override fun forBlock(position: Vector<Int>, block: PacketScope.BlockPacketScope.() -> Unit) =
+        forBlock(position.toVector3i(), block)
 
-    override fun tileEntityData(position: Vector<Int>, blockEntityType: BlockEntityType, compound: NBTCompound) {
-        WrapperPlayServerBlockEntityData(
-            position.toVector3i(),
-            blockEntityType,
-            compound
-        ).collect()
+    override fun forBlock(position: Vector3i, block: PacketScope.BlockPacketScope.() -> Unit) {
+        BlockPacketFactory(position) { this.collect() }.apply(block)
     }
 
     override fun destroyEntities(vararg entityIds: Int) {
@@ -72,6 +68,14 @@ class PacketBuilderContext : PacketCollector, PacketBuilderScope {
 
         override fun rotation(yaw: Float, pitch: Float) {
             WrapperPlayServerPlayerRotation(yaw, pitch).collect()
+        }
+
+        override fun containerSetSlot(
+            windowId: Int,
+            slot: Int,
+            item: ItemStack?
+        ) {
+            WrapperPlayServerSetSlot(windowId, 0, slot, item ?: ItemStack.EMPTY).collect()
         }
     }
 
@@ -137,24 +141,28 @@ class PacketBuilderContext : PacketCollector, PacketBuilderScope {
         }
     }
 
-    class SignPacketFactory internal constructor(
-        position: Vector<Int>,
+    class BlockPacketFactory internal constructor(
+        private val position: Vector3i,
         private val collect: PacketWrapper<*>.() -> Unit
-    ) : PacketScope.SignPacketScope {
+    ) : PacketScope.BlockPacketScope {
 
-        private val position = position.toVector3i()
+        override fun blockChange(state: WrappedBlockState) {
+            WrapperPlayServerBlockChange(position, state).collect()
+        }
+
+        override fun tileEntityData(
+            blockEntityType: BlockEntityType,
+            compound: NBTCompound
+        ) {
+            WrapperPlayServerBlockEntityData(
+                position,
+                blockEntityType,
+                compound
+            ).collect()
+        }
 
         override fun openSignEditor(isFrontText: Boolean) {
             WrapperPlayServerOpenSignEditor(position, isFrontText).collect()
-        }
-
-        override fun updateSign(vararg lines: String) {
-            val compound = NBTCompound()
-            for (i in 0 until 4) compound.setTag(
-                "Text${i + 1}",
-                NBTString("{\"text\":\"${lines.getOrNull(i) ?: ""}\"}")
-            )
-            WrapperPlayServerBlockEntityData(position, BlockEntityTypes.SIGN, compound).collect()
         }
     }
 

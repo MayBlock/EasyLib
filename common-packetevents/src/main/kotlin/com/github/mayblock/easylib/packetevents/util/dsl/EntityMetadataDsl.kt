@@ -1,7 +1,7 @@
-package com.github.mayblock.easylib.packetevents.packet.extension
+package com.github.mayblock.easylib.packetevents.util.dsl
 
+import com.github.mayblock.easylib.packetevents.annotation.EntityMetadataDsl
 import com.github.mayblock.easylib.packetevents.packet.PacketScope
-import com.github.mayblock.easylib.packetevents.packet.annotation.EntityMetadataDsl
 import com.github.retrooper.packetevents.protocol.entity.data.EntityData
 import com.github.retrooper.packetevents.protocol.entity.data.EntityDataType
 import com.github.retrooper.packetevents.protocol.entity.data.EntityMetadataProvider

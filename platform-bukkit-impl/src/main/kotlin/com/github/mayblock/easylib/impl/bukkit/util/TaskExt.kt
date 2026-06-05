@@ -1,4 +1,4 @@
-package com.github.mayblock.easylib.impl.bukkit
+package com.github.mayblock.easylib.impl.bukkit.util
 
 import kotlin.time.Duration
 import kotlin.time.DurationUnit

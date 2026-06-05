@@ -1,11 +1,11 @@
 package com.github.mayblock.easylib.packetevents
 
+import com.github.mayblock.easylib.api.util.Disposable
 import com.github.mayblock.easylib.packetevents.packet.PacketBuilderScope
 import com.github.mayblock.easylib.packetevents.packet.PacketCollector
 import com.github.mayblock.easylib.packetevents.packet.impl.PacketBuilderContext
 import com.github.retrooper.packetevents.PacketEventsAPI
 import com.github.retrooper.packetevents.event.PacketListener
-import com.github.retrooper.packetevents.event.PacketListenerCommon
 import com.github.retrooper.packetevents.event.PacketListenerPriority
 import com.github.retrooper.packetevents.wrapper.PacketWrapper
 
@@ -31,8 +31,8 @@ abstract class AbstractPacketManager<T>(
     override fun registerListener(
         listener: PacketListener,
         priority: PacketListenerPriority
-    ): PacketListenerCommon = packetEventsApi.eventManager.registerListener(listener, priority)
-
-    override fun unregisterListeners(listener: PacketListenerCommon) =
-        packetEventsApi.eventManager.unregisterListeners(listener)
+    ): Disposable {
+        val listener = packetEventsApi.eventManager.registerListener(listener, priority)
+        return Disposable { packetEventsApi.eventManager.unregisterListener(listener) }
+    }
 }

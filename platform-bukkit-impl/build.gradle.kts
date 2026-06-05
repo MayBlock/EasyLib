@@ -4,9 +4,9 @@ plugins {
 }
 
 dependencies {
-    api(project(":common-packetevents"))
     api(project(":platform-bukkit-api"))
     implementation(project(":common-impl"))
+    implementation(project(":common-packetevents"))
     compileOnly("org.spigotmc:spigot-api:26.1.2-R0.1-SNAPSHOT")
     compileOnly(libs.packetEvents.spigot)
     implementation(libs.nbtApi)

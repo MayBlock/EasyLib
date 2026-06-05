@@ -46,3 +46,5 @@ fun BlockArea.getBlocks(world: World): List<Block> {
     }
     return blocks
 }
+
+fun Block.vector(): Vector<Int> = Vector(x, y, z)

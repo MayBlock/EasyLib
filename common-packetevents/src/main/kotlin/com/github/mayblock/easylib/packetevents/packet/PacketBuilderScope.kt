@@ -1,6 +1,6 @@
 package com.github.mayblock.easylib.packetevents.packet
 
-import com.github.mayblock.easylib.packetevents.packet.annotation.PacketDsl
+import com.github.mayblock.easylib.packetevents.annotation.PacketDsl
 
 @PacketDsl
 interface PacketBuilderScope : PacketScope {

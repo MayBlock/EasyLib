@@ -10,10 +10,10 @@ import com.github.mayblock.easylib.api.game.arena.event.ArenaLeaveEvent
 import com.github.mayblock.easylib.api.scheduler.TaskScheduler
 import com.github.mayblock.easylib.api.util.Disposable
 import com.github.mayblock.easylib.impl.bukkit.game.arena.bridge.BridgeEvent
-import com.github.mayblock.easylib.impl.bukkit.sendActionBar
-import com.github.mayblock.easylib.impl.bukkit.setProgressbar
-import com.github.mayblock.easylib.impl.bukkit.ticks
-import com.github.mayblock.easylib.impl.bukkit.toTicks
+import com.github.mayblock.easylib.impl.bukkit.util.sendActionBar
+import com.github.mayblock.easylib.impl.bukkit.util.setProgressbar
+import com.github.mayblock.easylib.impl.bukkit.util.ticks
+import com.github.mayblock.easylib.impl.bukkit.util.toTicks
 import com.github.mayblock.easylib.impl.game.arena.feature.PreGameCountdownFeature
 import org.bukkit.ChatColor
 import org.bukkit.GameMode

@@ -7,10 +7,10 @@ import com.github.mayblock.easylib.api.feature.FeatureKey
 import com.github.mayblock.easylib.api.game.arena.event.ArenaLeaveEvent
 import com.github.mayblock.easylib.api.service.require
 import com.github.mayblock.easylib.api.util.Disposable
+import com.github.mayblock.easylib.impl.bukkit.BukkitEasyLib.Companion.api
 import com.github.mayblock.easylib.impl.bukkit.game.arena.bridge.BridgeEvent
 import com.github.mayblock.easylib.impl.bukkit.game.arena.service.SpectatorService
-import com.github.mayblock.easylib.impl.bukkit.sendTitle
-import com.github.mayblock.easylib.packetevents.PacketManager
+import com.github.mayblock.easylib.impl.bukkit.util.sendTitle
 import com.github.retrooper.packetevents.event.PacketListener
 import com.github.retrooper.packetevents.event.PacketReceiveEvent
 import com.github.retrooper.packetevents.protocol.packettype.PacketType
@@ -18,9 +18,9 @@ import com.github.retrooper.packetevents.wrapper.play.client.WrapperPlayClientAt
 import io.github.retrooper.packetevents.util.SpigotConversionUtil
 import org.bukkit.entity.Player
 
-class SpectatorFeature<T : BukkitArena<*, *>>(
-    private val manager: PacketManager<Player>
-) : Feature<T> {
+class SpectatorFeature<T : BukkitArena<*, *>> : Feature<T> {
+
+    private val manager = api.packetManager
 
     companion object Key : FeatureKey<SpectatorFeature<*>>("SpectatorFeature")
 
@@ -60,7 +60,7 @@ class SpectatorFeature<T : BukkitArena<*, *>>(
     }
 
     private fun onPacketListener(service: SpectatorService<*>): Disposable {
-        val listener = object : PacketListener {
+        return object : PacketListener {
             override fun onPacketReceive(e: PacketReceiveEvent) {
                 val type = e.packetType
                 if (type != PacketType.Play.Client.ATTACK) {
@@ -77,7 +77,6 @@ class SpectatorFeature<T : BukkitArena<*, *>>(
                 )
             }
         }.let(manager::registerListener)
-        return Disposable { manager.unregisterListeners(listener) }
     }
 
     private fun resolveTarget(

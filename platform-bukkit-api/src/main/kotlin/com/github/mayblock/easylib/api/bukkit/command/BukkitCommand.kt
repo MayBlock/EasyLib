@@ -10,11 +10,13 @@ import com.github.mayblock.easylib.api.command.Command
 import org.bukkit.Bukkit
 import org.bukkit.ChatColor
 import org.bukkit.command.CommandSender
+import org.bukkit.entity.Player
 
 abstract class BukkitCommand(
     name: String,
     description: String? = null,
     val permission: String? = null,
+    val playerOnly: Boolean = false,
 ): Command(name, description) {
 
     init {
@@ -25,7 +27,7 @@ abstract class BukkitCommand(
         }
     }
 
-    val sender by requireObject<CommandSender>()
+    private val sender by requireObject<CommandSender>()
 
     protected fun BaseCliktCommand<*>.player(
         name: String = "player",
@@ -36,5 +38,13 @@ abstract class BukkitCommand(
         Bukkit.getPlayer(it) ?: fail("player $it is offline or not found")
     }
 
-    abstract override fun run()
+    final override fun run() {
+        if (playerOnly && sender !is Player) {
+            echo("Only players can use this command")
+            return
+        }
+        execute(sender)
+    }
+
+    abstract fun execute(sender: CommandSender)
 }
