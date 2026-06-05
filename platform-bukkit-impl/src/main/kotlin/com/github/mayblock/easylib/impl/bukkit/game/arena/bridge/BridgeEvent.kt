@@ -15,11 +15,20 @@ import org.bukkit.damage.DamageSource
 import org.bukkit.entity.Entity
 import org.bukkit.entity.Item
 import org.bukkit.event.block.Action
+import org.bukkit.event.entity.EntityTargetEvent
 import org.bukkit.inventory.EquipmentSlot
 import org.bukkit.inventory.ItemStack
 import org.bukkit.util.Vector
 
 object BridgeEvent {
+
+    class PlayerTargetedByEntityEvent(
+        var target: BukkitArenaPlayer,
+        val entity: Entity,
+        val reason: EntityTargetEvent.TargetReason,
+        override var isCancelled: Boolean = false
+    ) : ArenaEvent, Event.Cancellable
+
     class FoodLevelChangeEvent(
         val player: BukkitArenaPlayer,
         var foodLevel: Int,

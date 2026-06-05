@@ -47,6 +47,20 @@ class BukkitEventBridge<A, P : BukkitArenaPlayer, E : BukkitArenaEntity> private
 
     private inner class BukkitListener : Listener {
 
+        @EventHandler
+        fun onTarget(e: EntityTargetEvent) {
+            val target = (e.target as? Player)?.let {
+                arena.getPlayer(it.uniqueId)
+            } ?: return
+            e.isCancelled = BridgeEvent.PlayerTargetedByEntityEvent(
+                target,
+                e.entity,
+                e.reason
+            ).also(arena::emit).apply {
+                e.target = target.bukkitPlayer
+            }.isCancelled
+        }
+
         @EventHandler(priority = EventPriority.LOWEST)
         fun onFoodLevelChange(e: FoodLevelChangeEvent) {
             val player = arena.getPlayer(e.entity.uniqueId) ?: return

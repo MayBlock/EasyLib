@@ -19,6 +19,7 @@ import org.bukkit.plugin.Plugin
 class GuardFeature<T>(
     private val plugin: Plugin,
     private val isActive: () -> Boolean,
+    private val noTargetedByEntity: Boolean = true,
     private val noBreakBlock: Boolean = true,
     private val noDamage: Boolean = true,
     private val noInteract: Boolean = true,
@@ -36,6 +37,10 @@ class GuardFeature<T>(
 
     override fun onInstall(context: T) {
         context.on(name) {
+            on<BridgeEvent.PlayerTargetedByEntityEvent> {
+                if (!isActive()) return@on
+                isCancelled = noTargetedByEntity
+            }
             on<BridgeEvent.BlockDamageEvent> {
                 if (!isActive()) return@on
                 isCancelled = noBreakBlock
