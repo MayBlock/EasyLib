@@ -2,8 +2,7 @@ package com.github.mayblock.easylib.impl.bukkit.game.arena.service
 
 import com.github.mayblock.easylib.api.bukkit.game.arena.BukkitArena
 import com.github.mayblock.easylib.api.bukkit.game.arena.BukkitArenaPlayer
-import com.github.mayblock.easylib.api.bukkit.menu.MenuBuilder
-import com.github.mayblock.easylib.api.bukkit.menu.VirtualPlayerInventoryMenu
+import com.github.mayblock.easylib.api.bukkit.menu.player.PlayerMenuBuilder
 import com.github.mayblock.easylib.api.service.Service
 import com.github.mayblock.easylib.api.service.ServiceKey
 import com.github.mayblock.easylib.impl.bukkit.BukkitEasyLib.Companion.api
@@ -15,10 +14,10 @@ import java.util.*
 
 class SpectatorService<A : BukkitArena<out BukkitArenaPlayer, *>>(
     private val arena: A,
-    playerInventory: (MenuBuilder<VirtualPlayerInventoryMenu>.() -> Unit)? = null,
+    playerInventory: (PlayerMenuBuilder.() -> Unit)? = null,
 ) : Service {
 
-    val virtualPlayerInventory = api.createVirtualPlayerInventory(playerInventory ?: {})
+    val virtualPlayerInventory = api.menuApi.createPlayerInventoryMenu(playerInventory ?: {})
 
     companion object Key : ServiceKey<SpectatorService<*>>("SpectatorService")
 

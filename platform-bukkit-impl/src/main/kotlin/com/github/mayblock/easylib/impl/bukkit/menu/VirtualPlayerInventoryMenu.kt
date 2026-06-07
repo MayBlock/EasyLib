@@ -1,14 +1,17 @@
 package com.github.mayblock.easylib.impl.bukkit.menu
 
-import com.github.mayblock.easylib.api.bukkit.menu.InteractAction
-import com.github.mayblock.easylib.api.bukkit.menu.InteractionType
-import com.github.mayblock.easylib.api.bukkit.menu.MenuItem
-import com.github.mayblock.easylib.api.bukkit.menu.VirtualPlayerInventoryMenu
+import com.github.mayblock.easylib.api.bukkit.menu.player.InteractHandler
+import com.github.mayblock.easylib.api.bukkit.menu.player.InteractionType
+import com.github.mayblock.easylib.api.bukkit.menu.player.PlayerInventoryMenu
+import com.github.mayblock.easylib.api.bukkit.menu.player.PlayerMenuItem
 import com.github.mayblock.easylib.api.util.Disposable
 import com.github.mayblock.easylib.impl.bukkit.BukkitEasyLib.Companion.api
+import com.github.mayblock.easylib.impl.bukkit.menu.ext.updateCursorItem
+import com.github.mayblock.easylib.impl.bukkit.menu.ext.updateItem
 import com.github.mayblock.easylib.impl.bukkit.packet.extension.getBukkitClickType
 import com.github.mayblock.easylib.impl.bukkit.util.sendPackets
 import com.github.mayblock.easylib.impl.util.extension.ifTrue
+import com.github.mayblock.easylib.packetevents.packet.PacketScope
 import com.github.retrooper.packetevents.event.PacketListener
 import com.github.retrooper.packetevents.event.PacketReceiveEvent
 import com.github.retrooper.packetevents.event.PacketSendEvent
@@ -18,28 +21,40 @@ import com.github.retrooper.packetevents.protocol.player.DiggingAction
 import com.github.retrooper.packetevents.wrapper.play.client.WrapperPlayClientClickWindow
 import com.github.retrooper.packetevents.wrapper.play.client.WrapperPlayClientPlayerDigging
 import com.github.retrooper.packetevents.wrapper.play.server.WrapperPlayServerSetSlot
+import com.github.retrooper.packetevents.wrapper.play.server.WrapperPlayServerWindowItems
 import io.github.retrooper.packetevents.util.SpigotConversionUtil
 import org.bukkit.entity.Player
 
-class VirtualPlayerInventoryMenuImpl internal constructor(
-    slots: Map<Int, MenuItem>,
-    private val canDrop: Boolean = false,
-) : VirtualPlayerInventoryMenu {
+class VirtualPlayerInventoryMenu internal constructor(
+    slots: List<PlayerMenuItem?>
+) : PlayerInventoryMenu {
+
+    private data class VirtualPlayerMenuItem(
+        val item: ItemStack,
+        val onInteract: InteractHandler? = null
+    ) {
+        companion object {
+            val EMPTY = VirtualPlayerMenuItem(ItemStack.EMPTY)
+        }
+    }
+
+    private val slots: List<VirtualPlayerMenuItem> = slots.map {
+        val (item, handler) = it ?: return@map VirtualPlayerMenuItem.EMPTY
+        VirtualPlayerMenuItem(item.let(SpigotConversionUtil::fromBukkitItemStack), handler)
+    }
 
     private var offListener: Disposable? = null
 
     private var _isDestroyed: Boolean = false
     override val isDestroyed: Boolean get() = _isDestroyed
     val activePlayers = mutableSetOf<Player>()
-    override val slots = slots.toMutableMap()
 
     override fun activate(player: Player) {
         if (_isDestroyed) throw IllegalStateException("this inventory is destroyed!")
-        hideRealItems(player)
         player.sendPackets {
-            forPlayer {
-                slots.forEach { (slot, item) ->
-                    containerSetSlot(0, slot, SpigotConversionUtil.fromBukkitItemStack(item.item))
+            bundle {
+                forPlayer {
+                    syncMenuItems()
                 }
             }
         }
@@ -60,18 +75,6 @@ class VirtualPlayerInventoryMenuImpl internal constructor(
         offListener?.dispose()
     }
 
-    private fun hideRealItems(player: Player) {
-        player.sendPackets {
-            bundle {
-                forPlayer {
-                    repeat(size - 1) { i ->
-                        containerSetSlot(0, i, null)
-                    }
-                }
-            }
-        }
-    }
-
     private fun restoreItems(player: Player) {
         player.updateInventory()
     }
@@ -86,20 +89,16 @@ class VirtualPlayerInventoryMenuImpl internal constructor(
                         player,
                         WrapperPlayClientClickWindow(e)
                     )
-
                     PacketType.Play.Client.ANIMATION -> {
-                        handleInteract(player, InteractAction.LEFT_CLICK)
+                        handleInteract(player, InteractionType.Interact.Action.LEFT_CLICK)
                     }
-
                     PacketType.Play.Client.USE_ITEM -> {
-                        handleInteract(player, InteractAction.RIGHT_CLICK)
+                        handleInteract(player, InteractionType.Interact.Action.RIGHT_CLICK)
                     }
-
                     PacketType.Play.Client.PLAYER_DIGGING -> {
                         val heldItemSlot = player.inventory.heldItemSlot + 36
                         handleDropItem(player, heldItemSlot, WrapperPlayClientPlayerDigging(e).action)
                     }
-
                     else -> false
                 }
                 e.isCancelled = isCancelled
@@ -109,17 +108,19 @@ class VirtualPlayerInventoryMenuImpl internal constructor(
                 val player = e.getPlayer() as? Player ?: return
                 if (!activePlayers.contains(player)) return
                 e.isCancelled = when (e.packetType) {
-                    PacketType.Play.Server.WINDOW_ITEMS -> true
+                    PacketType.Play.Server.WINDOW_ITEMS -> {
+                        val packet = WrapperPlayServerWindowItems(e)
+                        packet.windowId == 0 // 仅拦截 PlayerInventory
+                    }
                     PacketType.Play.Server.SET_SLOT -> {
                         val packet = WrapperPlayServerSetSlot(e)
                         if (packet.windowId == 0) {
-                            packet.item = slots[packet.slot]?.item
+                            packet.item = slots.getOrNull(packet.slot)?.item
                                 ?.let(SpigotConversionUtil::fromBukkitItemStack)
                                 ?: ItemStack.EMPTY
                         }
                         false
                     }
-
                     else -> false
                 }
             }
@@ -137,54 +138,59 @@ class VirtualPlayerInventoryMenuImpl internal constructor(
             return handleDropItem(player, packet.slot, diggingAction)
         }
         val involvedSlots = packet.hashedSlots.keys
-        if (!involvedSlots.any { slots.contains(it) }) return false
+        if (involvedSlots.none { it in slots.indices }) return false
         involvedSlots.forEach { slot ->
-            slots[slot]?.onClick(player, InteractionType.Inventory(slot, packet.getBukkitClickType()))
+            slots.getOrNull(slot)?.onInteract?.invoke(
+                player,
+                InteractionType.Inventory(slot, packet.getBukkitClickType())
+            )
         }
         player.sendPackets {
             forPlayer {
-                containerSetSlot(-1, -1, null) // windowId -1代表是光标槽，以下代码清空当前光标持有的物品
+                updateCursorItem(null)
                 involvedSlots.forEach { slot ->
-                    val item = slots[slot]?.item?.let(SpigotConversionUtil::fromBukkitItemStack)
-                    containerSetSlot(0, slot, item)
+                    val item = slots.getOrNull(slot)?.item ?: ItemStack.EMPTY
+                    updateItem(0, slot, item)
                 }
             }
         }
         return true
     }
 
-    private fun handleInteract(player: Player, action: InteractAction): Boolean {
+    private fun handleInteract(player: Player, action: InteractionType.Interact.Action): Boolean {
         val heldItemSlot = player.inventory.heldItemSlot + 36
-        slots[heldItemSlot]?.apply {
-            onClick(player, InteractionType.Interact(heldItemSlot, action))
-            updateItem(player, heldItemSlot, item)
+        slots.getOrNull(heldItemSlot)?.apply {
+            onInteract?.invoke(player, InteractionType.Interact(heldItemSlot, action))?.apply {
+                player.sendPackets {
+                    forPlayer {
+                        updateItem(0, heldItemSlot, item)
+                    }
+                }
+            }
         }
         return true
     }
 
     private fun handleDropItem(player: Player, slot: Int, action: DiggingAction): Boolean {
         if (action != DiggingAction.DROP_ITEM && action != DiggingAction.DROP_ITEM_STACK) return false
-        slots[slot]?.apply {
-            val item = if (canDrop) {
-                if (item.amount > 1 && action == DiggingAction.DROP_ITEM) {
-                    item.apply {
-                        amount -= 1
-                    }
-                } else {
-                    slots.remove(slot) // 从slots中删除
-                    null
+        slots.getOrNull(slot)?.apply {
+            player.sendPackets {
+                forPlayer {
+                    updateItem(0, slot, item)
                 }
-            } else item
-            updateItem(player, slot, item)
+            }
         }
-        return true // 始终取消丢弃包
+        return true
     }
 
-    private fun updateItem(player: Player, slot: Int, item: org.bukkit.inventory.ItemStack?) {
-        player.sendPackets {
-            forPlayer {
-                containerSetSlot(0, slot, item?.let(SpigotConversionUtil::fromBukkitItemStack))
-            }
+    private fun PacketScope.PlayerPacketScope.syncMenuItems() {
+        slots.forEachIndexed { slot, item ->
+            containerSetSlot(
+                0,
+                0,
+                slot,
+                item.item
+            )
         }
     }
 }

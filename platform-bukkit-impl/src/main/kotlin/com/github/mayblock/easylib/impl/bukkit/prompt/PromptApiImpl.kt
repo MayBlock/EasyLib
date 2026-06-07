@@ -1,6 +1,6 @@
 package com.github.mayblock.easylib.impl.bukkit.prompt
 
-import com.github.mayblock.easylib.api.bukkit.prompt.Prompt
+import com.github.mayblock.easylib.api.bukkit.prompt.PromptApi
 import com.github.mayblock.easylib.api.util.Vector
 import com.github.mayblock.easylib.impl.bukkit.BukkitEasyLib.Companion.api
 import com.github.mayblock.easylib.impl.bukkit.util.sendPackets
@@ -17,7 +17,7 @@ import kotlinx.coroutines.suspendCancellableCoroutine
 import org.bukkit.entity.Player
 import kotlin.coroutines.resume
 
-object PromptImpl : Prompt {
+object PromptApiImpl : PromptApi {
 
     private val promptList = mutableMapOf<Vector3i, (String?) -> Unit>()
 

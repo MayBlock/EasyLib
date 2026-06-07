@@ -5,7 +5,7 @@ import org.bukkit.event.player.PlayerInteractEvent
 import org.bukkit.inventory.InventoryHolder
 import org.bukkit.inventory.ItemStack
 
-interface ItemExtension {
+interface ItemExtensionApi {
 
     fun onInteract(item: ItemStack, block: PlayerInteractEvent.() -> Unit)
     fun onClick(holder: InventoryHolder, item: ItemStack, block: InventoryClickEvent.() -> Unit)

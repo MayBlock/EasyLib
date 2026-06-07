@@ -8,6 +8,7 @@ kotlinReflect = "2.3.21"
 kotlinxDatetime = "0.7.1"
 kotlinxCoroutines = "1.10.2"
 clikt = "5.1.0"
+adventureApi = "5.1.1"
 packetEvents = "2.12.2"
 fastboard = "2.1.5"
 nbtApi = "2.15.7"
@@ -21,6 +22,7 @@ kotlinReflect = { module = "org.jetbrains.kotlin:kotlin-reflect", version.ref = 
 kotlinxDatetime = { module = "org.jetbrains.kotlinx:kotlinx-datetime", version.ref = "kotlinxDatetime" }
 kotlinxCoroutines = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-core", version.ref = "kotlinxCoroutines" }
 clikt-core = { module = "com.github.ajalt.clikt:clikt-core", version.ref = "clikt" }
+adventure-api = { module = "net.kyori:adventure-api", version.ref = "adventureApi" }
 packetEvents-api = { module = "com.github.retrooper:packetevents-api", version.ref = "packetEvents" }
 packetEvents-spigot = { module = "com.github.retrooper:packetevents-spigot", version.ref = "packetEvents" }
 fastboard = { module = "fr.mrmicky:fastboard", version.ref = "fastboard" }

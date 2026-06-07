@@ -5,5 +5,6 @@ plugins {
 }
 dependencies {
     api(project(":common-api"))
+    compileOnly(libs.adventure.api)
     compileOnlyApi(libs.packetEvents.api)
 }

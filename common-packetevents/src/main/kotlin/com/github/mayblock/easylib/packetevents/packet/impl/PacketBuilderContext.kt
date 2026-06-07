@@ -1,6 +1,7 @@
 package com.github.mayblock.easylib.packetevents.packet.impl
 
 import com.github.mayblock.easylib.api.util.Vector
+import com.github.mayblock.easylib.packetevents.packet.ContainerType
 import com.github.mayblock.easylib.packetevents.packet.PacketBuilderScope
 import com.github.mayblock.easylib.packetevents.packet.PacketCollector
 import com.github.mayblock.easylib.packetevents.packet.PacketScope
@@ -17,6 +18,7 @@ import com.github.retrooper.packetevents.protocol.world.states.WrappedBlockState
 import com.github.retrooper.packetevents.util.Vector3i
 import com.github.retrooper.packetevents.wrapper.PacketWrapper
 import com.github.retrooper.packetevents.wrapper.play.server.*
+import net.kyori.adventure.text.Component
 
 class PacketBuilderContext : PacketCollector, PacketBuilderScope {
 
@@ -70,12 +72,16 @@ class PacketBuilderContext : PacketCollector, PacketBuilderScope {
             WrapperPlayServerPlayerRotation(yaw, pitch).collect()
         }
 
-        override fun containerSetSlot(
-            windowId: Int,
-            slot: Int,
-            item: ItemStack?
-        ) {
-            WrapperPlayServerSetSlot(windowId, 0, slot, item ?: ItemStack.EMPTY).collect()
+        override fun containerSetSlot(windowId: Int, stateId: Int, slot: Int, item: ItemStack?) {
+            WrapperPlayServerSetSlot(windowId, stateId, slot, item ?: ItemStack.EMPTY).collect()
+        }
+
+        override fun containerOpen(windowId: Int, type: ContainerType, title: Component) {
+            WrapperPlayServerOpenWindow(windowId, type.id, title).collect()
+        }
+
+        override fun containerItems(windowId: Int, stateId: Int, items: List<ItemStack?>, carriedItem: ItemStack?) {
+            WrapperPlayServerWindowItems(windowId, stateId, items.map { it ?: ItemStack.EMPTY }, carriedItem).collect()
         }
     }
 

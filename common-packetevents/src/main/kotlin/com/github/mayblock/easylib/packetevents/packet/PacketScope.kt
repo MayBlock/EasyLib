@@ -12,6 +12,7 @@ import com.github.retrooper.packetevents.protocol.world.states.WrappedBlockState
 import com.github.retrooper.packetevents.util.Vector3i
 import com.github.retrooper.packetevents.wrapper.play.server.WrapperPlayServerChangeGameState
 import com.github.retrooper.packetevents.wrapper.play.server.WrapperPlayServerEntityAnimation
+import net.kyori.adventure.text.Component
 
 @PacketDsl
 interface PacketScope {
@@ -34,7 +35,9 @@ interface PacketScope {
         fun changeGameState(state: WrapperPlayServerChangeGameState.Reason, param: Float)
         fun camera(watchedEntityId: Int)
         fun rotation(yaw: Float, pitch: Float)
-        fun containerSetSlot(windowId: Int, slot: Int, item: ItemStack?)
+        fun containerSetSlot(windowId: Int, stateId: Int, slot: Int, item: ItemStack?)
+        fun containerOpen(windowId: Int, type: ContainerType, title: Component)
+        fun containerItems(windowId: Int, stateId: Int, items: List<ItemStack?>, carriedItem: ItemStack? = null)
     }
 
     @PacketDsl

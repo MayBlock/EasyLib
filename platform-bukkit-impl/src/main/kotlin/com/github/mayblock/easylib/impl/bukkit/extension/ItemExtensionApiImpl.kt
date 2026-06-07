@@ -1,6 +1,6 @@
 package com.github.mayblock.easylib.impl.bukkit.extension
 
-import com.github.mayblock.easylib.api.bukkit.extension.ItemExtension
+import com.github.mayblock.easylib.api.bukkit.extension.ItemExtensionApi
 import org.bukkit.Bukkit
 import org.bukkit.event.EventHandler
 import org.bukkit.event.Listener
@@ -10,9 +10,9 @@ import org.bukkit.inventory.InventoryHolder
 import org.bukkit.inventory.ItemStack
 import org.bukkit.plugin.Plugin
 
-class ItemExtensionImpl(
+class ItemExtensionApiImpl(
     plugin: Plugin
-) : ItemExtension, Listener {
+) : ItemExtensionApi, Listener {
 
     private val invHandlers = mutableMapOf<Pair<InventoryHolder, ItemStack>, InventoryClickEvent.() -> Unit>()
     private val interactHandlers = mutableMapOf<ItemStack, PlayerInteractEvent.() -> Unit>()
