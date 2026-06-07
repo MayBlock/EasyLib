@@ -8,7 +8,7 @@ import org.bukkit.command.SimpleCommandMap
 import org.bukkit.plugin.Plugin
 import org.slf4j.LoggerFactory
 
-class BukkitCommandRegistry(
+class BukkitCommandRegistry internal constructor(
     private val plugin: Plugin
 ) : CommandRegistry {
 

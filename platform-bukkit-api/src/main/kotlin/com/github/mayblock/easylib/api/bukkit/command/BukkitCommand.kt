@@ -33,7 +33,7 @@ abstract class BukkitCommand(
         name: String = "player",
         help: String = "the player to target",
         helpTags: Map<String, String> = emptyMap(),
-        completionCandidates: CompletionCandidates? = null
+        completionCandidates: CompletionCandidates? = CompletionCandidates.Username
     ) = argument(name, help, helpTags, completionCandidates).convert {
         Bukkit.getPlayer(it) ?: fail("player $it is offline or not found")
     }
