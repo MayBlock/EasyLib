@@ -8,6 +8,5 @@ typealias ClickHandler = (Player, ClickType) -> Unit
 
 data class InventoryMenuItem(
     val item: ItemStack,
-    val isFreeze: Boolean,
     val onClick: ClickHandler?
 )

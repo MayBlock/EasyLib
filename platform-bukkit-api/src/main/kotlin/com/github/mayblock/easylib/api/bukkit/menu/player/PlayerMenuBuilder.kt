@@ -5,11 +5,9 @@ import org.bukkit.inventory.ItemStack
 import org.bukkit.inventory.meta.ItemMeta
 
 class PlayerMenuBuilder(
-    private val size: Int,
-    private val factory: (
-        slots: List<PlayerMenuItem?>
-    ) -> PlayerInventoryMenu
+    private val factory: (slots: List<PlayerMenuItem?>) -> PlayerInventoryMenu
 ) {
+    private val size: Int = PlayerInventoryMenu.INVENTORY_SIZE
     private val _slots = MutableList<PlayerMenuItem?>(size) { null }
     val slots get() = _slots.toList()
 

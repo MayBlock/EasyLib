@@ -52,10 +52,8 @@ class VirtualPlayerInventoryMenu internal constructor(
     override fun activate(player: Player) {
         if (_isDestroyed) throw IllegalStateException("this inventory is destroyed!")
         player.sendPackets {
-            bundle {
-                forPlayer {
-                    syncMenuItems()
-                }
+            forPlayer {
+                syncMenuItems()
             }
         }
         activePlayers.add(player)
@@ -107,21 +105,18 @@ class VirtualPlayerInventoryMenu internal constructor(
             override fun onPacketSend(e: PacketSendEvent) {
                 val player = e.getPlayer() as? Player ?: return
                 if (!activePlayers.contains(player)) return
-                e.isCancelled = when (e.packetType) {
+                when (e.packetType) {
                     PacketType.Play.Server.WINDOW_ITEMS -> {
                         val packet = WrapperPlayServerWindowItems(e)
-                        packet.windowId == 0 // 仅拦截 PlayerInventory
+                        if (packet.windowId != 0) return
+                        packet.items = this@VirtualPlayerInventoryMenu.slots.map { it.item }
                     }
                     PacketType.Play.Server.SET_SLOT -> {
                         val packet = WrapperPlayServerSetSlot(e)
-                        if (packet.windowId == 0) {
-                            packet.item = slots.getOrNull(packet.slot)?.item
-                                ?.let(SpigotConversionUtil::fromBukkitItemStack)
-                                ?: ItemStack.EMPTY
-                        }
-                        false
+                        if (packet.windowId != 0) return
+                        packet.item = this@VirtualPlayerInventoryMenu.slots.getOrNull(packet.slot)?.item
+                            ?: ItemStack.EMPTY
                     }
-                    else -> false
                 }
             }
         })
@@ -184,13 +179,10 @@ class VirtualPlayerInventoryMenu internal constructor(
     }
 
     private fun PacketScope.PlayerPacketScope.syncMenuItems() {
-        slots.forEachIndexed { slot, item ->
-            containerSetSlot(
-                0,
-                0,
-                slot,
-                item.item
-            )
-        }
+        containerItems(
+            0,
+            0,
+            slots.map { it.item }
+        )
     }
 }
