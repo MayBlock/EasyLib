@@ -1,8 +1,8 @@
-package com.github.mayblock.easylib.packetevents.util
+package com.github.mayblock.easylib.packetevents.packet
 
 import com.github.mayblock.easylib.packetevents.PacketManager
-import com.github.mayblock.easylib.packetevents.packet.PacketBuilderScope
-import com.github.mayblock.easylib.packetevents.packet.PacketScope
+import com.github.mayblock.easylib.packetevents.packet.dsl.PacketBuilderScope
+import com.github.mayblock.easylib.packetevents.packet.dsl.PacketScope
 import com.github.retrooper.packetevents.protocol.nbt.NBTCompound
 import com.github.retrooper.packetevents.protocol.nbt.NBTList
 import com.github.retrooper.packetevents.protocol.nbt.NBTString

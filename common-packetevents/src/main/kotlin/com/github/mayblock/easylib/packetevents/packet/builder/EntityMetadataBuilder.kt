@@ -1,10 +1,12 @@
-package com.github.mayblock.easylib.packetevents.util.dsl
+package com.github.mayblock.easylib.packetevents.packet.builder
 
-import com.github.mayblock.easylib.packetevents.annotation.EntityMetadataDsl
-import com.github.mayblock.easylib.packetevents.packet.PacketScope
+import com.github.mayblock.easylib.packetevents.packet.dsl.PacketScope
 import com.github.retrooper.packetevents.protocol.entity.data.EntityData
 import com.github.retrooper.packetevents.protocol.entity.data.EntityDataType
 import com.github.retrooper.packetevents.protocol.entity.data.EntityMetadataProvider
+
+@DslMarker
+annotation class EntityMetadataDsl
 
 inline fun PacketScope.EntityPacketScope.metadata(block: EntityMetadataBuilder.() -> Unit) =
     this.metadata(EntityMetadataBuilder().apply(block).build())

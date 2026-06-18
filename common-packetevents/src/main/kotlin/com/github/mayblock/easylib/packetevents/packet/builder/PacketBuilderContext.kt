@@ -1,10 +1,10 @@
-package com.github.mayblock.easylib.packetevents.packet.impl
+package com.github.mayblock.easylib.packetevents.packet.builder
 
 import com.github.mayblock.easylib.api.util.Vector
 import com.github.mayblock.easylib.packetevents.packet.ContainerType
-import com.github.mayblock.easylib.packetevents.packet.PacketBuilderScope
-import com.github.mayblock.easylib.packetevents.packet.PacketCollector
-import com.github.mayblock.easylib.packetevents.packet.PacketScope
+import com.github.mayblock.easylib.packetevents.packet.dsl.PacketBuilderScope
+import com.github.mayblock.easylib.packetevents.packet.dsl.PacketCollector
+import com.github.mayblock.easylib.packetevents.packet.dsl.PacketScope
 import com.github.mayblock.easylib.packetevents.util.toVector3d
 import com.github.mayblock.easylib.packetevents.util.toVector3i
 import com.github.retrooper.packetevents.protocol.entity.data.EntityData
@@ -20,7 +20,7 @@ import com.github.retrooper.packetevents.wrapper.PacketWrapper
 import com.github.retrooper.packetevents.wrapper.play.server.*
 import net.kyori.adventure.text.Component
 
-class PacketBuilderContext : PacketCollector, PacketBuilderScope {
+internal class PacketBuilderContext : PacketCollector, PacketBuilderScope {
 
     private val packets = mutableListOf<PacketWrapper<*>>()
 

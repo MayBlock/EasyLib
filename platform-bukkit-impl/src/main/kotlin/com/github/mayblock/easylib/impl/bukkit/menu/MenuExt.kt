@@ -1,6 +1,6 @@
-package com.github.mayblock.easylib.impl.bukkit.menu.ext
+package com.github.mayblock.easylib.impl.bukkit.menu
 
-import com.github.mayblock.easylib.packetevents.packet.PacketScope
+import com.github.mayblock.easylib.packetevents.packet.dsl.PacketScope
 import com.github.retrooper.packetevents.protocol.item.ItemStack
 
 internal fun PacketScope.PlayerPacketScope.updateCursorItem(item: ItemStack?) {

@@ -1,17 +1,17 @@
-package com.github.mayblock.easylib.impl.bukkit.menu
+package com.github.mayblock.easylib.impl.bukkit.menu.chest
 
 import com.github.mayblock.easylib.api.bukkit.menu.ClickHandler
 import com.github.mayblock.easylib.api.bukkit.menu.InventoryMenuItem
 import com.github.mayblock.easylib.api.bukkit.menu.chest.ChestMenu
 import com.github.mayblock.easylib.api.bukkit.menu.chest.ChestMenuType
 import com.github.mayblock.easylib.api.util.Disposable
-import com.github.mayblock.easylib.impl.bukkit.BukkitEasyLib.Companion.api
-import com.github.mayblock.easylib.impl.bukkit.menu.ext.updateCursorItem
-import com.github.mayblock.easylib.impl.bukkit.menu.ext.updateItem
+import com.github.mayblock.easylib.impl.bukkit.BukkitEasyLib
+import com.github.mayblock.easylib.impl.bukkit.menu.updateCursorItem
+import com.github.mayblock.easylib.impl.bukkit.menu.updateItem
 import com.github.mayblock.easylib.impl.bukkit.packet.extension.getBukkitClickType
 import com.github.mayblock.easylib.impl.bukkit.util.sendPackets
 import com.github.mayblock.easylib.packetevents.packet.ContainerType
-import com.github.mayblock.easylib.packetevents.packet.PacketScope
+import com.github.mayblock.easylib.packetevents.packet.dsl.PacketScope
 import com.github.retrooper.packetevents.event.PacketListener
 import com.github.retrooper.packetevents.event.PacketReceiveEvent
 import com.github.retrooper.packetevents.protocol.item.ItemStack
@@ -59,13 +59,14 @@ class VirtualChestMenu internal constructor(
     }
 
     init {
-        offListener = api.packetManager.registerListener(object : PacketListener {
+        offListener = BukkitEasyLib.api.packetManager.registerListener(object : PacketListener {
             override fun onPacketReceive(e: PacketReceiveEvent) {
                 when (e.packetType) {
                     PacketType.Play.Client.CLICK_WINDOW -> {
                         val player = e.getPlayer() as? Player ?: return
                         e.isCancelled = handleClickWindow(player, WrapperPlayClientClickWindow(e))
                     }
+
                     PacketType.Play.Client.CLOSE_WINDOW -> {
                         val player = e.getPlayer() as? Player ?: return
                         e.isCancelled = handleCloseWindow(player, WrapperPlayClientCloseWindow(e))

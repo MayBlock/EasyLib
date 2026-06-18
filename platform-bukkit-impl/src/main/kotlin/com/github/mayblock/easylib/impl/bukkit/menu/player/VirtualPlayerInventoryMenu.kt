@@ -1,17 +1,17 @@
-package com.github.mayblock.easylib.impl.bukkit.menu
+package com.github.mayblock.easylib.impl.bukkit.menu.player
 
 import com.github.mayblock.easylib.api.bukkit.menu.player.InteractHandler
 import com.github.mayblock.easylib.api.bukkit.menu.player.InteractionType
 import com.github.mayblock.easylib.api.bukkit.menu.player.PlayerInventoryMenu
 import com.github.mayblock.easylib.api.bukkit.menu.player.PlayerMenuItem
 import com.github.mayblock.easylib.api.util.Disposable
-import com.github.mayblock.easylib.impl.bukkit.BukkitEasyLib.Companion.api
-import com.github.mayblock.easylib.impl.bukkit.menu.ext.updateCursorItem
-import com.github.mayblock.easylib.impl.bukkit.menu.ext.updateItem
+import com.github.mayblock.easylib.impl.bukkit.BukkitEasyLib
+import com.github.mayblock.easylib.impl.bukkit.menu.updateCursorItem
+import com.github.mayblock.easylib.impl.bukkit.menu.updateItem
 import com.github.mayblock.easylib.impl.bukkit.packet.extension.getBukkitClickType
 import com.github.mayblock.easylib.impl.bukkit.util.sendPackets
 import com.github.mayblock.easylib.impl.util.extension.ifTrue
-import com.github.mayblock.easylib.packetevents.packet.PacketScope
+import com.github.mayblock.easylib.packetevents.packet.dsl.PacketScope
 import com.github.retrooper.packetevents.event.PacketListener
 import com.github.retrooper.packetevents.event.PacketReceiveEvent
 import com.github.retrooper.packetevents.event.PacketSendEvent
@@ -78,7 +78,7 @@ class VirtualPlayerInventoryMenu internal constructor(
     }
 
     init {
-        offListener = api.packetManager.registerListener(object : PacketListener {
+        offListener = BukkitEasyLib.api.packetManager.registerListener(object : PacketListener {
             override fun onPacketReceive(e: PacketReceiveEvent) {
                 val player = e.getPlayer() as? Player ?: return
                 if (!activePlayers.contains(player)) return
@@ -87,16 +87,20 @@ class VirtualPlayerInventoryMenu internal constructor(
                         player,
                         WrapperPlayClientClickWindow(e)
                     )
+
                     PacketType.Play.Client.ANIMATION -> {
                         handleInteract(player, InteractionType.Interact.Action.LEFT_CLICK)
                     }
+
                     PacketType.Play.Client.USE_ITEM -> {
                         handleInteract(player, InteractionType.Interact.Action.RIGHT_CLICK)
                     }
+
                     PacketType.Play.Client.PLAYER_DIGGING -> {
                         val heldItemSlot = player.inventory.heldItemSlot + 36
                         handleDropItem(player, heldItemSlot, WrapperPlayClientPlayerDigging(e).action)
                     }
+
                     else -> false
                 }
                 e.isCancelled = isCancelled
@@ -111,6 +115,7 @@ class VirtualPlayerInventoryMenu internal constructor(
                         if (packet.windowId != 0) return
                         packet.items = this@VirtualPlayerInventoryMenu.slots.map { it.item }
                     }
+
                     PacketType.Play.Server.SET_SLOT -> {
                         val packet = WrapperPlayServerSetSlot(e)
                         if (packet.windowId != 0) return

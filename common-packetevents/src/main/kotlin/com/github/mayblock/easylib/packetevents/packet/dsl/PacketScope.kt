@@ -1,7 +1,7 @@
-package com.github.mayblock.easylib.packetevents.packet
+package com.github.mayblock.easylib.packetevents.packet.dsl
 
 import com.github.mayblock.easylib.api.util.Vector
-import com.github.mayblock.easylib.packetevents.annotation.PacketDsl
+import com.github.mayblock.easylib.packetevents.packet.ContainerType
 import com.github.retrooper.packetevents.protocol.entity.data.EntityData
 import com.github.retrooper.packetevents.protocol.entity.data.EntityMetadataProvider
 import com.github.retrooper.packetevents.protocol.item.ItemStack

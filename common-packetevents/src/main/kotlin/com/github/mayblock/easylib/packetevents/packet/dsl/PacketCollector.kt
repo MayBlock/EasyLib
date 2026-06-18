@@ -1,4 +1,4 @@
-package com.github.mayblock.easylib.packetevents.packet
+package com.github.mayblock.easylib.packetevents.packet.dsl
 
 import com.github.retrooper.packetevents.wrapper.PacketWrapper
 
