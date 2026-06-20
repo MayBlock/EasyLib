@@ -6,12 +6,12 @@ import com.github.mayblock.easylib.api.bukkit.menu.event.UpdatableSlot
 import com.github.mayblock.easylib.api.bukkit.menu.event.UpdateEvent
 import com.github.mayblock.easylib.api.bukkit.menu.type.chest.ChestMenu
 import com.github.mayblock.easylib.api.bukkit.menu.type.chest.ChestMenuType
+import com.github.mayblock.easylib.api.scheduler.TaskScheduler
 import com.github.mayblock.easylib.api.util.Disposable
 import com.github.mayblock.easylib.impl.bukkit.BukkitEasyLib
 import com.github.mayblock.easylib.impl.bukkit.menu.*
 import com.github.mayblock.easylib.impl.bukkit.menu.internal.InternalSlot
 import com.github.mayblock.easylib.impl.bukkit.packet.extension.getBukkitClickType
-import com.github.mayblock.easylib.impl.bukkit.scheduler.BukkitTaskScheduler
 import com.github.mayblock.easylib.impl.bukkit.util.sendPackets
 import com.github.mayblock.easylib.packetevents.packet.ContainerType
 import com.github.mayblock.easylib.packetevents.packet.dsl.PacketScope
@@ -25,18 +25,17 @@ import com.github.retrooper.packetevents.wrapper.play.client.WrapperPlayClientCl
 import com.github.retrooper.packetevents.wrapper.play.server.WrapperPlayServerOpenWindow
 import net.kyori.adventure.text.Component
 import org.bukkit.entity.Player
-import org.bukkit.plugin.Plugin
 import java.util.concurrent.atomic.AtomicInteger
 
 class VirtualChestMenu internal constructor(
-    plugin: Plugin,
+    taskScheduler: TaskScheduler,
     override val title: Component,
     override val type: ChestMenuType,
     slots: Map<Int, Slot>
 ) : ChestMenu, VirtualMenu {
 
     private val slots = slots.mapValues { InternalSlot(it.value) }
-    private val slotUpdateScheduler = SlotUpdateScheduler(BukkitTaskScheduler(plugin)) { index, listener ->
+    private val slotUpdateScheduler = SlotUpdateScheduler(taskScheduler) { index, listener ->
         if (activeViewers.isEmpty()) return@SlotUpdateScheduler
         val slot = this.slots[index]!!
         val oldItem = slot.bukkitItem

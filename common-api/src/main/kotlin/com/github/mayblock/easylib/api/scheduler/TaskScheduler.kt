@@ -4,8 +4,6 @@ import kotlin.time.Duration
 
 interface TaskScheduler {
 
-    val tickPeriod: Duration
-
     fun scheduleTask(task: Task): Int
     fun cancelTask(taskId: Int): Boolean
     fun cancelAllTasks()

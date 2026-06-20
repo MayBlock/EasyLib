@@ -6,12 +6,12 @@ import com.github.mayblock.easylib.api.bukkit.menu.event.UpdateEvent
 import com.github.mayblock.easylib.api.bukkit.menu.type.player.InteractEvent
 import com.github.mayblock.easylib.api.bukkit.menu.type.player.InteractionType
 import com.github.mayblock.easylib.api.bukkit.menu.type.player.PlayerInventoryMenu
+import com.github.mayblock.easylib.api.scheduler.TaskScheduler
 import com.github.mayblock.easylib.api.util.Disposable
 import com.github.mayblock.easylib.impl.bukkit.BukkitEasyLib
 import com.github.mayblock.easylib.impl.bukkit.menu.*
 import com.github.mayblock.easylib.impl.bukkit.menu.internal.InternalSlot
 import com.github.mayblock.easylib.impl.bukkit.packet.extension.getBukkitClickType
-import com.github.mayblock.easylib.impl.bukkit.scheduler.BukkitTaskScheduler
 import com.github.mayblock.easylib.impl.bukkit.util.sendPackets
 import com.github.mayblock.easylib.impl.util.extension.ifTrue
 import com.github.mayblock.easylib.packetevents.packet.dsl.PacketScope
@@ -26,15 +26,14 @@ import com.github.retrooper.packetevents.wrapper.play.client.WrapperPlayClientPl
 import com.github.retrooper.packetevents.wrapper.play.server.WrapperPlayServerSetSlot
 import com.github.retrooper.packetevents.wrapper.play.server.WrapperPlayServerWindowItems
 import org.bukkit.entity.Player
-import org.bukkit.plugin.Plugin
 
 class VirtualPlayerInventoryMenu internal constructor(
-    plugin: Plugin,
+    taskScheduler: TaskScheduler,
     slots: Map<Int, Slot>
 ) : PlayerInventoryMenu, VirtualMenu {
 
     private val slots = slots.mapValues { InternalSlot(it.value) }
-    private val slotUpdateScheduler = SlotUpdateScheduler(BukkitTaskScheduler(plugin)) { index, listener ->
+    private val slotUpdateScheduler = SlotUpdateScheduler(taskScheduler) { index, listener ->
         if (activeViewers.isEmpty()) return@SlotUpdateScheduler
         val slot = this.slots[index]!!
         val oldItem = slot.bukkitItem
