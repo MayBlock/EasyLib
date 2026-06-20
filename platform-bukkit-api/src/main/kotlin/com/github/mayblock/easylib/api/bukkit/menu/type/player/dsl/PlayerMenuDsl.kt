@@ -18,6 +18,12 @@ interface PlayerMenuScope {
         metadata: ItemMeta.() -> Unit = {},
         block: (SlotEventCollectorScope<InteractEvent, UpdateEvent>.() -> Unit)? = null
     )
+    fun slot(
+        range: IntRange,
+        item: ItemStack,
+        metadata: ItemMeta.() -> Unit = {},
+        block: (SlotEventCollectorScope<InteractEvent, UpdateEvent>.() -> Unit)? = null
+    )
 }
 
 fun PlayerMenuScope.slot(
@@ -28,4 +34,13 @@ fun PlayerMenuScope.slot(
     block: (SlotEventCollectorScope<InteractEvent, UpdateEvent>.() -> Unit)? = null
 ) {
     slot(index, ItemStack(type, amount), metadata, block)
+}
+fun PlayerMenuScope.slot(
+    range: IntRange,
+    type: Material,
+    amount: Int = 1,
+    metadata: ItemMeta.() -> Unit = {},
+    block: (SlotEventCollectorScope<InteractEvent, UpdateEvent>.() -> Unit)? = null
+) {
+    slot(range, ItemStack(type, amount), metadata, block)
 }

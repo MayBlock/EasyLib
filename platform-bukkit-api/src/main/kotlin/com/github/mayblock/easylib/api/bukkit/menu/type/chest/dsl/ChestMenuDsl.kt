@@ -31,6 +31,12 @@ interface ChestMenuScope {
         metadata: ItemMeta.() -> Unit = {},
         block: (SlotEventCollectorScope<InventoryClickEvent, UpdateEvent>.() -> Unit)? = null
     )
+    fun slot(
+        range: IntRange,
+        item: ItemStack,
+        metadata: ItemMeta.() -> Unit = {},
+        block: (SlotEventCollectorScope<InventoryClickEvent, UpdateEvent>.() -> Unit)? = null
+    )
 }
 
 fun ChestMenuScope.slot(
@@ -41,6 +47,15 @@ fun ChestMenuScope.slot(
     block: (SlotEventCollectorScope<InventoryClickEvent, UpdateEvent>.() -> Unit)? = null
 ) {
     slot(index, ItemStack(type, amount), metadata, block)
+}
+fun ChestMenuScope.slot(
+    range: IntRange,
+    type: Material,
+    amount: Int = 1,
+    metadata: ItemMeta.() -> Unit = {},
+    block: (SlotEventCollectorScope<InventoryClickEvent, UpdateEvent>.() -> Unit)? = null
+) {
+    slot(range, ItemStack(type, amount), metadata, block)
 }
 
 fun ChestMenuScope.closeButton(

@@ -11,7 +11,7 @@ import com.github.mayblock.easylib.impl.bukkit.menu.internal.SlotDefinition
 import org.bukkit.inventory.ItemStack
 import org.bukkit.inventory.meta.ItemMeta
 
-class PlayerMenuBuilder internal constructor(
+internal class PlayerMenuBuilder(
     private val factory: (slots: Map<Int, Slot>) -> PlayerInventoryMenu
 ) : PlayerMenuScope {
     private val size: Int = PlayerInventoryMenu.INVENTORY_SIZE
@@ -24,7 +24,28 @@ class PlayerMenuBuilder internal constructor(
         block: (SlotEventCollectorScope<InteractEvent, UpdateEvent>.() -> Unit)?
     ) {
         require(index in 0 until size) { "slot must be in range [0, $size]" }
-        slots[index] = item.also { item ->
+        slots[index] = buildSlot(item, metadata, block)
+    }
+
+    override fun slot(
+        range: IntRange,
+        item: ItemStack,
+        metadata: ItemMeta.() -> Unit,
+        block: (SlotEventCollectorScope<InteractEvent, UpdateEvent>.() -> Unit)?
+    ) {
+        require(range.first >= 0 && range.last < size) { "slot must be in range [0, $size]" }
+        val slot = buildSlot(item, metadata, block)
+        range.forEach { index ->
+            slots[index] = slot
+        }
+    }
+
+    private fun buildSlot(
+        item: ItemStack,
+        metadata: ItemMeta.() -> Unit,
+        block: (SlotEventCollectorScope<InteractEvent, UpdateEvent>.() -> Unit)?
+    ): Slot {
+        return item.also { item ->
             item.itemMeta = item.itemMeta?.also(metadata)
         }.let { item ->
             val listener = block?.let(SlotEventCollector<InteractEvent, UpdateEvent>()::apply)
