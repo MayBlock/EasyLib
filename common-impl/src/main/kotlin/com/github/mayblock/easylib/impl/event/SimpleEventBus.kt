@@ -4,13 +4,8 @@ import com.github.mayblock.easylib.api.event.Event
 import com.github.mayblock.easylib.api.event.EventBus
 import com.github.mayblock.easylib.api.event.EventException
 import com.github.mayblock.easylib.api.event.EventListener
-import org.slf4j.LoggerFactory
 
 class SimpleEventBus<E : Event> : EventBus<E> {
-
-    companion object {
-        private val logger = LoggerFactory.getLogger(SimpleEventBus::class.java)
-    }
 
     private val listeners = mutableListOf<EventListener<out E>>()
 

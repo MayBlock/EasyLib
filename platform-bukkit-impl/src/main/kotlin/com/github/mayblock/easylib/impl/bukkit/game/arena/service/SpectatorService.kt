@@ -2,7 +2,7 @@ package com.github.mayblock.easylib.impl.bukkit.game.arena.service
 
 import com.github.mayblock.easylib.api.bukkit.game.arena.BukkitArena
 import com.github.mayblock.easylib.api.bukkit.game.arena.BukkitArenaPlayer
-import com.github.mayblock.easylib.api.bukkit.menu.player.dsl.PlayerMenuScope
+import com.github.mayblock.easylib.api.bukkit.menu.type.player.dsl.PlayerMenuScope
 import com.github.mayblock.easylib.api.service.Service
 import com.github.mayblock.easylib.api.service.ServiceKey
 import com.github.mayblock.easylib.impl.bukkit.BukkitEasyLib.Companion.api

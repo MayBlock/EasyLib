@@ -1,10 +1,10 @@
-package com.github.mayblock.easylib.impl.bukkit.menu.chest.builder
+package com.github.mayblock.easylib.impl.bukkit.menu.type.chest.builder
 
-import com.github.mayblock.easylib.api.bukkit.menu.InventoryMenuItem
-import com.github.mayblock.easylib.api.bukkit.menu.chest.ChestMenu
-import com.github.mayblock.easylib.api.bukkit.menu.chest.ChestMenuType
-import com.github.mayblock.easylib.api.bukkit.menu.chest.dsl.ChestMenuScope
-import com.github.mayblock.easylib.api.bukkit.menu.chest.dsl.PageableChestMenuScope
+import com.github.mayblock.easylib.api.bukkit.menu.event.Slot
+import com.github.mayblock.easylib.api.bukkit.menu.type.chest.ChestMenu
+import com.github.mayblock.easylib.api.bukkit.menu.type.chest.ChestMenuType
+import com.github.mayblock.easylib.api.bukkit.menu.type.chest.dsl.ChestMenuScope
+import com.github.mayblock.easylib.api.bukkit.menu.type.chest.dsl.PageableChestMenuScope
 import net.kyori.adventure.text.Component
 import org.bukkit.ChatColor
 import org.bukkit.Material
@@ -14,7 +14,7 @@ import org.bukkit.inventory.meta.ItemMeta
 internal class PageableChestMenuBuilder(
     override val type: ChestMenuType,
     private val factory: (
-        title: Component, slots: List<InventoryMenuItem?>
+        title: Component, slots: Map<Int, Slot>
     ) -> ChestMenu
 ) : PageableChestMenuScope {
     private val size = type.size
@@ -68,15 +68,19 @@ internal class PageableChestMenuBuilder(
             pages.forEachIndexed { i, page ->
                 page.title = page.title.append(Component.text(" (${i + 1}/${pages.size})"))
                 if (i + 1 < pages.size) {
-                    val (slot, item) = nextPageItem
-                    page.slot(slot, item) { player, _ ->
-                        builtMenus[i + 1].open(player)
+                    val (index, item) = nextPageItem
+                    page.slot(index, item) {
+                        onClick {
+                            builtMenus[i + 1].open(player)
+                        }
                     }
                 }
                 if (i - 1 >= 0) {
-                    val (slot, item) = previousPageItem
-                    page.slot(slot, item) { player, _ ->
-                        builtMenus[i - 1].open(player)
+                    val (index, item) = previousPageItem
+                    page.slot(index, item) {
+                        onClick {
+                            builtMenus[i - 1].open(player)
+                        }
                     }
                 }
             }

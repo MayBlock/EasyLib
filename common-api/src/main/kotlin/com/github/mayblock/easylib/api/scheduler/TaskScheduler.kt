@@ -18,8 +18,15 @@ interface TaskScheduler {
     }
 
     interface Task {
-        val onTick: (() -> Unit)?
-        val onAsyncTick: (() -> Unit)?
+        val trigger: Trigger
+        val isAsync: Boolean
+        val onTick: () -> Unit
+    }
+
+    sealed interface Trigger {
+        object Once : Trigger
+        class Delay(val delay: Duration) : Trigger
+        class Interval(val period: Duration) : Trigger
     }
 
     @DslMarker
@@ -27,12 +34,17 @@ interface TaskScheduler {
 
     @TaskDsl
     class TaskBuilder {
+        var trigger: Trigger = Trigger.Once
+        var isAsync: Boolean = false
         var onTick: (() -> Unit)? = null
-        var onAsyncTick: (() -> Unit)? = null
 
-        internal fun build(): Task = object : Task {
-            override val onTick = this@TaskBuilder.onTick
-            override val onAsyncTick = this@TaskBuilder.onAsyncTick
+        internal fun build(): Task {
+            require(onTick != null) { "onTick can not be null." }
+            return object : Task {
+                override val trigger = this@TaskBuilder.trigger
+                override val isAsync = this@TaskBuilder.isAsync
+                override val onTick = this@TaskBuilder.onTick!!
+            }
         }
     }
 }

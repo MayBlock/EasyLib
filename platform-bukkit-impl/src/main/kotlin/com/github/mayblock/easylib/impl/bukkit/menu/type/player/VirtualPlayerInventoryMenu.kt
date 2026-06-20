@@ -1,14 +1,17 @@
-package com.github.mayblock.easylib.impl.bukkit.menu.player
+package com.github.mayblock.easylib.impl.bukkit.menu.type.player
 
-import com.github.mayblock.easylib.api.bukkit.menu.player.InteractHandler
-import com.github.mayblock.easylib.api.bukkit.menu.player.InteractionType
-import com.github.mayblock.easylib.api.bukkit.menu.player.PlayerInventoryMenu
-import com.github.mayblock.easylib.api.bukkit.menu.player.PlayerMenuItem
+import com.github.mayblock.easylib.api.bukkit.menu.event.Slot
+import com.github.mayblock.easylib.api.bukkit.menu.event.UpdatableSlot
+import com.github.mayblock.easylib.api.bukkit.menu.event.UpdateEvent
+import com.github.mayblock.easylib.api.bukkit.menu.type.player.InteractEvent
+import com.github.mayblock.easylib.api.bukkit.menu.type.player.InteractionType
+import com.github.mayblock.easylib.api.bukkit.menu.type.player.PlayerInventoryMenu
 import com.github.mayblock.easylib.api.util.Disposable
 import com.github.mayblock.easylib.impl.bukkit.BukkitEasyLib
-import com.github.mayblock.easylib.impl.bukkit.menu.updateCursorItem
-import com.github.mayblock.easylib.impl.bukkit.menu.updateItem
+import com.github.mayblock.easylib.impl.bukkit.menu.*
+import com.github.mayblock.easylib.impl.bukkit.menu.internal.InternalSlot
 import com.github.mayblock.easylib.impl.bukkit.packet.extension.getBukkitClickType
+import com.github.mayblock.easylib.impl.bukkit.scheduler.BukkitTaskScheduler
 import com.github.mayblock.easylib.impl.bukkit.util.sendPackets
 import com.github.mayblock.easylib.impl.util.extension.ifTrue
 import com.github.mayblock.easylib.packetevents.packet.dsl.PacketScope
@@ -22,32 +25,49 @@ import com.github.retrooper.packetevents.wrapper.play.client.WrapperPlayClientCl
 import com.github.retrooper.packetevents.wrapper.play.client.WrapperPlayClientPlayerDigging
 import com.github.retrooper.packetevents.wrapper.play.server.WrapperPlayServerSetSlot
 import com.github.retrooper.packetevents.wrapper.play.server.WrapperPlayServerWindowItems
-import io.github.retrooper.packetevents.util.SpigotConversionUtil
 import org.bukkit.entity.Player
+import org.bukkit.plugin.Plugin
 
 class VirtualPlayerInventoryMenu internal constructor(
-    slots: List<PlayerMenuItem?>
-) : PlayerInventoryMenu {
+    plugin: Plugin,
+    slots: Map<Int, Slot>
+) : PlayerInventoryMenu, VirtualMenu {
 
-    private data class VirtualPlayerMenuItem(
-        val item: ItemStack,
-        val onInteract: InteractHandler? = null
-    ) {
-        companion object {
-            val EMPTY = VirtualPlayerMenuItem(ItemStack.EMPTY)
+    private val slots = slots.mapValues { InternalSlot(it.value) }
+    private val slotUpdateScheduler = SlotUpdateScheduler(BukkitTaskScheduler(plugin)) { index, listener ->
+        if (activeViewers.isEmpty()) return@SlotUpdateScheduler
+        val slot = this.slots[index]!!
+        val oldItem = slot.bukkitItem
+        val event = UpdateEvent(index, oldItem.clone()).also(listener::onUpdate)
+        if (event.item == oldItem) return@SlotUpdateScheduler
+        (slot.native as UpdatableSlot<*>).item = event.item
+        activeViewers.forEach { player ->
+            if (!player.isOnline) {
+                activeViewers.remove(player)
+                return@forEach
+            }
+            player.sendPackets {
+                forPlayer {
+                    updateItem(windowId, index, slot.packetItem)
+                }
+            }
         }
     }
 
-    private val slots: List<VirtualPlayerMenuItem> = slots.map {
-        val (item, handler) = it ?: return@map VirtualPlayerMenuItem.EMPTY
-        VirtualPlayerMenuItem(item.let(SpigotConversionUtil::fromBukkitItemStack), handler)
+    init {
+        slots.mapValues { it.value.asUpdatableSlot<UpdateEvent>() }.forEach { (index, slot) ->
+            if (slot == null) return@forEach
+            slotUpdateScheduler.schedule(index, slot)
+        }
     }
+
+    override val windowId: Int = 0
 
     private var offListener: Disposable? = null
 
     private var _isDestroyed: Boolean = false
     override val isDestroyed: Boolean get() = _isDestroyed
-    val activePlayers = mutableSetOf<Player>()
+    override val activeViewers = mutableSetOf<Player>()
 
     override fun activate(player: Player) {
         if (_isDestroyed) throw IllegalStateException("this inventory is destroyed!")
@@ -56,12 +76,12 @@ class VirtualPlayerInventoryMenu internal constructor(
                 syncMenuItems()
             }
         }
-        activePlayers.add(player)
+        activeViewers.add(player)
     }
 
     override fun deactivate(player: Player): Boolean {
         if (_isDestroyed) throw IllegalStateException("this inventory is destroyed!")
-        return activePlayers.remove(player).ifTrue {
+        return activeViewers.remove(player).ifTrue {
             restoreItems(player)
         }
     }
@@ -69,7 +89,8 @@ class VirtualPlayerInventoryMenu internal constructor(
     override fun destroy() {
         if (_isDestroyed) return
         _isDestroyed = true
-        activePlayers.forEach(::deactivate)
+        activeViewers.forEach(::deactivate)
+        slotUpdateScheduler.cancelAllTasks()
         offListener?.dispose()
     }
 
@@ -81,26 +102,22 @@ class VirtualPlayerInventoryMenu internal constructor(
         offListener = BukkitEasyLib.api.packetManager.registerListener(object : PacketListener {
             override fun onPacketReceive(e: PacketReceiveEvent) {
                 val player = e.getPlayer() as? Player ?: return
-                if (!activePlayers.contains(player)) return
+                if (!activeViewers.contains(player)) return
                 val isCancelled = when (e.packetType) {
                     PacketType.Play.Client.CLICK_WINDOW -> handleClickWindow(
                         player,
                         WrapperPlayClientClickWindow(e)
                     )
-
                     PacketType.Play.Client.ANIMATION -> {
                         handleInteract(player, InteractionType.Interact.Action.LEFT_CLICK)
                     }
-
                     PacketType.Play.Client.USE_ITEM -> {
                         handleInteract(player, InteractionType.Interact.Action.RIGHT_CLICK)
                     }
-
                     PacketType.Play.Client.PLAYER_DIGGING -> {
                         val heldItemSlot = player.inventory.heldItemSlot + 36
                         handleDropItem(player, heldItemSlot, WrapperPlayClientPlayerDigging(e).action)
                     }
-
                     else -> false
                 }
                 e.isCancelled = isCancelled
@@ -108,23 +125,23 @@ class VirtualPlayerInventoryMenu internal constructor(
 
             override fun onPacketSend(e: PacketSendEvent) {
                 val player = e.getPlayer() as? Player ?: return
-                if (!activePlayers.contains(player)) return
+                if (!activeViewers.contains(player)) return
                 when (e.packetType) {
                     PacketType.Play.Server.WINDOW_ITEMS -> {
                         val packet = WrapperPlayServerWindowItems(e)
                         if (packet.windowId != 0) return
-                        packet.items = this@VirtualPlayerInventoryMenu.slots.map { it.item }
+                        packet.items = this@VirtualPlayerInventoryMenu.slots.values.map { it.packetItem }
                     }
-
                     PacketType.Play.Server.SET_SLOT -> {
                         val packet = WrapperPlayServerSetSlot(e)
                         if (packet.windowId != 0) return
-                        packet.item = this@VirtualPlayerInventoryMenu.slots.getOrNull(packet.slot)?.item
+                        packet.item = this@VirtualPlayerInventoryMenu.slots[packet.slot]?.packetItem
                             ?: ItemStack.EMPTY
                     }
                 }
             }
         })
+
     }
 
     private fun handleClickWindow(player: Player, packet: WrapperPlayClientClickWindow): Boolean {
@@ -137,19 +154,19 @@ class VirtualPlayerInventoryMenu internal constructor(
             }
             return handleDropItem(player, packet.slot, diggingAction)
         }
+        val clickType = packet.getBukkitClickType()
         val involvedSlots = packet.hashedSlots.keys
-        if (involvedSlots.none { it in slots.indices }) return false
         involvedSlots.forEach { slot ->
-            slots.getOrNull(slot)?.onInteract?.invoke(
-                player,
-                InteractionType.Inventory(slot, packet.getBukkitClickType())
-            )
+            slots[slot]?.native?.asClickSlot<InteractEvent>()?.clickListeners?.forEach {
+                val event = InteractEvent(player, slot, InteractionType.Inventory(clickType))
+                it.onClick(event)
+            }
         }
         player.sendPackets {
             forPlayer {
                 updateCursorItem(null)
                 involvedSlots.forEach { slot ->
-                    val item = slots.getOrNull(slot)?.item ?: ItemStack.EMPTY
+                    val item = slots[slot]?.packetItem ?: ItemStack.EMPTY
                     updateItem(0, slot, item)
                 }
             }
@@ -159,12 +176,14 @@ class VirtualPlayerInventoryMenu internal constructor(
 
     private fun handleInteract(player: Player, action: InteractionType.Interact.Action): Boolean {
         val heldItemSlot = player.inventory.heldItemSlot + 36
-        slots.getOrNull(heldItemSlot)?.apply {
-            onInteract?.invoke(player, InteractionType.Interact(heldItemSlot, action))?.apply {
-                player.sendPackets {
-                    forPlayer {
-                        updateItem(0, heldItemSlot, item)
-                    }
+        val slot = slots[heldItemSlot] ?: return false
+        slot.native?.asClickSlot<InteractEvent>()?.clickListeners?.forEach {
+            val event = InteractEvent(player, heldItemSlot, InteractionType.Interact(action))
+            it.onClick(event)
+        }?.apply {
+            player.sendPackets {
+                forPlayer {
+                    updateItem(0, heldItemSlot, slot.packetItem)
                 }
             }
         }
@@ -173,10 +192,10 @@ class VirtualPlayerInventoryMenu internal constructor(
 
     private fun handleDropItem(player: Player, slot: Int, action: DiggingAction): Boolean {
         if (action != DiggingAction.DROP_ITEM && action != DiggingAction.DROP_ITEM_STACK) return false
-        slots.getOrNull(slot)?.apply {
+        slots[slot]?.apply {
             player.sendPackets {
                 forPlayer {
-                    updateItem(0, slot, item)
+                    updateItem(0, slot, packetItem)
                 }
             }
         }
@@ -187,7 +206,7 @@ class VirtualPlayerInventoryMenu internal constructor(
         containerItems(
             0,
             0,
-            slots.map { it.item }
+            List(PlayerInventoryMenu.INVENTORY_SIZE) { slots[it]?.packetItem }
         )
     }
 }

@@ -27,7 +27,7 @@ class BukkitEasyLib(
     override val dispatcher = BukkitDispatcherImpl(plugin)
     override val promptApi: PromptApi by lazy { PromptApiImpl }
     override val itemExtensionApi = ItemExtensionApiImpl(plugin)
-    override val menuApi: MenuApi = MenuApiImpl
+    override val menuApi: MenuApi = MenuApiImpl(plugin)
     override val commandRegistry = BukkitCommandRegistry(plugin)
     val packetManager: PacketManager<Player> = BukkitPacketManager
 

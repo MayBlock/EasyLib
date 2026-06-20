@@ -1,7 +1,9 @@
-package com.github.mayblock.easylib.api.bukkit.menu.chest.dsl
+package com.github.mayblock.easylib.api.bukkit.menu.type.chest.dsl
 
-import com.github.mayblock.easylib.api.bukkit.menu.ClickHandler
-import com.github.mayblock.easylib.api.bukkit.menu.chest.ChestMenuType
+import com.github.mayblock.easylib.api.bukkit.menu.event.InventoryClickEvent
+import com.github.mayblock.easylib.api.bukkit.menu.event.UpdateEvent
+import com.github.mayblock.easylib.api.bukkit.menu.event.dsl.SlotEventCollectorScope
+import com.github.mayblock.easylib.api.bukkit.menu.type.chest.ChestMenuType
 import net.kyori.adventure.text.Component
 import org.bukkit.ChatColor
 import org.bukkit.Material
@@ -24,30 +26,32 @@ interface ChestMenuScope {
     var title: Component
     val type: ChestMenuType
     fun slot(
-        slot: Int,
+        index: Int,
         item: ItemStack,
         metadata: ItemMeta.() -> Unit = {},
-        onClick: ClickHandler? = null
+        block: (SlotEventCollectorScope<InventoryClickEvent, UpdateEvent>.() -> Unit)? = null
     )
 }
 
 fun ChestMenuScope.slot(
-    slot: Int,
+    index: Int,
     type: Material,
     amount: Int = 1,
     metadata: ItemMeta.() -> Unit = {},
-    onClick: ClickHandler? = null
+    block: (SlotEventCollectorScope<InventoryClickEvent, UpdateEvent>.() -> Unit)? = null
 ) {
-    slot(slot, ItemStack(type, amount), metadata, onClick)
+    slot(index, ItemStack(type, amount), metadata, block)
 }
 
 fun ChestMenuScope.closeButton(
-    slot: Int,
+    index: Int,
     metadata: ItemMeta.() -> Unit = {
         setDisplayName("${ChatColor.RED}Close Menu")
     },
 ) {
-    this.slot(slot, Material.BARRIER, metadata = metadata, onClick = { player, _ ->
-        player.closeInventory()
-    })
+    this.slot(index, Material.BARRIER, metadata = metadata) {
+        onClick {
+            this.player.closeInventory()
+        }
+    }
 }

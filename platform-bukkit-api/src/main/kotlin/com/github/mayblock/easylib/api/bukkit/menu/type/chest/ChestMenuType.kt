@@ -1,4 +1,4 @@
-package com.github.mayblock.easylib.api.bukkit.menu.chest
+package com.github.mayblock.easylib.api.bukkit.menu.type.chest
 
 enum class ChestMenuType(val size: Int) {
     GENERIC_9X1(9),

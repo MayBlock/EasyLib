@@ -1,6 +1,8 @@
 package com.github.mayblock.easylib.impl.bukkit.scheduler
 
 import com.github.mayblock.easylib.api.scheduler.TaskScheduler
+import com.github.mayblock.easylib.impl.bukkit.util.toTicks
+import com.google.common.primitives.Longs.max
 import org.bukkit.Bukkit
 import org.bukkit.plugin.Plugin
 import org.bukkit.scheduler.BukkitTask
@@ -16,60 +18,64 @@ class BukkitTaskScheduler(
 ) : TaskScheduler {
 
     private val idGenerator = AtomicInteger(0)
-    private val tasks = ConcurrentHashMap<Int, com.github.mayblock.easylib.api.scheduler.TaskScheduler.Task>()
-    private val scheduler = TaskScheduler()
+    private val tasks = ConcurrentHashMap<Int, BukkitTask>()
 
     private val bukkitTickPeriod = (tickPeriod.toLong(DurationUnit.MILLISECONDS) / 50)
         .coerceAtLeast(0)
 
-    override fun scheduleTask(task: com.github.mayblock.easylib.api.scheduler.TaskScheduler.Task): Int {
+    override fun scheduleTask(task: TaskScheduler.Task): Int {
         val id = idGenerator.getAndIncrement()
-        tasks[id] = task
-        if (!scheduler.isEnabled) {
-            scheduler.start()
+        val trigger = task.trigger
+        val repeatingRunnable = Runnable {
+            task.onTick()
+        }
+        val oneShotRunnable = Runnable {
+            task.onTick()
+            cancelTask(id)
+        }
+        tasks[id] = when (trigger) {
+            TaskScheduler.Trigger.Once -> if (task.isAsync) {
+                Bukkit.getScheduler().runTaskAsynchronously(plugin, oneShotRunnable)
+            } else Bukkit.getScheduler().runTask(plugin, oneShotRunnable)
+
+            is TaskScheduler.Trigger.Delay -> if (task.isAsync) {
+                Bukkit.getScheduler().runTaskLaterAsynchronously(
+                    plugin,
+                    oneShotRunnable,
+                    max(trigger.delay.toTicks(), bukkitTickPeriod)
+                )
+            } else Bukkit.getScheduler().runTaskLater(
+                plugin,
+                oneShotRunnable,
+                max(trigger.delay.toTicks(), bukkitTickPeriod)
+            )
+
+            is TaskScheduler.Trigger.Interval -> if (task.isAsync) {
+                Bukkit.getScheduler().runTaskTimerAsynchronously(
+                    plugin,
+                    repeatingRunnable,
+                    0,
+                    max(trigger.period.toTicks(), bukkitTickPeriod)
+                )
+            } else Bukkit.getScheduler().runTaskTimer(
+                plugin,
+                repeatingRunnable,
+                0,
+                max(trigger.period.toTicks(), bukkitTickPeriod)
+            )
         }
         return id
     }
 
     override fun cancelTask(taskId: Int): Boolean {
-        val removed = tasks.remove(taskId) != null
-        if (removed && tasks.isEmpty()) {
-            scheduler.stop()
-        }
+        val removed = tasks.remove(taskId)?.also {
+            it.cancel()
+        } != null
         return removed
     }
 
     override fun cancelAllTasks() {
-        scheduler.stop()
+        tasks.values.forEach { it.cancel() }
         tasks.clear()
-    }
-
-    private inner class TaskScheduler {
-        private var syncTask: BukkitTask? = null
-        private var asyncTask: BukkitTask? = null
-
-        val isEnabled get() = syncTask != null || asyncTask != null
-
-        fun start() {
-            if (syncTask == null) {
-                syncTask = Bukkit.getScheduler().runTaskTimer(plugin, Runnable {
-                    tasks.values.toList().forEach { it.onTick?.invoke() }
-                }, 0, bukkitTickPeriod)
-            }
-            if (asyncTask == null) {
-                asyncTask = Bukkit.getScheduler().runTaskTimerAsynchronously(plugin, Runnable {
-                    tasks.values.toList().forEach { it.onAsyncTick?.invoke() }
-                }, 0, bukkitTickPeriod)
-            }
-        }
-
-        fun stop() {
-            syncTask?.cancel()?.let {
-                syncTask = null
-            }
-            asyncTask?.cancel()?.let {
-                asyncTask = null
-            }
-        }
     }
 }

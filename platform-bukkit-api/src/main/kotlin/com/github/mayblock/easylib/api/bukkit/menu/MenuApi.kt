@@ -1,10 +1,10 @@
 package com.github.mayblock.easylib.api.bukkit.menu
 
-import com.github.mayblock.easylib.api.bukkit.menu.chest.ChestMenu
-import com.github.mayblock.easylib.api.bukkit.menu.chest.ChestMenuType
-import com.github.mayblock.easylib.api.bukkit.menu.chest.dsl.PageableChestMenuScope
-import com.github.mayblock.easylib.api.bukkit.menu.player.PlayerInventoryMenu
-import com.github.mayblock.easylib.api.bukkit.menu.player.dsl.PlayerMenuScope
+import com.github.mayblock.easylib.api.bukkit.menu.type.chest.ChestMenu
+import com.github.mayblock.easylib.api.bukkit.menu.type.chest.ChestMenuType
+import com.github.mayblock.easylib.api.bukkit.menu.type.chest.dsl.PageableChestMenuScope
+import com.github.mayblock.easylib.api.bukkit.menu.type.player.PlayerInventoryMenu
+import com.github.mayblock.easylib.api.bukkit.menu.type.player.dsl.PlayerMenuScope
 
 interface MenuApi {
 

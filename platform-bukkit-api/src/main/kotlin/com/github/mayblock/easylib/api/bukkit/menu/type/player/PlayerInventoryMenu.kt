@@ -1,4 +1,4 @@
-package com.github.mayblock.easylib.api.bukkit.menu.player
+package com.github.mayblock.easylib.api.bukkit.menu.type.player
 
 import com.github.mayblock.easylib.api.bukkit.menu.Menu
 import com.github.mayblock.easylib.api.util.Destroyable
