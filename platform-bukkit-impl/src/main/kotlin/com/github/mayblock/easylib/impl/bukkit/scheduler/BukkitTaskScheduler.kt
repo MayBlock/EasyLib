@@ -20,7 +20,7 @@ class BukkitTaskScheduler(
     private val scheduler = TaskScheduler()
 
     private val bukkitTickPeriod = (tickPeriod.toLong(DurationUnit.MILLISECONDS) / 50)
-        .coerceAtLeast(0)
+        .coerceAtLeast(1)
 
     override fun scheduleTask(task: com.github.mayblock.easylib.api.scheduler.TaskScheduler.Task): Int {
         val id = idGenerator.getAndIncrement()

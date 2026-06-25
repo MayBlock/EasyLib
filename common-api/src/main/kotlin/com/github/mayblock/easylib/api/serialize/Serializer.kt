@@ -1,4 +1,4 @@
-package com.github.mayblock.easylib.api.serialze
+package com.github.mayblock.easylib.api.serialize
 
 interface Serializer<Serialized, Object> {
     fun serialize(): Serialized

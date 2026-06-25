@@ -22,6 +22,7 @@ interface EventBus<E : Event> {
     fun <T : E> subscribe(listener: EventListener<T>)
     fun <T : E> unsubscribe(listener: EventListener<T>): Boolean
     fun unsubscribeGroup(group: String): Boolean
+    fun unsubscribeAll()
 
     @Throws(EventException::class)
     fun emit(event: E)

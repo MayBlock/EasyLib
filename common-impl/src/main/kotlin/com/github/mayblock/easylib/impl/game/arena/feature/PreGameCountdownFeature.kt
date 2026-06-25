@@ -55,8 +55,9 @@ private class CountdownTask(
     private var state = PreGameCountdownFeature.State.WAITING
         set(value) {
             if (field != value) {
+                val previous = field
                 field = value
-                onStateChanged(field, value)
+                onStateChanged(previous, value)
             }
         }
 

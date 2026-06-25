@@ -12,6 +12,7 @@ interface FeatureRegistry<Context> {
     fun <FeatureContext : Context, F : Feature<FeatureContext>> install(key: FeatureKey<in F>, factory: () -> F): F
     fun <FeatureContext : Context, F : Feature<FeatureContext>> uninstall(key: FeatureKey<in F>)
     fun <F : Feature<*>> getFeature(key: FeatureKey<in F>): F?
+    fun uninstallAll()
 }
 
 fun <F : Feature<*>> FeatureRegistry<*>.require(key: FeatureKey<F>): F =

@@ -3,11 +3,13 @@ package com.github.mayblock.easylib.impl.service
 import com.github.mayblock.easylib.api.service.Service
 import com.github.mayblock.easylib.api.service.ServiceKey
 import com.github.mayblock.easylib.api.service.ServiceRegistry
+import java.util.concurrent.ConcurrentHashMap
 
 class SimpleServiceRegistry : ServiceRegistry {
 
-    private val services = mutableMapOf<ServiceKey<*>, Service>()
+    private val services = ConcurrentHashMap<ServiceKey<*>, Service>()
 
+    @Synchronized
     override fun <S : Service> register(
         key: ServiceKey<in S>,
         factory: () -> S
@@ -22,11 +24,13 @@ class SimpleServiceRegistry : ServiceRegistry {
     @Suppress("UNCHECKED_CAST")
     override fun <S : Service> get(key: ServiceKey<in S>): S? = services[key] as S?
 
+    @Synchronized
     override fun <S : Service> unregister(key: ServiceKey<in S>) {
         services.remove(key)?.onUnregister() ?: throw IllegalArgumentException("Service $key is not registered")
     }
 
-    fun unregisterAll() {
+    @Synchronized
+    override fun unregisterAll() {
         services.keys.toList().forEach { key ->
             unregister(key)
         }

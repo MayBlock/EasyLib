@@ -1,7 +1,7 @@
 package com.github.mayblock.easylib.api.game.arena
 
 import com.github.mayblock.easylib.api.feature.FeatureRegistry
-import com.github.mayblock.easylib.api.serialze.Serializer
+import com.github.mayblock.easylib.api.serialize.Serializer
 import com.github.mayblock.easylib.api.service.ServiceRegistry
 import java.util.*
 

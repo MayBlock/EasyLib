@@ -3,13 +3,15 @@ package com.github.mayblock.easylib.impl.feature
 import com.github.mayblock.easylib.api.feature.Feature
 import com.github.mayblock.easylib.api.feature.FeatureKey
 import com.github.mayblock.easylib.api.feature.FeatureRegistry
+import java.util.concurrent.ConcurrentHashMap
 
 class SimpleFeatureRegistry<Context>(
     private val context: Context
 ) : FeatureRegistry<Context> {
 
-    private val features = mutableMapOf<FeatureKey<*>, Feature<out Context>>()
+    private val features = ConcurrentHashMap<FeatureKey<*>, Feature<out Context>>()
 
+    @Synchronized
     override fun <FeatureContext : Context, F : Feature<FeatureContext>> install(
         key: FeatureKey<in F>,
         factory: () -> F
@@ -27,6 +29,7 @@ class SimpleFeatureRegistry<Context>(
         }
     }
 
+    @Synchronized
     override fun <FeatureContext : Context, F : Feature<FeatureContext>> uninstall(
         key: FeatureKey<in F>
     ) {
@@ -41,7 +44,8 @@ class SimpleFeatureRegistry<Context>(
         key: FeatureKey<in F>
     ): F? = features[key] as F?
 
-    fun uninstallAll() {
+    @Synchronized
+    override fun uninstallAll() {
         features.keys.toList().forEach { key ->
             @Suppress("UNCHECKED_CAST")
             uninstall(key as FeatureKey<Feature<Context>>)
