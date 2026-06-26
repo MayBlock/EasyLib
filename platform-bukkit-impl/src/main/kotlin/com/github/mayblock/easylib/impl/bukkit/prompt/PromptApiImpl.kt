@@ -4,8 +4,8 @@ import com.github.mayblock.easylib.api.bukkit.prompt.PromptApi
 import com.github.mayblock.easylib.api.util.Vector
 import com.github.mayblock.easylib.impl.bukkit.BukkitEasyLib.Companion.api
 import com.github.mayblock.easylib.impl.bukkit.util.sendPackets
+import com.github.mayblock.easylib.packetevents.packet.updateSign
 import com.github.mayblock.easylib.packetevents.util.toVector3i
-import com.github.mayblock.easylib.packetevents.util.updateSign
 import com.github.retrooper.packetevents.event.PacketListener
 import com.github.retrooper.packetevents.event.PacketReceiveEvent
 import com.github.retrooper.packetevents.protocol.packettype.PacketType

@@ -5,6 +5,7 @@ import com.github.mayblock.easylib.api.bukkit.BukkitEasyLibApi
 import com.github.mayblock.easylib.api.bukkit.bukkitApi
 import com.github.mayblock.easylib.api.bukkit.menu.MenuApi
 import com.github.mayblock.easylib.api.bukkit.prompt.PromptApi
+import com.github.mayblock.easylib.api.scheduler.TaskScheduler
 import com.github.mayblock.easylib.impl.bukkit.command.BukkitCommandRegistry
 import com.github.mayblock.easylib.impl.bukkit.extension.ItemExtensionApiImpl
 import com.github.mayblock.easylib.impl.bukkit.menu.MenuApiImpl
@@ -12,13 +13,11 @@ import com.github.mayblock.easylib.impl.bukkit.packet.BukkitPacketManager
 import com.github.mayblock.easylib.impl.bukkit.prompt.PromptApiImpl
 import com.github.mayblock.easylib.impl.bukkit.scheduler.BukkitTaskScheduler
 import com.github.mayblock.easylib.packetevents.PacketManager
-import net.kyori.adventure.platform.bukkit.BukkitAudiences
 import org.bukkit.entity.Player
 import org.bukkit.plugin.Plugin
-import kotlin.time.Duration
 
 class BukkitEasyLib(
-    private val plugin: Plugin,
+    plugin: Plugin,
 ) : BukkitEasyLibApi {
 
     companion object {
@@ -30,13 +29,11 @@ class BukkitEasyLib(
         EasyLibApi.api = this
     }
 
+    override val taskScheduler: TaskScheduler = BukkitTaskScheduler(plugin)
     override val dispatcher = BukkitDispatcherImpl(plugin)
     override val promptApi: PromptApi by lazy { PromptApiImpl }
     override val itemExtensionApi = ItemExtensionApiImpl(plugin)
-    override val menuApi: MenuApi = MenuApiImpl
+    override val menuApi: MenuApi = MenuApiImpl(taskScheduler)
     override val commandRegistry = BukkitCommandRegistry(plugin)
     val packetManager: PacketManager<Player> = BukkitPacketManager
-    val audiences = BukkitAudiences.create(plugin)
-
-    override fun createTaskScheduler(tickPeriod: Duration) = BukkitTaskScheduler(plugin, tickPeriod)
 }

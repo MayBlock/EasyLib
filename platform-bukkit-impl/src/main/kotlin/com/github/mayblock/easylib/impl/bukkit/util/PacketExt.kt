@@ -1,10 +1,10 @@
 package com.github.mayblock.easylib.impl.bukkit.util
 
 import com.github.mayblock.easylib.impl.bukkit.BukkitEasyLib.Companion.api
-import com.github.mayblock.easylib.packetevents.packet.PacketBuilderScope
-import com.github.mayblock.easylib.packetevents.packet.PacketScope
-import com.github.mayblock.easylib.packetevents.util.gameMode
-import com.github.mayblock.easylib.packetevents.util.sendPackets
+import com.github.mayblock.easylib.packetevents.packet.dsl.PacketBuilderScope
+import com.github.mayblock.easylib.packetevents.packet.dsl.PacketScope
+import com.github.mayblock.easylib.packetevents.packet.gameMode
+import com.github.mayblock.easylib.packetevents.packet.sendPackets
 import com.github.retrooper.packetevents.protocol.player.User
 import org.bukkit.GameMode
 import org.bukkit.entity.Player
