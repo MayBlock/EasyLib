@@ -1,9 +1,9 @@
 package com.github.mayblock.easylib.packetevents
 
 import com.github.mayblock.easylib.api.util.Disposable
-import com.github.mayblock.easylib.packetevents.packet.PacketBuilderScope
-import com.github.mayblock.easylib.packetevents.packet.PacketCollector
-import com.github.mayblock.easylib.packetevents.packet.impl.PacketBuilderContext
+import com.github.mayblock.easylib.packetevents.packet.builder.PacketBuilderContext
+import com.github.mayblock.easylib.packetevents.packet.dsl.PacketBuilderScope
+import com.github.mayblock.easylib.packetevents.packet.dsl.PacketCollector
 import com.github.retrooper.packetevents.PacketEventsAPI
 import com.github.retrooper.packetevents.event.PacketListener
 import com.github.retrooper.packetevents.event.PacketListenerPriority
@@ -13,10 +13,8 @@ abstract class AbstractPacketManager<T>(
     private val packetEventsApi: PacketEventsAPI<*>
 ) : PacketManager<T> {
 
-    override fun createPacketCollector() = PacketBuilderContext()
-
     override fun collectPackets(block: PacketBuilderScope.() -> Unit): PacketCollector {
-        return createPacketCollector().apply(block)
+        return PacketBuilderContext().apply(block)
     }
 
     override fun sendPackets(
