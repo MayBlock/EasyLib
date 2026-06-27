@@ -2,6 +2,7 @@
 // `buildSrc` is a Gradle-recognized directory and every plugin there will be easily available in the rest of the build.
 package buildsrc.convention
 
+import org.gradle.api.tasks.bundling.Jar
 import org.gradle.api.tasks.testing.logging.TestLogEvent
 
 plugins {
@@ -16,6 +17,14 @@ kotlin {
     jvmToolchain(25)
 }
 
+// Single source of truth for this module's published coordinate name,
+// reused by both the maven artifactId and the jar archive base name.
+val coordinateName = "${rootProject.name}-${project.name}"
+
+val rootExtra = rootProject.extra
+val gitBranch = rootExtra["gitBranch"] as String
+val gitCommitHash = rootExtra["gitCommitHash"] as String
+
 tasks.withType<Test>().configureEach {
     // Configure all test Gradle tasks to use JUnitPlatform.
     useJUnitPlatform()
@@ -26,6 +35,19 @@ tasks.withType<Test>().configureEach {
             TestLogEvent.FAILED,
             TestLogEvent.PASSED,
             TestLogEvent.SKIPPED
+        )
+    }
+}
+
+tasks.withType<Jar>().configureEach {
+    archiveBaseName.set(coordinateName)
+    archiveVersion.set(project.version.toString())
+    manifest {
+        attributes(
+            "Implementation-Title" to coordinateName,
+            "Implementation-Version" to project.version.toString(),
+            "Build-Branch" to gitBranch,
+            "Build-Commit" to gitCommitHash,
         )
     }
 }
@@ -42,7 +64,7 @@ publishing {
         create<MavenPublication>("maven") {
             from(components["java"])
             groupId = project.group as String
-            artifactId = "${rootProject.name}-${project.path.removePrefix(":").replace(":", "-")}"
+            artifactId = coordinateName
             version = project.version as String
         }
     }

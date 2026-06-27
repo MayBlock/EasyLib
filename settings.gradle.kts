@@ -2,7 +2,9 @@ rootProject.name = "EasyLib"
 
 gradle.beforeProject {
     group = "com.github.mayblock"
-    version = property("version") as String
+    val base = property("version") as String
+    val isSnapshot = (property("snapshot") as String).toBooleanStrict()
+    version = base + if (isSnapshot) "-SNAPSHOT" else ""
 }
 
 include(":common-api")
