@@ -6,7 +6,7 @@ import com.github.mayblock.easylib.api.bukkit.menu.type.chest.dsl.PageableChestM
 import com.github.mayblock.easylib.api.bukkit.menu.type.player.PlayerInventoryMenu
 import com.github.mayblock.easylib.api.bukkit.menu.type.player.dsl.PlayerMenuScope
 
-interface MenuApi {
+interface MenuFactory {
 
     fun createPlayerInventoryMenu(builder: PlayerMenuScope.() -> Unit): PlayerInventoryMenu
     fun createChestMenu(type: ChestMenuType, builder: PageableChestMenuScope.() -> Unit): ChestMenu

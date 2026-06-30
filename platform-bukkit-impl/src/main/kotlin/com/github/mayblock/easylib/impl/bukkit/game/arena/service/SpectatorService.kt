@@ -17,7 +17,7 @@ class SpectatorService<A : BukkitArena<out BukkitArenaPlayer, *>>(
     playerInventory: (PlayerMenuScope.() -> Unit)? = null,
 ) : Service {
 
-    val virtualPlayerInventory = api.menuApi.createPlayerInventoryMenu(playerInventory ?: {})
+    val virtualPlayerInventory = api.menuFactory.createPlayerInventoryMenu(playerInventory ?: {})
 
     companion object Key : ServiceKey<SpectatorService<*>>("SpectatorService")
 

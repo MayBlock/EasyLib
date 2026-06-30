@@ -1,14 +1,16 @@
 package com.github.mayblock.easylib.api.bukkit.menu.type.player
 
-import com.github.mayblock.easylib.api.bukkit.menu.event.ClickEvent
+import com.github.mayblock.easylib.api.bukkit.menu.Menu
+import com.github.mayblock.easylib.api.bukkit.menu.slot.SlotClickEvent
 import org.bukkit.entity.Player
 import org.bukkit.event.inventory.ClickType
 
 class InteractEvent(
+    menu: Menu,
     player: Player,
-    slot: Int,
+    index: Int,
     val type: InteractionType
-) : ClickEvent(slot, player)
+) : SlotClickEvent(menu, index, player)
 
 sealed class InteractionType {
     class Inventory(val type: ClickType) : InteractionType()

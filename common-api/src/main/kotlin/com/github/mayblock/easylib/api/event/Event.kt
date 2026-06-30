@@ -1,6 +1,7 @@
 package com.github.mayblock.easylib.api.event
 
 import com.github.mayblock.easylib.api.util.Disposable
+import com.github.mayblock.easylib.api.util.Priority
 
 typealias EventHandler<T> = T.() -> Unit
 
@@ -12,18 +13,24 @@ interface Event {
 }
 
 class EventListener<T : Event>(
-    val type: Class<T>,
+    val type: Class<out T>,
     val group: String?,
     val handler: EventHandler<T>,
-    val priority: Int = 10
+    val priority: Priority
 )
 
-interface EventBus<E : Event> {
+/**
+ * 事件总线的「订阅侧」：只能订阅/退订，不能 emit。
+ * 想对外暴露「可被监听、但不可被外部触发」的事件源时使用本接口。
+ */
+interface EventSource<E : Event> {
     fun <T : E> subscribe(listener: EventListener<T>)
     fun <T : E> unsubscribe(listener: EventListener<T>): Boolean
     fun unsubscribeGroup(group: String): Boolean
     fun unsubscribeAll()
+}
 
+interface EventBus<E : Event> : EventSource<E> {
     @Throws(EventException::class)
     fun emit(event: E)
 }
@@ -32,10 +39,10 @@ interface EventBus<E : Event> {
 annotation class EventDsl
 
 @EventDsl
-class EventScope<E : Event>(val group: String?, val bus: EventBus<in E>) : Disposable {
+class EventScope<E : Event>(val group: String?, val bus: EventSource<in E>) : Disposable {
     @PublishedApi
     internal val disposables = mutableListOf<Disposable>()
-    inline fun <reified T : E> on(priority: Int = 10, noinline handler: EventHandler<T>): EventListener<T> {
+    inline fun <reified T : E> on(priority: Priority = Priority.DEFAULT, noinline handler: EventHandler<T>): EventListener<T> {
         return EventListener(T::class.java, group, handler, priority)
             .also {
                 bus.subscribe(it)
@@ -48,7 +55,7 @@ class EventScope<E : Event>(val group: String?, val bus: EventBus<in E>) : Dispo
     }
 }
 
-inline fun <reified T : Event> EventBus<in T>.on(group: String? = null, block: EventScope<T>.() -> Unit): Disposable {
+inline fun <reified T : Event> EventSource<in T>.on(group: String? = null, block: EventScope<T>.() -> Unit): Disposable {
     return EventScope(group, this).apply(block)
 }
 

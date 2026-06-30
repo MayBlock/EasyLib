@@ -4,7 +4,7 @@ import com.github.mayblock.easylib.api.bukkit.menu.Menu
 import com.github.mayblock.easylib.api.util.Destroyable
 import org.bukkit.entity.Player
 
-interface PlayerInventoryMenu : Menu, Destroyable {
+interface PlayerInventoryMenu : Menu {
 
     override fun open(player: Player) = activate(player)
     fun activate(player: Player)

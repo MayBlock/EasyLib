@@ -1,14 +1,12 @@
 package com.github.mayblock.easylib.impl.bukkit.menu.type.chest.builder
 
-import com.github.mayblock.easylib.api.bukkit.menu.event.InventoryClickEvent
-import com.github.mayblock.easylib.api.bukkit.menu.event.Slot
-import com.github.mayblock.easylib.api.bukkit.menu.event.UpdateEvent
-import com.github.mayblock.easylib.api.bukkit.menu.event.dsl.SlotEventCollectorScope
+import com.github.mayblock.easylib.api.bukkit.menu.slot.InventoryClickEvent
+import com.github.mayblock.easylib.api.bukkit.menu.slot.dsl.SlotScope
 import com.github.mayblock.easylib.api.bukkit.menu.type.chest.ChestMenu
 import com.github.mayblock.easylib.api.bukkit.menu.type.chest.ChestMenuType
 import com.github.mayblock.easylib.api.bukkit.menu.type.chest.dsl.ChestMenuScope
-import com.github.mayblock.easylib.impl.bukkit.menu.event.builder.SlotEventCollector
-import com.github.mayblock.easylib.impl.bukkit.menu.internal.SlotDefinition
+import com.github.mayblock.easylib.impl.bukkit.menu.slot.SlotBuilder
+import com.github.mayblock.easylib.impl.bukkit.menu.slot.SlotSpec
 import net.kyori.adventure.text.Component
 import org.bukkit.inventory.ItemStack
 import org.bukkit.inventory.meta.ItemMeta
@@ -16,19 +14,17 @@ import org.bukkit.inventory.meta.ItemMeta
 internal class ChestMenuBuilder(
     override val type: ChestMenuType,
     override var title: Component,
-    private val factory: (
-        title: Component, slots: Map<Int, Slot>
-    ) -> ChestMenu
+    private val factory: (title: Component, slots: Map<Int, SlotSpec>) -> ChestMenu,
 ) : ChestMenuScope {
 
     private val size = type.size
-    private val slots = mutableMapOf<Int, Slot>()
+    private val slots = mutableMapOf<Int, SlotSpec>()
 
     override fun slot(
         index: Int,
         item: ItemStack,
         metadata: ItemMeta.() -> Unit,
-        block: (SlotEventCollectorScope<InventoryClickEvent, UpdateEvent>.() -> Unit)?
+        block: (SlotScope<InventoryClickEvent>.() -> Unit)?,
     ) {
         require(index in 0 until size) { "slot must be in range [0, $size]" }
         slots[index] = buildSlot(item, metadata, block)
@@ -38,32 +34,21 @@ internal class ChestMenuBuilder(
         range: IntRange,
         item: ItemStack,
         metadata: ItemMeta.() -> Unit,
-        block: (SlotEventCollectorScope<InventoryClickEvent, UpdateEvent>.() -> Unit)?
+        block: (SlotScope<InventoryClickEvent>.() -> Unit)?,
     ) {
         require(range.first >= 0 && range.last < size) { "slot must be in range [0, $size]" }
         val slot = buildSlot(item, metadata, block)
-        range.forEach { index ->
-            slots[index] = slot
-        }
+        range.forEach { slots[it] = slot }
     }
 
     private fun buildSlot(
         item: ItemStack,
         metadata: ItemMeta.() -> Unit,
-        block: (SlotEventCollectorScope<InventoryClickEvent, UpdateEvent>.() -> Unit)?
-    ): Slot {
-        return item.also { item ->
-            item.itemMeta = item.itemMeta?.also(metadata)
-        }.let { item ->
-            val listener = block?.let(SlotEventCollector<InventoryClickEvent, UpdateEvent>()::apply)
-            SlotDefinition(
-                item,
-                UpdateEvent::class.java,
-                InventoryClickEvent::class.java,
-                listener?.updateListeners ?: emptyList(),
-                listener?.clickListeners ?: emptyList()
-            ).build()
-        }
+        block: (SlotScope<InventoryClickEvent>.() -> Unit)?,
+    ): SlotSpec {
+        return SlotBuilder(InventoryClickEvent::class.java)
+            .apply { block?.invoke(this) }
+            .build(item.also { item.itemMeta = item.itemMeta?.also(metadata) })
     }
 
     fun build(): ChestMenu = factory(title, slots)

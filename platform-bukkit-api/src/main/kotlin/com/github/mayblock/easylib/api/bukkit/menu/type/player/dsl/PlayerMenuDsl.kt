@@ -1,7 +1,6 @@
 package com.github.mayblock.easylib.api.bukkit.menu.type.player.dsl
 
-import com.github.mayblock.easylib.api.bukkit.menu.event.UpdateEvent
-import com.github.mayblock.easylib.api.bukkit.menu.event.dsl.SlotEventCollectorScope
+import com.github.mayblock.easylib.api.bukkit.menu.slot.dsl.SlotScope
 import com.github.mayblock.easylib.api.bukkit.menu.type.player.InteractEvent
 import org.bukkit.Material
 import org.bukkit.inventory.ItemStack
@@ -16,13 +15,13 @@ interface PlayerMenuScope {
         index: Int,
         item: ItemStack,
         metadata: ItemMeta.() -> Unit = {},
-        block: (SlotEventCollectorScope<InteractEvent, UpdateEvent>.() -> Unit)? = null
+        block: (SlotScope<InteractEvent>.() -> Unit)? = null
     )
     fun slot(
         range: IntRange,
         item: ItemStack,
         metadata: ItemMeta.() -> Unit = {},
-        block: (SlotEventCollectorScope<InteractEvent, UpdateEvent>.() -> Unit)? = null
+        block: (SlotScope<InteractEvent>.() -> Unit)? = null
     )
 }
 
@@ -31,7 +30,7 @@ fun PlayerMenuScope.slot(
     type: Material,
     amount: Int = 1,
     metadata: ItemMeta.() -> Unit = {},
-    block: (SlotEventCollectorScope<InteractEvent, UpdateEvent>.() -> Unit)? = null
+    block: (SlotScope<InteractEvent>.() -> Unit)? = null
 ) {
     slot(index, ItemStack(type, amount), metadata, block)
 }
@@ -40,7 +39,7 @@ fun PlayerMenuScope.slot(
     type: Material,
     amount: Int = 1,
     metadata: ItemMeta.() -> Unit = {},
-    block: (SlotEventCollectorScope<InteractEvent, UpdateEvent>.() -> Unit)? = null
+    block: (SlotScope<InteractEvent>.() -> Unit)? = null
 ) {
     slot(range, ItemStack(type, amount), metadata, block)
 }

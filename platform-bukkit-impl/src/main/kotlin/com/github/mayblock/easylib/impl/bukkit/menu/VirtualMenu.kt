@@ -5,5 +5,4 @@ import org.bukkit.entity.Player
 
 internal interface VirtualMenu : Menu {
     val windowId: Int
-    val activeViewers: Set<Player>
 }

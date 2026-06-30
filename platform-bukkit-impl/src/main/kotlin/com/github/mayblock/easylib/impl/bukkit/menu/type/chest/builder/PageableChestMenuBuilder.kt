@@ -1,7 +1,7 @@
 package com.github.mayblock.easylib.impl.bukkit.menu.type.chest.builder
 
-import com.github.mayblock.easylib.api.bukkit.menu.event.Slot
 import com.github.mayblock.easylib.api.bukkit.menu.type.chest.ChestMenu
+import com.github.mayblock.easylib.impl.bukkit.menu.slot.SlotSpec
 import com.github.mayblock.easylib.api.bukkit.menu.type.chest.ChestMenuType
 import com.github.mayblock.easylib.api.bukkit.menu.type.chest.dsl.ChestMenuScope
 import com.github.mayblock.easylib.api.bukkit.menu.type.chest.dsl.PageableChestMenuScope
@@ -14,7 +14,7 @@ import org.bukkit.inventory.meta.ItemMeta
 internal class PageableChestMenuBuilder(
     override val type: ChestMenuType,
     private val factory: (
-        title: Component, slots: Map<Int, Slot>
+        title: Component, slots: Map<Int, SlotSpec>
     ) -> ChestMenu
 ) : PageableChestMenuScope {
     private val size = type.size

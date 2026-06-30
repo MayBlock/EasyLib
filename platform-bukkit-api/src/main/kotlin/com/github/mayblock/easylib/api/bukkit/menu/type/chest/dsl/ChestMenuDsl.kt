@@ -1,8 +1,7 @@
 package com.github.mayblock.easylib.api.bukkit.menu.type.chest.dsl
 
-import com.github.mayblock.easylib.api.bukkit.menu.event.InventoryClickEvent
-import com.github.mayblock.easylib.api.bukkit.menu.event.UpdateEvent
-import com.github.mayblock.easylib.api.bukkit.menu.event.dsl.SlotEventCollectorScope
+import com.github.mayblock.easylib.api.bukkit.menu.slot.InventoryClickEvent
+import com.github.mayblock.easylib.api.bukkit.menu.slot.dsl.SlotScope
 import com.github.mayblock.easylib.api.bukkit.menu.type.chest.ChestMenuType
 import net.kyori.adventure.text.Component
 import org.bukkit.ChatColor
@@ -29,13 +28,13 @@ interface ChestMenuScope {
         index: Int,
         item: ItemStack,
         metadata: ItemMeta.() -> Unit = {},
-        block: (SlotEventCollectorScope<InventoryClickEvent, UpdateEvent>.() -> Unit)? = null
+        block: (SlotScope<InventoryClickEvent>.() -> Unit)? = null
     )
     fun slot(
         range: IntRange,
         item: ItemStack,
         metadata: ItemMeta.() -> Unit = {},
-        block: (SlotEventCollectorScope<InventoryClickEvent, UpdateEvent>.() -> Unit)? = null
+        block: (SlotScope<InventoryClickEvent>.() -> Unit)? = null
     )
 }
 
@@ -44,7 +43,7 @@ fun ChestMenuScope.slot(
     type: Material,
     amount: Int = 1,
     metadata: ItemMeta.() -> Unit = {},
-    block: (SlotEventCollectorScope<InventoryClickEvent, UpdateEvent>.() -> Unit)? = null
+    block: (SlotScope<InventoryClickEvent>.() -> Unit)? = null
 ) {
     slot(index, ItemStack(type, amount), metadata, block)
 }
@@ -53,7 +52,7 @@ fun ChestMenuScope.slot(
     type: Material,
     amount: Int = 1,
     metadata: ItemMeta.() -> Unit = {},
-    block: (SlotEventCollectorScope<InventoryClickEvent, UpdateEvent>.() -> Unit)? = null
+    block: (SlotScope<InventoryClickEvent>.() -> Unit)? = null
 ) {
     slot(range, ItemStack(type, amount), metadata, block)
 }

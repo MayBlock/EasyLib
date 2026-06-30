@@ -1,18 +1,16 @@
 package com.github.mayblock.easylib.impl.bukkit.menu.type.chest
 
-import com.github.mayblock.easylib.api.bukkit.menu.event.InventoryClickEvent
-import com.github.mayblock.easylib.api.bukkit.menu.event.Slot
-import com.github.mayblock.easylib.api.bukkit.menu.event.UpdatableSlot
-import com.github.mayblock.easylib.api.bukkit.menu.event.UpdateEvent
+import com.github.mayblock.easylib.api.bukkit.menu.slot.InventoryClickEvent
 import com.github.mayblock.easylib.api.bukkit.menu.type.chest.ChestMenu
 import com.github.mayblock.easylib.api.bukkit.menu.type.chest.ChestMenuType
 import com.github.mayblock.easylib.api.scheduler.TaskScheduler
 import com.github.mayblock.easylib.api.util.Disposable
 import com.github.mayblock.easylib.impl.bukkit.BukkitEasyLib
 import com.github.mayblock.easylib.impl.bukkit.menu.*
-import com.github.mayblock.easylib.impl.bukkit.menu.internal.InternalSlot
+import com.github.mayblock.easylib.impl.bukkit.menu.slot.SlotSpec
 import com.github.mayblock.easylib.impl.bukkit.packet.extension.getBukkitClickType
 import com.github.mayblock.easylib.impl.bukkit.util.sendPackets
+import com.github.mayblock.easylib.impl.util.extension.ifTrue
 import com.github.mayblock.easylib.packetevents.packet.ContainerType
 import com.github.mayblock.easylib.packetevents.packet.dsl.PacketScope
 import com.github.retrooper.packetevents.event.PacketListener
@@ -27,48 +25,21 @@ import net.kyori.adventure.text.Component
 import org.bukkit.entity.Player
 import java.util.concurrent.atomic.AtomicInteger
 
-class VirtualChestMenu internal constructor(
+internal class VirtualChestMenu(
     taskScheduler: TaskScheduler,
     override val title: Component,
     override val type: ChestMenuType,
-    slots: Map<Int, Slot>
-) : ChestMenu, VirtualMenu {
-
-    private val slots = slots.mapValues { InternalSlot(it.value) }
-    private val slotUpdateScheduler = SlotUpdateScheduler(taskScheduler) { index, listener ->
-        if (activeViewers.isEmpty()) return@SlotUpdateScheduler
-        val slot = this.slots[index]!!
-        val oldItem = slot.bukkitItem
-        val event = UpdateEvent(index, oldItem.clone()).also(listener::onUpdate)
-        if (event.item == oldItem) return@SlotUpdateScheduler
-        (slot.native as UpdatableSlot<*>).item = event.item
-        activeViewers.forEach { player ->
-            if (!player.isOnline) {
-                activeViewers.remove(player)
-                return@forEach
-            }
-            player.sendPackets {
-                forPlayer {
-                    updateItem(windowId, index, slot.packetItem)
-                }
-            }
-        }
-    }
-
-    init {
-        slots.mapValues { it.value.asUpdatableSlot<UpdateEvent>() }.forEach { (index, slot) ->
-            if (slot == null) return@forEach
-            slotUpdateScheduler.schedule(index, slot)
-        }
-    }
+    specs: Map<Int, SlotSpec>,
+) : AbstractVirtualMenu(taskScheduler, specs), ChestMenu {
 
     override val windowId = windowIdCounter.getAndIncrement()
 
-    private var offListener: Disposable? = null
-
-    override val activeViewers = mutableSetOf<Player>()
+    init {
+        startMenu()
+    }
 
     override fun open(player: Player) {
+        check(!isDestroyed) { "this menu is destroyed!" }
         player.sendPackets {
             bundle {
                 forPlayer {
@@ -78,11 +49,22 @@ class VirtualChestMenu internal constructor(
                 }
             }
         }
-        activeViewers.add(player)
+        addViewer(player)
     }
 
-    init {
-        offListener = BukkitEasyLib.api.packetManager.registerListener(object : PacketListener {
+    override fun repaint(index: Int) {
+        activeViewers.toList().forEach { player ->
+            if (!player.isOnline) return@forEach
+            player.sendPackets { forPlayer { updateItem(windowId, index, grid.packetItem(index)) } }
+        }
+    }
+
+    override fun onClose(player: Player) {
+        player.updateInventory()
+    }
+
+    override fun registerPacketListener(): Disposable =
+        BukkitEasyLib.api.packetManager.registerListener(object : PacketListener {
             override fun onPacketReceive(e: PacketReceiveEvent) {
                 when (e.packetType) {
                     PacketType.Play.Client.CLICK_WINDOW -> {
@@ -95,44 +77,37 @@ class VirtualChestMenu internal constructor(
                     }
                 }
             }
+
             override fun onPacketSend(e: PacketSendEvent) {
                 val player = e.getPlayer() as? Player ?: return
-                if (!activeViewers.contains(player)) return
+                if (player !in activeViewers) return
                 when (e.packetType) {
                     PacketType.Play.Server.OPEN_WINDOW -> {
                         val packet = WrapperPlayServerOpenWindow(e)
-                        if (packet.containerId != windowId) {
-                            activeViewers.remove(player)
-                        }
+                        if (packet.containerId != windowId) removeViewer(player)
                     }
                 }
             }
         })
-    }
 
     private fun handleCloseWindow(player: Player, packet: WrapperPlayClientCloseWindow): Boolean {
         if (packet.windowId != windowId) return false
-        player.updateInventory()
-        return activeViewers.remove(player)
+        return removeViewer(player).ifTrue { player.updateInventory() }
     }
 
     private fun handleClickWindow(player: Player, packet: WrapperPlayClientClickWindow): Boolean {
         if (packet.windowId != windowId) return false
-        if (!activeViewers.contains(player)) return false
+        if (player !in activeViewers) return false
         val involvedSlots = packet.hashedSlots.keys
         val clickType = packet.getBukkitClickType()
         involvedSlots.forEach { slot ->
-            slots[slot]?.native?.asClickSlot<InventoryClickEvent>()?.clickListeners?.forEach {
-                val event = InventoryClickEvent(player, slot, clickType)
-                it.onClick(event)
-            }
+            publish(InventoryClickEvent(this, player, slot, clickType))
         }
         player.sendPackets {
             forPlayer {
                 updateCursorItem(null)
                 involvedSlots.forEach { slot ->
-                    val item = slots[slot]?.packetItem ?: ItemStack.EMPTY
-                    updateItem(windowId, slot, item)
+                    updateItem(windowId, slot, grid.packetItem(slot))
                 }
             }
         }
@@ -140,11 +115,7 @@ class VirtualChestMenu internal constructor(
     }
 
     private fun PacketScope.PlayerPacketScope.syncMenuItems() {
-        containerItems(
-            windowId,
-            0,
-            List(type.size) { slots[it]?.packetItem }
-        )
+        containerItems(windowId, 0, grid.packetItems(type.size))
     }
 
     private fun PacketScope.PlayerPacketScope.hidePlayerInventoryItems() {

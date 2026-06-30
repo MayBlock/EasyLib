@@ -3,12 +3,11 @@ package com.github.mayblock.easylib.impl.bukkit
 import com.github.mayblock.easylib.api.EasyLibApi
 import com.github.mayblock.easylib.api.bukkit.BukkitEasyLibApi
 import com.github.mayblock.easylib.api.bukkit.bukkitApi
-import com.github.mayblock.easylib.api.bukkit.menu.MenuApi
 import com.github.mayblock.easylib.api.bukkit.prompt.PromptApi
 import com.github.mayblock.easylib.api.scheduler.TaskScheduler
 import com.github.mayblock.easylib.impl.bukkit.command.BukkitCommandRegistry
 import com.github.mayblock.easylib.impl.bukkit.extension.ItemExtensionApiImpl
-import com.github.mayblock.easylib.impl.bukkit.menu.MenuApiImpl
+import com.github.mayblock.easylib.impl.bukkit.menu.VirtualMenuManager
 import com.github.mayblock.easylib.impl.bukkit.packet.BukkitPacketManager
 import com.github.mayblock.easylib.impl.bukkit.prompt.PromptApiImpl
 import com.github.mayblock.easylib.impl.bukkit.scheduler.BukkitTaskScheduler
@@ -33,7 +32,12 @@ class BukkitEasyLib(
     override val dispatcher = BukkitDispatcherImpl(plugin)
     override val promptApi: PromptApi by lazy { PromptApiImpl }
     override val itemExtensionApi = ItemExtensionApiImpl(plugin)
-    override val menuApi: MenuApi = MenuApiImpl(taskScheduler)
+    override val menuFactory = VirtualMenuManager(taskScheduler)
     override val commandRegistry = BukkitCommandRegistry(plugin)
     val packetManager: PacketManager<Player> = BukkitPacketManager
+
+    override fun close() {
+        taskScheduler.cancelAllTasks()
+        menuFactory.close()
+    }
 }
