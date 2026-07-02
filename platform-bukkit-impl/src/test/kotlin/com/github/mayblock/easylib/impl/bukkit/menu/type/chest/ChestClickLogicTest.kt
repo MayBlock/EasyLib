@@ -119,6 +119,32 @@ class ChestClickLogicTest {
         assertTrue(d.fromInventory)
     }
 
+    @Test
+    fun `背包源光标放入非 placeable 槽位拒绝（isPutBack 对背包源永不生效）`() {
+        val d = logic().decide(5, false, invCursor(ItemStack(Material.EMERALD, 2), 30), view(null, placeable = false), null)
+        assertIs<ClickDecision.Deny>(d)
+    }
+
+    @Test
+    fun `右键拿起单个物品仍拿起 1 个`() {
+        val d = logic().decide(5, true, null, view(ItemStack(Material.STONE, 1), movable = true), null)
+        assertIs<ClickDecision.PickupFromMenu>(d)
+        assertEquals(1, d.amount)
+    }
+
+    @Test
+    fun `放回来源槽位但槽内已是异类物品时不享受放回豁免`() {
+        val cursor = menuCursor(ItemStack(Material.STONE, 2), origin = 5)
+        val d = logic().decide(5, false, cursor, view(ItemStack(Material.DIRT, 1), movable = true, placeable = false), null)
+        assertIs<ClickDecision.Deny>(d)
+    }
+
+    @Test
+    fun `右键从背包区拿起同样允许`() {
+        val d = logic().decide(30, true, null, null, ItemStack(Material.EMERALD))
+        assertIs<ClickDecision.PickupFromInventory>(d)
+    }
+
     // ── 光标 · 背包区 ──────────────────────────────────────────────
 
     @Test
