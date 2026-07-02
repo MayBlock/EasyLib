@@ -1,6 +1,8 @@
 package com.github.mayblock.easylib.api.bukkit.menu.type.chest.dsl
 
 import com.github.mayblock.easylib.api.bukkit.menu.slot.InventoryClickEvent
+import com.github.mayblock.easylib.api.bukkit.menu.slot.SlotPlaceEvent
+import com.github.mayblock.easylib.api.bukkit.menu.slot.SlotTakeEvent
 import com.github.mayblock.easylib.api.bukkit.menu.slot.dsl.SlotScope
 import com.github.mayblock.easylib.api.bukkit.menu.type.chest.ChestMenuType
 import net.kyori.adventure.text.Component
@@ -24,15 +26,26 @@ interface PageableChestMenuScope {
 interface ChestMenuScope {
     var title: Component
     val type: ChestMenuType
+
+    /**
+     * 声明一个槽位。
+     * @param movable 槽中物品可被玩家拿起（真实给予经 `onTake` 回调，见 [SlotTakeEvent]）
+     * @param placeable 玩家可把自己背包的物品放入本槽（真实扣除经 `onPlace` 回调，见 [SlotPlaceEvent]；
+     *   要求菜单以 `hidePlayerInventory = false` 创建）
+     */
     fun slot(
         index: Int,
         item: ItemStack,
+        movable: Boolean = false,
+        placeable: Boolean = false,
         metadata: ItemMeta.() -> Unit = {},
         block: (SlotScope<InventoryClickEvent>.() -> Unit)? = null
     )
     fun slot(
         range: IntRange,
         item: ItemStack,
+        movable: Boolean = false,
+        placeable: Boolean = false,
         metadata: ItemMeta.() -> Unit = {},
         block: (SlotScope<InventoryClickEvent>.() -> Unit)? = null
     )
@@ -42,19 +55,23 @@ fun ChestMenuScope.slot(
     index: Int,
     type: Material,
     amount: Int = 1,
+    movable: Boolean = false,
+    placeable: Boolean = false,
     metadata: ItemMeta.() -> Unit = {},
     block: (SlotScope<InventoryClickEvent>.() -> Unit)? = null
 ) {
-    slot(index, ItemStack(type, amount), metadata, block)
+    slot(index, ItemStack(type, amount), movable, placeable, metadata, block)
 }
 fun ChestMenuScope.slot(
     range: IntRange,
     type: Material,
     amount: Int = 1,
+    movable: Boolean = false,
+    placeable: Boolean = false,
     metadata: ItemMeta.() -> Unit = {},
     block: (SlotScope<InventoryClickEvent>.() -> Unit)? = null
 ) {
-    slot(range, ItemStack(type, amount), metadata, block)
+    slot(range, ItemStack(type, amount), movable, placeable, metadata, block)
 }
 
 fun ChestMenuScope.closeButton(
