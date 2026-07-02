@@ -5,12 +5,12 @@ import com.github.mayblock.easylib.impl.bukkit.menu.slot.SlotSpec
 import org.bukkit.inventory.ItemStack
 
 /** 虚拟光标物品的来源。 */
-internal sealed class CursorOrigin {
+internal sealed interface CursorOrigin {
     /** 从菜单槽位拿起。 */
-    class MenuSlot(val index: Int) : CursorOrigin()
+    class MenuSlot(val index: Int) : CursorOrigin
 
     /** 从玩家真实背包拿起（[windowSlot] 为箱子窗口坐标；真实物品从未离开背包）。 */
-    class PlayerInventory(val windowSlot: Int) : CursorOrigin()
+    class PlayerInventory(val windowSlot: Int) : CursorOrigin
 }
 
 /** per-player 虚拟光标：物品副本 + 来源。 */
@@ -20,26 +20,26 @@ internal class VirtualCursor(val item: ItemStack, val origin: CursorOrigin)
 internal class SlotView(val item: ItemStack?, val movable: Boolean, val placeable: Boolean)
 
 /** PICKUP 点击的决策结果；副作用由 ChestClickEngine 执行。 */
-internal sealed class ClickDecision {
-    object Deny : ClickDecision()
+internal sealed interface ClickDecision {
+    object Deny : ClickDecision
 
     /** 从菜单槽位拿起 [amount] 个到虚拟光标（纯虚拟）。 */
-    class PickupFromMenu(val slot: Int, val amount: Int) : ClickDecision()
+    class PickupFromMenu(val slot: Int, val amount: Int) : ClickDecision
 
     /** 从玩家真实背包槽位「视觉拿起」（不动真实背包，仅记录来源）。 */
-    class PickupFromInventory(val windowSlot: Int) : ClickDecision()
+    class PickupFromInventory(val windowSlot: Int) : ClickDecision
 
     /** 放入菜单槽位；[fromInventory] 时须先派发 SlotPlaceEvent。 */
-    class PlaceInMenu(val slot: Int, val amount: Int, val fromInventory: Boolean) : ClickDecision()
+    class PlaceInMenu(val slot: Int, val amount: Int, val fromInventory: Boolean) : ClickDecision
 
     /** 菜单源光标与槽位异类物品交换（纯虚拟）。 */
-    class SwapWithMenu(val slot: Int) : ClickDecision()
+    class SwapWithMenu(val slot: Int) : ClickDecision
 
     /** 背包源光标放回原真实槽位（视觉还原）。 */
-    object PutBackToInventory : ClickDecision()
+    object PutBackToInventory : ClickDecision
 
     /** 菜单源光标落入背包区 → 派发 SlotTakeEvent。 */
-    class DropToInventory(val windowSlot: Int) : ClickDecision()
+    class DropToInventory(val windowSlot: Int) : ClickDecision
 }
 
 /** 箱子窗口中玩家背包区的窗口槽位范围（27 主背包 + 9 热键栏，共 36）。 */

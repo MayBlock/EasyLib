@@ -12,9 +12,9 @@ class InteractEvent(
     val type: InteractionType
 ) : SlotClickEvent(menu, index, player)
 
-sealed class InteractionType {
-    class Inventory(val type: ClickType) : InteractionType()
-    class Interact(val action: Action) : InteractionType() {
+sealed interface InteractionType {
+    class Inventory(val type: ClickType) : InteractionType
+    class Interact(val action: Action) : InteractionType {
         enum class Action {
             LEFT_CLICK,
             RIGHT_CLICK,

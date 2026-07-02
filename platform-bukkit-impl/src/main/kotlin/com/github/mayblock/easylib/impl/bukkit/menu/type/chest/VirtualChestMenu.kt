@@ -16,6 +16,7 @@ import com.github.mayblock.easylib.packetevents.packet.dsl.PacketScope
 import com.github.retrooper.packetevents.event.PacketListener
 import com.github.retrooper.packetevents.event.PacketReceiveEvent
 import com.github.retrooper.packetevents.event.PacketSendEvent
+import com.github.retrooper.packetevents.event.UserDisconnectEvent
 import com.github.retrooper.packetevents.protocol.item.ItemStack
 import com.github.retrooper.packetevents.protocol.packettype.PacketType
 import com.github.retrooper.packetevents.wrapper.play.client.WrapperPlayClientClickWindow
@@ -140,6 +141,18 @@ internal class VirtualChestMenu(
                         }
                     }
                 }
+            }
+
+            /**
+             * 玩家直接断线（非关窗）时，服务端不会为纯虚拟菜单产生 CLOSE/CLICK 包，
+             * 故在此驱动与关窗一致的清理：移除观察者并把其菜单源虚拟光标物品归还来源槽位
+             * （广播给其余观察者），避免共享菜单永久丢失 movable 物品与 per-player 光标映射泄漏。
+             * 不调用 updateInventory（玩家已离开）。
+             */
+            override fun onUserDisconnect(e: UserDisconnectEvent) {
+                val uuid = e.user.uuid ?: return
+                val player = activeViewers.firstOrNull { it.uniqueId == uuid } ?: return
+                if (removeViewer(player)) clickEngine.onViewerRemoved(player)
             }
         })
 
