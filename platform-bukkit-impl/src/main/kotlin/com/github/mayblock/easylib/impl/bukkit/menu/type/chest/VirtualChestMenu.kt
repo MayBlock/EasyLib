@@ -1,6 +1,5 @@
 package com.github.mayblock.easylib.impl.bukkit.menu.type.chest
 
-import com.github.mayblock.easylib.api.bukkit.menu.slot.InventoryClickEvent
 import com.github.mayblock.easylib.api.bukkit.menu.type.chest.ChestMenu
 import com.github.mayblock.easylib.api.bukkit.menu.type.chest.ChestMenuType
 import com.github.mayblock.easylib.api.scheduler.TaskScheduler
@@ -9,6 +8,7 @@ import com.github.mayblock.easylib.impl.bukkit.BukkitEasyLib
 import com.github.mayblock.easylib.impl.bukkit.menu.*
 import com.github.mayblock.easylib.impl.bukkit.menu.slot.SlotSpec
 import com.github.mayblock.easylib.impl.bukkit.packet.extension.getBukkitClickType
+import com.github.mayblock.easylib.impl.bukkit.util.fromBukkit
 import com.github.mayblock.easylib.impl.bukkit.util.sendPackets
 import com.github.mayblock.easylib.impl.util.extension.ifTrue
 import com.github.mayblock.easylib.packetevents.packet.ContainerType
@@ -31,9 +31,21 @@ internal class VirtualChestMenu(
     override val type: ChestMenuType,
     specs: Map<Int, SlotSpec>,
     private val hidePlayerInventory: Boolean = true,
-) : AbstractVirtualMenu(taskScheduler, specs), ChestMenu {
+) : AbstractVirtualMenu(taskScheduler, specs), ChestMenu, ChestClickRenderer {
 
     override val windowId = windowIdCounter.getAndIncrement()
+
+    private val clickEngine = ChestClickEngine(
+        menu = this,
+        grid = grid,
+        menuSize = type.size,
+        hidePlayerInventory = hidePlayerInventory,
+        hasPlaceableSlot = specs.values.any { it.placeable },
+        scheduler = taskScheduler,
+        publish = ::publish,
+        renderer = this,
+        isViewing = { it in activeViewers },
+    )
 
     init {
         requirePlaceableVisible(hidePlayerInventory, specs)
@@ -62,8 +74,45 @@ internal class VirtualChestMenu(
     }
 
     override fun onClose(player: Player) {
+        clickEngine.onViewerRemoved(player)
         player.updateInventory()
     }
+
+    // ── ChestClickRenderer ───────────────────────────────────────────
+
+    override fun repaintSlot(index: Int) = repaint(index)
+
+    override fun sendCursor(player: Player, item: org.bukkit.inventory.ItemStack?) {
+        player.sendPackets {
+            forPlayer { updateCursorItem(item?.takeUnless { it.isEmptyStack() }?.fromBukkit()) }
+        }
+    }
+
+    override fun sendWindowSlotEmpty(player: Player, windowSlot: Int) {
+        player.sendPackets { forPlayer { updateItem(windowId, windowSlot, ItemStack.EMPTY) } }
+    }
+
+    override fun resyncSlots(player: Player, slots: Collection<Int>) {
+        val (menuArea, bottomArea) = slots.distinct().partition { it < type.size }
+        player.sendPackets {
+            forPlayer {
+                menuArea.forEach { updateItem(windowId, it, grid.packetItem(it)) }
+                if (hidePlayerInventory) bottomArea.forEach { updateItem(windowId, it, ItemStack.EMPTY) }
+            }
+        }
+        if (!hidePlayerInventory && bottomArea.isNotEmpty()) player.updateInventory()
+    }
+
+    override fun resyncBottomAfterTransfer(player: Player, clickedWindowSlot: Int) {
+        if (hidePlayerInventory) sendWindowSlotEmpty(player, clickedWindowSlot)
+        else player.updateInventory()
+    }
+
+    override fun updatePlayerInventory(player: Player) {
+        player.updateInventory()
+    }
+
+    // ── 包监听 ───────────────────────────────────────────────────────
 
     override fun registerPacketListener(): Disposable =
         BukkitEasyLib.api.packetManager.registerListener(object : PacketListener {
@@ -86,7 +135,9 @@ internal class VirtualChestMenu(
                 when (e.packetType) {
                     PacketType.Play.Server.OPEN_WINDOW -> {
                         val packet = WrapperPlayServerOpenWindow(e)
-                        if (packet.containerId != windowId) removeViewer(player)
+                        if (packet.containerId != windowId && removeViewer(player)) {
+                            clickEngine.onViewerRemoved(player)
+                        }
                     }
                 }
             }
@@ -94,25 +145,26 @@ internal class VirtualChestMenu(
 
     private fun handleCloseWindow(player: Player, packet: WrapperPlayClientCloseWindow): Boolean {
         if (packet.windowId != windowId) return false
-        return removeViewer(player).ifTrue { player.updateInventory() }
+        return removeViewer(player).ifTrue {
+            clickEngine.onViewerRemoved(player)
+            player.updateInventory()
+        }
     }
 
+    /** Netty 线程：仅做归属判断与快照调度；决策与副作用在主线程串行执行。 */
     private fun handleClickWindow(player: Player, packet: WrapperPlayClientClickWindow): Boolean {
         if (packet.windowId != windowId) return false
         if (player !in activeViewers) return false
-        val involvedSlots = packet.hashedSlots.keys
-        val clickType = packet.getBukkitClickType()
-        involvedSlots.forEach { slot ->
-            publish(InventoryClickEvent(this, player, slot, clickType))
-        }
-        player.sendPackets {
-            forPlayer {
-                updateCursorItem(null)
-                involvedSlots.forEach { slot ->
-                    updateItem(windowId, slot, grid.packetItem(slot))
-                }
-            }
-        }
+        clickEngine.submit(
+            player,
+            ChestClickEngine.ClickSnapshot(
+                windowSlot = packet.slot,
+                button = packet.button,
+                clickType = packet.windowClickType,
+                involvedSlots = packet.hashedSlots.keys.toList(),
+                bukkitClickType = packet.getBukkitClickType(),
+            ),
+        )
         return true
     }
 
