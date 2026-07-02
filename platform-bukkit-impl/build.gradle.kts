@@ -3,11 +3,6 @@ plugins {
     id("buildsrc.convention.repos")
 }
 
-repositories {
-    // Paper API is compileOnly in MockBukkit — must supply it from Paper's own repo.
-    maven("https://repo.papermc.io/repository/maven-public/")
-}
-
 dependencies {
     api(project(":platform-bukkit-api"))
     implementation(project(":common-impl"))
@@ -19,7 +14,7 @@ dependencies {
     testImplementation(kotlin("test"))
     testImplementation(libs.bundles.mockk)
     // Paper API supersedes spigot-api for test runtime; they conflict as capabilities.
-    testImplementation("io.papermc.paper:paper-api:26.1.2.build.57-stable")
+    testImplementation(libs.paper.api)
     testImplementation("org.mockbukkit.mockbukkit:mockbukkit-v26.1.2:4.113.1")
     testImplementation(libs.packetEvents.spigot)
 }
