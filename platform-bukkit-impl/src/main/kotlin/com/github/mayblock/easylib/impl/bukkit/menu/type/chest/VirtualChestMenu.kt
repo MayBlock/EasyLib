@@ -30,11 +30,13 @@ internal class VirtualChestMenu(
     override val title: Component,
     override val type: ChestMenuType,
     specs: Map<Int, SlotSpec>,
+    private val hidePlayerInventory: Boolean = true,
 ) : AbstractVirtualMenu(taskScheduler, specs), ChestMenu {
 
     override val windowId = windowIdCounter.getAndIncrement()
 
     init {
+        requirePlaceableVisible(hidePlayerInventory, specs)
         startMenu()
     }
 
@@ -45,7 +47,7 @@ internal class VirtualChestMenu(
                 forPlayer {
                     containerOpen(windowId, ContainerType.getByTypeId(type.ordinal)!!, title)
                     syncMenuItems()
-                    hidePlayerInventoryItems()
+                    if (hidePlayerInventory) hidePlayerInventoryItems()
                 }
             }
         }
@@ -119,7 +121,7 @@ internal class VirtualChestMenu(
     }
 
     private fun PacketScope.PlayerPacketScope.hidePlayerInventoryItems() {
-        for (i in type.size - 1 until type.size + 36) {
+        for (i in playerInventoryWindowSlots(type.size)) {
             containerSetSlot(windowId, 0, i, ItemStack.EMPTY)
         }
     }

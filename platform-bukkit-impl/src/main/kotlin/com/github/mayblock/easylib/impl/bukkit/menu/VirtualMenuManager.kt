@@ -34,10 +34,14 @@ class VirtualMenuManager(private val taskScheduler: TaskScheduler) : MenuFactory
             }.apply(builder).build()
         )
 
-    override fun createChestMenu(type: ChestMenuType, builder: PageableChestMenuScope.() -> Unit): com.github.mayblock.easylib.api.bukkit.menu.type.chest.ChestMenu =
+    override fun createChestMenu(
+        type: ChestMenuType,
+        hidePlayerInventory: Boolean,
+        builder: PageableChestMenuScope.() -> Unit,
+    ): com.github.mayblock.easylib.api.bukkit.menu.type.chest.ChestMenu =
         register(
             PageableChestMenuBuilder(type) { title, slots ->
-                VirtualChestMenu(taskScheduler, title, type, slots)
+                VirtualChestMenu(taskScheduler, title, type, slots, hidePlayerInventory)
             }.apply(builder).build()
         )
 
