@@ -19,17 +19,20 @@ internal class LiveSlot(private val spec: SlotSpec) {
     val placeable: Boolean get() = spec.placeable
 
     private var lastBukkitItem: org.bukkit.inventory.ItemStack? = null
-    private var cachedPacketItem: ItemStack = ItemStack.EMPTY
+    // Lazily computed on first packetItem() call — avoids triggering PacketEvents static
+    // initialisation (ItemStack.EMPTY) during construction, which requires a live PacketEvents API.
+    private var cachedPacketItem: ItemStack? = null
 
     fun packetItem(): ItemStack {
         val current = item
-        if (current === lastBukkitItem) return cachedPacketItem
+        if (current === lastBukkitItem) return cachedPacketItem!!
         if (current == lastBukkitItem) {
             lastBukkitItem = current
-            return cachedPacketItem
+            return cachedPacketItem!!
         }
-        cachedPacketItem = current.fromBukkit()
+        val packet = current.fromBukkit()
+        cachedPacketItem = packet
         lastBukkitItem = current
-        return cachedPacketItem
+        return packet
     }
 }

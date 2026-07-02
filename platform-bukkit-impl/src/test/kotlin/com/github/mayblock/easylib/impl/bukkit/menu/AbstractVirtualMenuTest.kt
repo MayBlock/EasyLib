@@ -11,6 +11,9 @@ import io.mockk.mockk
 import org.bukkit.Material
 import org.bukkit.entity.Player
 import org.bukkit.inventory.ItemStack
+import org.mockbukkit.mockbukkit.MockBukkit
+import kotlin.test.AfterTest
+import kotlin.test.BeforeTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
@@ -30,6 +33,9 @@ private class TestMenu(
 }
 
 class AbstractVirtualMenuTest {
+
+    @BeforeTest fun setUp() { MockBukkit.mock() }
+    @AfterTest fun tearDown() { MockBukkit.unmock() }
 
     private fun specOf(item: ItemStack, block: SlotBuilder<InventoryClickEvent>.() -> Unit = {}): SlotSpec =
         SlotBuilder(InventoryClickEvent::class.java).apply(block).build(item)
