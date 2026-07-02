@@ -149,6 +149,7 @@ class ChestClickEngineTest {
         click(engine, p, 5)
         assertTrue(grid[5]!!.item.type.isAir)
         assertEquals(Material.EMERALD, engine.cursorOf(p)!!.item.type)
+        assertEquals(listOf(27), renderer.bottomResyncs)
     }
 
     @Test
@@ -185,6 +186,35 @@ class ChestClickEngineTest {
         assertEquals(Material.DIAMOND, grid[5]!!.item.type)
         assertEquals(1, renderer.resyncedSlots.size)
         assertTrue(events.single() is InventoryClickEvent) // 兼容：信息性事件照发
+    }
+
+    @Test
+    fun `菜单源光标放入空 placeable 槽位：纯虚拟提交，不派发 SlotPlaceEvent`() {
+        val (engine, grid) = engine(mapOf(
+            2 to spec(ItemStack(Material.STONE, 4), movable = true),
+            5 to spec(ItemStack(Material.AIR), placeable = true),
+        ))
+        val p = player()
+        click(engine, p, 2) // 拿起 STONE 全部（来源槽 2）
+        click(engine, p, 5) // 放入空 placeable 槽 5
+        assertEquals(Material.STONE, grid[5]!!.item.type)
+        assertEquals(4, grid[5]!!.item.amount)
+        assertNull(engine.cursorOf(p))
+        assertTrue(events.filterIsInstance<SlotPlaceEvent>().isEmpty())
+    }
+
+    @Test
+    fun `异类交换：光标与菜单槽位物品对调（纯虚拟，无边界事件）`() {
+        val (engine, grid) = engine(mapOf(
+            2 to spec(ItemStack(Material.STONE, 1), movable = true),
+            5 to spec(ItemStack(Material.DIRT, 1), movable = true, placeable = true),
+        ))
+        val p = player()
+        click(engine, p, 2) // 拿起 STONE（来源槽 2）
+        click(engine, p, 5) // 落到持有 DIRT 的槽 5 → 交换
+        assertEquals(Material.STONE, grid[5]!!.item.type)
+        assertEquals(Material.DIRT, engine.cursorOf(p)!!.item.type)
+        assertTrue(events.none { it is SlotTakeEvent || it is SlotPlaceEvent })
     }
 
     @Test

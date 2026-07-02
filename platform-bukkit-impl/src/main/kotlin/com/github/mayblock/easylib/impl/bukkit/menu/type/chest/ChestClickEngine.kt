@@ -176,6 +176,7 @@ internal class ChestClickEngine(
             if (event.isCancelled) {
                 renderer.sendCursor(player, cursor.item)
                 renderer.repaintSlot(d.slot)
+                renderer.resyncBottomAfterTransfer(player, sourceWindowSlot)
                 return
             }
         }
