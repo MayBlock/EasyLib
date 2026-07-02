@@ -193,7 +193,38 @@ per-player 虚拟光标：`CursorStack(item: ItemStack, origin: Origin)`，`Orig
 - 默认值（`hidePlayerInventory = true`、两 flag 为 false）下运行时行为与现状一致（除 off-by-one 修复：最后一个菜单 slot 不再被误清）。
 - `Menu` 接口新增两个方法，对库外部自定义 `Menu` 实现是源不兼容的（本库设计上不支持外部实现 `Menu`，实例只应经 `MenuFactory` 创建）。
 
-## 9. 不做的事（Out of Scope）
+## 9. 最小使用案例
+
+```kotlin
+val factory = EasyLibApi.api.bukkitApi().menuFactory
+
+val trade = factory.createChestMenu(ChestMenuType.GENERIC_9X3, hidePlayerInventory = false) {
+    page(Component.text("交易")) {
+        // 可被拿走的奖励：回调负责真实给予
+        slot(11, ItemStack(Material.DIAMOND), movable = true) {
+            onTake {                                        // this: SlotTakeEvent(item, targetSlot, ...)
+                if (player.inventory.addItem(item).isNotEmpty()) isCancelled = true  // 背包满 → 取消
+            }
+        }
+        // 玩家可放入物品的投入口（初始为空）：回调负责真实扣除
+        slot(15, ItemStack(Material.AIR), placeable = true) {
+            onPlace {                                       // this: SlotPlaceEvent(item, sourceSlot, ...)
+                val src = player.inventory.getItem(sourceSlot)
+                if (src?.isSimilar(item) != true || src.amount < item.amount) { isCancelled = true; return@onPlace }
+                if (src.amount == item.amount) player.inventory.setItem(sourceSlot, null)
+                else src.amount -= item.amount              // 右键放置可能只放入部分数量
+            }
+        }
+        closeButton(26)
+    }
+}
+trade.open(player)
+
+val deposited: ItemStack? = trade.getItem(15)   // 读取玩家放入的物品（AIR/未声明 → null）
+trade.setItem(15, null)                          // 清空并 repaint
+```
+
+## 10. 不做的事（Out of Scope）
 
 - `PlayerInventoryMenu` 的交互能力。
 - shift-快移 / 数字键 / 双击收集 / 拖拽的语义支持（保持取消+重刷）。
