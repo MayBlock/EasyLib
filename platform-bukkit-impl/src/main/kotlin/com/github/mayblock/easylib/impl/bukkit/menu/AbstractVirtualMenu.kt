@@ -10,7 +10,9 @@ import com.github.mayblock.easylib.api.scheduler.TaskScheduler
 import com.github.mayblock.easylib.api.util.Disposable
 import com.github.mayblock.easylib.impl.bukkit.menu.slot.SlotSpec
 import com.github.mayblock.easylib.impl.event.SimpleEventBus
+import org.bukkit.Material
 import org.bukkit.entity.Player
+import org.bukkit.inventory.ItemStack
 
 /**
  * 两类虚拟菜单的共用机制：菜单级事件总线（仅暴露订阅侧）、观察者集合、槽网格、更新循环、
@@ -52,6 +54,15 @@ internal abstract class AbstractVirtualMenu(
     protected fun startMenu() {
         updateLoop.start()
         packetListener = registerPacketListener()
+    }
+
+    final override fun getItem(index: Int): ItemStack? =
+        grid[index]?.item?.takeUnless { it.isEmptyStack() }
+
+    final override fun setItem(index: Int, item: ItemStack?) {
+        val slot = requireNotNull(grid[index]) { "slot $index is not declared on this menu" }
+        slot.item = item ?: ItemStack(Material.AIR)
+        repaint(index)
     }
 
     protected fun publish(event: MenuEvent) = bus.emit(event)

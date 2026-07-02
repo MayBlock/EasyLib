@@ -15,6 +15,8 @@ internal class LiveSlot(private val spec: SlotSpec) {
 
     val clickHandlers: List<ClickHandler> get() = spec.clickHandlers
     val updateRules: List<UpdateRule> get() = spec.updateRules
+    val movable: Boolean get() = spec.movable
+    val placeable: Boolean get() = spec.placeable
 
     private var lastBukkitItem: org.bukkit.inventory.ItemStack? = null
     private var cachedPacketItem: ItemStack = ItemStack.EMPTY

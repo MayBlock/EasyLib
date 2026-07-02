@@ -11,3 +11,7 @@ internal fun PacketScope.PlayerPacketScope.updateCursorItem(item: ItemStack?) {
 internal fun PacketScope.PlayerPacketScope.updateItem(windowId: Int, slot: Int, item: ItemStack) {
     containerSetSlot(windowId, 0, slot, item)
 }
+
+/** Bukkit 物品「空」判定：null、AIR 系或数量非正。 */
+internal fun org.bukkit.inventory.ItemStack?.isEmptyStack(): Boolean =
+    this == null || type.isAir || amount <= 0
