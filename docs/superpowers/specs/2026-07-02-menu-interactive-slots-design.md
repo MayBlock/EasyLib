@@ -156,7 +156,7 @@ per-player 虚拟光标：`CursorStack(item: ItemStack, origin: Origin)`，`Orig
 
 ### 5.3 线程模型
 
-`CLICK_WINDOW` 到达 Netty 线程：仅做 windowId 匹配 + `e.isCancelled = true` + 调度。状态机全部经 `scheduler.scheduleTask { onTick = { … } }`（`Trigger.Once`、同步）落到**主线程**执行（含纯虚拟分支），统一规避共享 grid 的复合写竞态，并让回调天然处于主线程（可安全操作 Bukkit API）。处理期间同一玩家的新点击直接拒绝+重刷（per-player pending 标志，主线程置/清）。包发送在主线程进行（`playerManager.sendPacket` 线程安全）。
+`CLICK_WINDOW` 到达 Netty 线程：仅做 windowId 匹配 + `e.isCancelled = true` + 调度。状态机全部经 `scheduler.scheduleTask { onTick = { … } }`（`Trigger.Once`、同步）落到**主线程**执行（含纯虚拟分支），统一规避共享 grid 的复合写竞态，并让回调天然处于主线程（可安全操作 Bukkit API）。点击处理任务经调度器在主线程串行执行，天然互斥，无需额外 pending 标志；处理时校验 `player.isOnline` 与观看状态，过期点击自然丢弃。包发送在主线程进行（`playerManager.sendPacket` 线程安全）。
 
 兼容性：现有 `InventoryClickEvent` 对所有点击**照常发布**（发布时机随状态机移至主线程；此前在 Netty 线程发布，对行为良好的处理器无影响，KDoc 注明）。事件顺序：同一次点击先发布信息性的 `InventoryClickEvent`（不可取消，维持现状），后发布可取消的边界事件（`SlotTakeEvent`/`SlotPlaceEvent`），由后者决定 commit。实现时需核实 `SimpleEventBus` 的类型匹配语义（精确类 vs `isAssignableFrom`），确保 `onClick`（`InventoryClickEvent`）监听不会误收 take/place 事件（两者是 `SlotClickEvent` 的兄弟子类，正常匹配下互不干扰）。
 
@@ -174,7 +174,7 @@ per-player 虚拟光标：`CursorStack(item: ItemStack, origin: Origin)`，`Orig
 
 - `hidePlayerInventory = true` 且任何页声明了 `placeable` slot：静态矛盾（背包不可见则玩家永远无法拿起物品来放置），构建时 `require` 失败并给出明确消息。
 - `movable`/`placeable` 对 `ItemStack(AIR)` 初始 slot 合法（placeable 的典型形态）。
-- 事件回调抛异常：按"已取消"处理（回滚 + 日志），保证虚拟状态不被插件 bug 破坏。
+- 事件回调抛异常：`SimpleEventBus` 会捕获监听器异常并记日志（不外传），因此经 `onTake`/`onPlace` DSL 注册的回调由构建器包装——异常时先将事件置为取消再重新抛出（日志仍由总线负责），保证「虚拟层不因半失败的真实操作而提交」；经 `menu.on{}` 直接订阅的监听器不受此包装，其异常安全由订阅方自理。
 - commit 前校验 `player.isOnline` 与 `player in activeViewers`，不满足则丢弃本次操作。
 
 ## 7. 测试策略
