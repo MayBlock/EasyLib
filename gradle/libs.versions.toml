@@ -24,6 +24,7 @@ kotlinxDatetime = { module = "org.jetbrains.kotlinx:kotlinx-datetime", version.r
 kotlinxCoroutines = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-core", version.ref = "kotlinxCoroutines" }
 clikt-core = { module = "com.github.ajalt.clikt:clikt-core", version.ref = "clikt" }
 adventure-api = { module = "net.kyori:adventure-api", version.ref = "adventureApi" }
+adventure-serializer-legacy = { module = "net.kyori:adventure-text-serializer-legacy", version.ref = "adventureApi" }
 packetEvents-api = { module = "com.github.retrooper:packetevents-api", version.ref = "packetEvents" }
 packetEvents-spigot = { module = "com.github.retrooper:packetevents-spigot", version.ref = "packetEvents" }
 fastboard = { module = "fr.mrmicky:fastboard", version.ref = "fastboard" }

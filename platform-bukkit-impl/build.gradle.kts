@@ -10,6 +10,7 @@ dependencies {
     compileOnly("org.spigotmc:spigot-api:26.1.2-R0.1-SNAPSHOT")
     compileOnly(libs.packetEvents.spigot)
     implementation(libs.nbtApi)
+    compileOnly(libs.adventure.serializer.legacy)
     implementation(libs.fastboard)
     testImplementation(kotlin("test"))
     testImplementation(libs.bundles.mockk)
