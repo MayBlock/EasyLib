@@ -51,6 +51,10 @@ internal class RealChestMenu(
     private val updateTaskIds = mutableListOf<Int>()
 
     init {
+        // placeable 槽位与背包隐藏互斥：构建期即报错，避免运行时永远无法放置
+        require(!(hidePlayerInventory && specs.values.any { it.placeable })) {
+            "placeable slots require hidePlayerInventory = false"
+        }
         // 初始物品写入真实容器
         specs.forEach { (index, spec) -> if (!spec.item.isEmptyStack()) bukkitInventory.setItem(index, spec.item) }
         // slot 声明的点击处理器挂到菜单总线（按 index 过滤）
