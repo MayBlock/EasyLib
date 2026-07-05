@@ -7,6 +7,7 @@ import com.github.mayblock.easylib.api.bukkit.menu.slot.SlotClickEvent
 import com.github.mayblock.easylib.api.bukkit.menu.slot.InventoryClickEvent
 import com.github.mayblock.easylib.api.bukkit.menu.slot.SlotTakeEvent
 import com.github.mayblock.easylib.api.bukkit.menu.slot.SlotPlaceEvent
+import com.github.mayblock.easylib.api.bukkit.menu.slot.SlotUpdateEvent
 import com.github.mayblock.easylib.api.bukkit.menu.type.chest.ChestMenu
 import com.github.mayblock.easylib.api.bukkit.menu.type.chest.ChestMenuType
 import com.github.mayblock.easylib.api.event.EventListener
@@ -47,6 +48,8 @@ internal class RealChestMenu(
     private var destroyed = false
     override val isDestroyed: Boolean get() = destroyed
 
+    private val updateTaskIds = mutableListOf<Int>()
+
     init {
         // 初始物品写入真实容器
         specs.forEach { (index, spec) -> if (!spec.item.isEmptyStack()) bukkitInventory.setItem(index, spec.item) }
@@ -56,6 +59,7 @@ internal class RealChestMenu(
                 bus.subscribe(EventListener<SlotClickEvent>(handler.type, null, { if (index == this.index) handler.block(this) }, handler.priority))
             }
         }
+        startUpdates()
     }
 
     override fun getInventory(): Inventory = bukkitInventory
@@ -85,6 +89,7 @@ internal class RealChestMenu(
     override fun destroy() {
         if (destroyed) return
         bukkitInventory.viewers.toList().forEach { it.closeInventory() }
+        stopUpdates()
         bus.unsubscribeAll()
         destroyed = true
     }
@@ -172,5 +177,26 @@ internal class RealChestMenu(
     fun handleClose(player: Player) {
         publishClose(player)
         if (hidePlayerInventory) player.updateInventory()
+    }
+
+    private fun startUpdates() {
+        specs.forEach { (index, spec) ->
+            spec.updateRules.forEach { rule ->
+                updateTaskIds += taskScheduler.scheduleTask {
+                    trigger = rule.trigger
+                    isAsync = false // 真实容器 setItem 必须主线程
+                    onTick = {
+                        val current = bukkitInventory.getItem(index) ?: ItemStack(Material.AIR)
+                        val event = SlotUpdateEvent(this@RealChestMenu, index, current.clone()).apply(rule.block)
+                        if (event.item != current) bukkitInventory.setItem(index, event.item)
+                    }
+                }
+            }
+        }
+    }
+
+    private fun stopUpdates() {
+        updateTaskIds.forEach(taskScheduler::cancelTask)
+        updateTaskIds.clear()
     }
 }
