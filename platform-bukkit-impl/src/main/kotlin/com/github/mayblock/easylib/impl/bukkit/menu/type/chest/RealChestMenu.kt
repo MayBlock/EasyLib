@@ -51,8 +51,6 @@ internal class RealChestMenu(
     val bukkitInventory: Inventory =
         Bukkit.createInventory(this, type.size, LegacyComponentSerializer.legacySection().serialize(title))
 
-    val hideInventory: Boolean get() = hidePlayerInventory
-
     private var destroyed = false
     override val isDestroyed: Boolean get() = destroyed
 
@@ -126,14 +124,15 @@ internal class RealChestMenu(
         player.openInventory(bukkitInventory) // 触发 InventoryOpenEvent → 监听器 publishOpen
     }
 
-    override fun getItem(index: Int): ItemStack? = bukkitInventory.getItem(index)?.takeUnless { it.isEmptyStack() }
+    override fun getItem(index: Int): ItemStack? {
+        require(index in 0 until type.size) { "slot $index out of range [0, ${type.size})" }
+        return bukkitInventory.getItem(index)?.takeUnless { it.isEmptyStack() }
+    }
 
     override fun setItem(index: Int, item: ItemStack?) {
         require(index in 0 until type.size) { "slot $index out of range [0, ${type.size})" }
         bukkitInventory.setItem(index, item ?: ItemStack(Material.AIR))
     }
-
-    fun publish(event: MenuEvent) = bus.emit(event)
 
     fun publishOpen(player: Player) {
         if (hidePlayerInventory) {
@@ -157,8 +156,6 @@ internal class RealChestMenu(
         bus.unsubscribeAll()
         destroyed = true
     }
-
-    val scheduler: TaskScheduler get() = taskScheduler
 
     /** 由 [MenuInteractionListener] 在主线程调用：按放行门决策处理一次点击。 */
     fun handleClick(e: org.bukkit.event.inventory.InventoryClickEvent) {
@@ -185,10 +182,14 @@ internal class RealChestMenu(
                 if (ev.isCancelled) e.isCancelled = true
             }
             is SlotDecision.FireSwap -> {
+                // swap 与 drag 的观察者回调应无副作用，因为 Bukkit 的原子性使某个观察者
+                // 可能在稍后整体取消前已触发。此处短路：take 取消时不再派发 place。
                 val take = SlotTakeEvent(this, decision.slot, player, (e.currentItem ?: ItemStack(Material.AIR)).clone(), targetSlot = -1)
+                bus.emit(take)
+                if (take.isCancelled) { e.isCancelled = true; return }
                 val place = SlotPlaceEvent(this, decision.slot, player, (e.cursor ?: ItemStack(Material.AIR)).clone(), sourceSlot = -1)
-                bus.emit(take); bus.emit(place)
-                if (take.isCancelled || place.isCancelled) e.isCancelled = true
+                bus.emit(place)
+                if (place.isCancelled) e.isCancelled = true
             }
             is SlotDecision.ShiftIntoMenu -> {
                 e.isCancelled = true

@@ -13,11 +13,13 @@ import kotlin.test.BeforeTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
+import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 
 class VirtualMenuManagerChestTest {
 
-    @BeforeTest fun setUp() { MockBukkit.mock() }
+    private lateinit var server: org.mockbukkit.mockbukkit.ServerMock
+    @BeforeTest fun setUp() { server = MockBukkit.mock() }
     @AfterTest fun tearDown() { MockBukkit.unmock() }
 
     private fun manager() = VirtualMenuManager(mockk<TaskScheduler>(relaxed = true), MockBukkit.createMockPlugin())
@@ -38,5 +40,20 @@ class VirtualMenuManagerChestTest {
                 page(Component.text("t")) { slot(0, Material.AIR, placeable = true) }
             }
         }
+    }
+
+    @Test
+    fun `关闭事件经监听器清理活跃菜单`() {
+        val mgr = manager()
+        val menu = mgr.createChestMenu(ChestMenuType.GENERIC_9X3, hidePlayerInventory = false) {
+            page(Component.text("t")) { slot(0, Material.DIAMOND) }
+        } as RealChestMenu
+        val p = server.addPlayer()
+        val view = p.openInventory(menu.bukkitInventory)!!
+        val listener = com.github.mayblock.easylib.impl.bukkit.menu.MenuInteractionListener()
+        listener.onOpen(org.bukkit.event.inventory.InventoryOpenEvent(view))
+        assertTrue(mgr.hasActiveMenu(p))
+        listener.onClose(org.bukkit.event.inventory.InventoryCloseEvent(view))
+        assertFalse(mgr.hasActiveMenu(p))
     }
 }

@@ -56,8 +56,8 @@ class VirtualMenuManager(
     }
 
     override fun close() {
-        HandlerList.unregisterAll(listener)
         menus.forEach { it.destroy() }
+        HandlerList.unregisterAll(listener)
         menus.clear()
         activeMenus.clear()
     }
