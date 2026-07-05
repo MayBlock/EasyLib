@@ -13,9 +13,16 @@ import com.github.mayblock.easylib.api.bukkit.menu.type.chest.ChestMenuType
 import com.github.mayblock.easylib.api.event.EventListener
 import com.github.mayblock.easylib.api.event.EventSource
 import com.github.mayblock.easylib.api.scheduler.TaskScheduler
+import com.github.mayblock.easylib.api.util.Disposable
+import com.github.mayblock.easylib.impl.bukkit.BukkitEasyLib
 import com.github.mayblock.easylib.impl.bukkit.menu.isEmptyStack
 import com.github.mayblock.easylib.impl.bukkit.menu.slot.SlotSpec
 import com.github.mayblock.easylib.impl.event.SimpleEventBus
+import com.github.retrooper.packetevents.event.PacketListener
+import com.github.retrooper.packetevents.event.PacketSendEvent
+import com.github.retrooper.packetevents.protocol.packettype.PacketType
+import com.github.retrooper.packetevents.wrapper.play.server.WrapperPlayServerSetSlot
+import com.github.retrooper.packetevents.wrapper.play.server.WrapperPlayServerWindowItems
 import net.kyori.adventure.text.Component
 import net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer
 import org.bukkit.Bukkit
@@ -25,6 +32,7 @@ import org.bukkit.event.inventory.ClickType
 import org.bukkit.inventory.Inventory
 import org.bukkit.inventory.InventoryHolder
 import org.bukkit.inventory.ItemStack
+import java.util.concurrent.ConcurrentHashMap
 
 /**
  * 真实容器版箱子菜单：自身即 [InventoryHolder]，持一个真实 [Inventory]（多观看者共享）。
@@ -49,6 +57,49 @@ internal class RealChestMenu(
     override val isDestroyed: Boolean get() = destroyed
 
     private val updateTaskIds = mutableListOf<Int>()
+
+    /** 当前正在观看本菜单且需屏蔽背包的玩家集合（线程安全）。 */
+    private val hideViewers = ConcurrentHashMap.newKeySet<Player>()
+
+    /**
+     * hide=true 时注册的发包拦截订阅；destroy 时释放。
+     * 使用懒初始化：首次打开（publishOpen）时触发，避免构造期访问 BukkitEasyLib.api，
+     * 保持对无 BukkitEasyLib 环境（如 MockBukkit 单元测试）的兼容性。
+     */
+    private val hidePacketSubDelegate: Lazy<Disposable?> =
+        lazy { if (hidePlayerInventory) registerHideListener() else null }
+    private val hidePacketSub: Disposable? by hidePacketSubDelegate
+
+    /**
+     * 注册发包拦截：对 [hideViewers] 中的玩家，将容器窗口（windowId != 0）的
+     * WINDOW_ITEMS / SET_SLOT 包中玩家背包区（>= type.size）的物品替换为空气。
+     * 与 VirtualPlayerInventoryMenu 相同模式，但 windowId 判定相反。
+     */
+    private fun registerHideListener(): Disposable =
+        BukkitEasyLib.api.packetManager.registerListener(object : PacketListener {
+            override fun onPacketSend(e: PacketSendEvent) {
+                val player = e.getPlayer() as? Player ?: return
+                if (player !in hideViewers) return
+                when (e.packetType) {
+                    PacketType.Play.Server.WINDOW_ITEMS -> {
+                        val packet = WrapperPlayServerWindowItems(e)
+                        if (packet.windowId == 0) return
+                        val items = packet.items.toMutableList()
+                        for (i in hiddenBottomIndices(type.size, items.size)) {
+                            items[i] = com.github.retrooper.packetevents.protocol.item.ItemStack.EMPTY
+                        }
+                        packet.items = items
+                    }
+                    PacketType.Play.Server.SET_SLOT -> {
+                        val packet = WrapperPlayServerSetSlot(e)
+                        if (packet.windowId == 0) return
+                        if (packet.slot >= type.size) {
+                            packet.item = com.github.retrooper.packetevents.protocol.item.ItemStack.EMPTY
+                        }
+                    }
+                }
+            }
+        })
 
     init {
         // placeable 槽位与背包隐藏互斥：构建期即报错，避免运行时永远无法放置
@@ -83,7 +134,15 @@ internal class RealChestMenu(
     }
 
     fun publish(event: MenuEvent) = bus.emit(event)
-    fun publishOpen(player: Player) = bus.emit(MenuOpenEvent(this, player))
+
+    fun publishOpen(player: Player) {
+        if (hidePlayerInventory) {
+            hidePacketSub // 首次打开时触发懒初始化，注册发包拦截器
+            hideViewers += player
+        }
+        bus.emit(MenuOpenEvent(this, player))
+    }
+
     fun publishClose(player: Player) = bus.emit(MenuCloseEvent(this, player))
 
     /** 仅测试用：直接派发一次 slot 点击事件，验证 index 过滤。 */
@@ -94,6 +153,7 @@ internal class RealChestMenu(
         if (destroyed) return
         bukkitInventory.viewers.toList().forEach { it.closeInventory() }
         stopUpdates()
+        if (hidePacketSubDelegate.isInitialized()) hidePacketSub?.dispose()
         bus.unsubscribeAll()
         destroyed = true
     }
@@ -177,8 +237,9 @@ internal class RealChestMenu(
         }
     }
 
-    /** 关窗/断线：publishClose + 若隐藏则恢复真实背包显示。 */
+    /** 关窗/断线：publishClose + 若隐藏则从 hideViewers 移除并恢复真实背包显示。 */
     fun handleClose(player: Player) {
+        hideViewers -= player
         publishClose(player)
         if (hidePlayerInventory) player.updateInventory()
     }
