@@ -61,6 +61,7 @@
 - **`RealChestMenu`**（impl，internal，替代 `VirtualChestMenu`）：实现 `ChestMenu`；持有 `Bukkit.createInventory(holder, type.size, legacyTitle)` 的真实 `Inventory`（多观看者共享此单一实例）；持菜单级事件总线（`SimpleEventBus<MenuEvent>`，用于外部 `menu.on{}` 订阅与内部 slot handler 派发，沿用现有 index 过滤注册）；持一个主线程更新循环。
 - **`MenuInteractionListener : Listener`**（impl，internal，注册在 plugin 上，全局单一实例）：监听 `InventoryClickEvent`/`InventoryDragEvent`/`InventoryOpenEvent`/`InventoryCloseEvent`，用 `event.inventory.holder as? MenuInventoryHolder` 找回菜单并转交处理。复用代码库既有模式（`ItemExtensionApiImpl` 已按 `InventoryHolder` 路由 `InventoryClickEvent`；`registerEvents(this, plugin)` + `HandlerList.unregisterAll`）。
 - **`ChestSlotGate`**（impl，internal，**纯逻辑、可单测**）：见 §4.3。
+- **`ShiftIntoMenuPlanner`**（impl，internal，**纯逻辑、可单测**）：给定被 shift 的来源物品 + 各 placeable 槽的当前内容（按索引有序），计算分发计划 `List<Placement(slotIndex, amount)>`（先填同类未满堆叠、再填空槽，遵守 `maxStackSize`，直至来源耗尽或无空间）。不含副作用；监听器据此逐槽触发 `SlotPlaceEvent` 并应用到真实 `Inventory`。
 - **`MenuManager`**（改造自 `VirtualMenuManager`）：仍实现 `MenuFactory`+`MenuRegistry`，构造 `RealChestMenu`；持有并注册/注销 `MenuInteractionListener`；因需注册 Bukkit 监听，构造函数新增 `plugin: Plugin` 参数（`BukkitEasyLib` 处已有 plugin 在作用域）。
 
 ### 4.3 per-slot 放行门（`ChestSlotGate`，纯逻辑）
@@ -73,19 +74,19 @@
 | `PLACE_*`（光标放入 slot）| 顶部且该 slot `placeable` → 放行；否则取消 |
 | `SWAP_WITH_CURSOR` | 顶部且 slot 同时 `movable && placeable` → 放行；否则取消 |
 | `DROP_*_SLOT`（从 slot 丢弃）| 顶部且 slot `movable` → 放行；否则取消 |
-| `MOVE_TO_OTHER_INVENTORY`（shift）| 点顶部：该 slot `movable` → 放行（移到玩家背包，触发 onTake）。点底部（shift 入菜单）：**v1 一律取消**——目标由 Bukkit 左到右分发到任意空/匹配顶部 slot（含不可变展示 slot），无法逐格约束；placeable 槽仍可用光标直接 `PLACE_*` 放入。「仅向 placeable 分发」的精细化推迟（§9）|
+| `MOVE_TO_OTHER_INVENTORY`（shift）| 点顶部：该 slot `movable` → 放行（Bukkit 原生移到玩家背包，触发 onTake）。点底部（shift 入菜单）：**取消 Bukkit 原生分发，改为手动受控分发**——按 slot 索引顺序**仅向 `placeable` 槽**分发（先填同类未满堆叠、再填空 placeable 槽，遵守 `maxStackSize`），每个目标槽触发可取消的 `SlotPlaceEvent`（取消则跳过该槽、继续下一个）；分发结束后把成功放入的量从来源背包槽扣除。若无任何可放置空间（placeable 槽全满/被异类占用/无 placeable 槽）→ 维持取消、不移动。分发计划由纯函数 `ShiftIntoMenuPlanner`（§4.2）计算，便于单测 |
 | `HOTBAR_SWAP`/`HOTBAR_MOVE_AND_READD`（数字键）| 点顶部：slot `movable && placeable` → 放行；否则取消 |
 | `COLLECT_TO_CURSOR`（双击收集）| 跨多格、**保守取消**（v1） |
 | `CLONE_STACK`（创造中键）| 取消（防创造复制） |
 | `NOTHING`/`UNKNOWN` | 取消 |
 | 底部（玩家背包）非跨容器的普通点击 | `hidePlayerInventory=true`：取消（背包已被数据包屏蔽，不应操作被隐藏的真实物品）；`hidePlayerInventory=false`：放行（玩家整理自己背包）|
 
-`InventoryDragEvent`：涉及多 slot，仅当拖拽触及的每个**顶部** slot 都 `placeable` 时放行，否则取消（触及底部则按 hide 规则）。
+`InventoryDragEvent`：拖拽目标是玩家明确划过的 slot（Bukkit 只放入这些槽，不跨格分发），故仅当触及的每个**顶部** slot 都 `placeable` 时放行原生拖拽、并逐个 placeable 目标槽触发 `SlotPlaceEvent`（原生拖拽只能整体取消，故任一目标被取消 → 取消整次拖拽）；触及任一不可放置的顶部 slot → 取消（触及底部按 hide 规则）。
 
 ### 4.4 事件与回调
 
 - **`onClick`**（信息性，保留）：对已声明 slot 的任意点击，在主线程触发 `InventoryClickEvent(menu, player, index, ClickType)`。用于按钮类 slot（如 closeButton）。**先于**门决策与 take/place 触发。
-- **`onTake`/`onPlace`（门+观察）**：保留 `SlotTakeEvent`/`SlotPlaceEvent` 类型与 DSL 写法（源码兼容）。契约变为：`movable` slot 被取走 → 触发 `SlotTakeEvent`（取消=阻止本次原生取出）；`placeable` slot 被放入 → 触发 `SlotPlaceEvent`（取消=阻止本次原生放入）。回调**不再手动给/扣物品**——Bukkit 原生完成移动。事件字段 `item` 保留（被取/放的物品）；`targetSlot`/`sourceSlot` 在原生移动下不总能精确得知（shift 可分发到多格），保留为 best-effort，取不到时置 -1，KDoc 注明。
+- **`onTake`/`onPlace`（门+观察）**：保留 `SlotTakeEvent`/`SlotPlaceEvent` 类型与 DSL 写法（源码兼容）。契约变为：`movable` slot 被取走 → 触发 `SlotTakeEvent`（取消=阻止本次取出）；`placeable` slot 被放入 → 触发 `SlotPlaceEvent`（取消=阻止本次放入）。回调**不再手动给/扣物品**——物品移动由引擎负责。物品移动**通常由 Bukkit 原生完成**（直接光标 `PLACE_*`、拖拽、原生 shift-取出）；**唯一例外是 shift-入菜单**，为约束"仅向 placeable 分发"，取消原生事件、由引擎手动应用分发（§4.3）——这对回调契约透明，回调在两种情形下都只把关、不手动给/扣。多目标情形（shift 分发、拖拽到多个 placeable 槽）**逐目标槽触发 `SlotPlaceEvent`**，某槽取消则仅跳过该槽。事件字段 `item` 保留（被取/放的物品，多目标时为该槽对应的量）；`targetSlot`/`sourceSlot` 在原生取出下不总能精确得知，保留为 best-effort，取不到时置 -1，KDoc 注明。
 - 触发顺序：`onClick`（信息）→ `onTake`/`onPlace`（门，其 `isCancelled` 决定是否 `event.setCancelled(true)` 取消 Bukkit 事件）。
 - **`MenuOpenEvent`/`MenuCloseEvent`**：由 `InventoryOpenEvent`/`InventoryCloseEvent` 原生驱动（主线程）。`InventoryCloseEvent` 在**关窗和断线时都会触发**——上一轮的断线清理缺口彻底消失。
 
@@ -139,6 +140,7 @@
 ## 6. 测试策略
 
 - **ChestSlotGate（纯逻辑单测）**：JUnit + MockBukkit（需 `InventoryAction`/`ItemStack`），覆盖 §4.3 全部动作类别 × movable/placeable × hide 的放行/取消矩阵。这是真实容器路线的核心正确性层，也是最可测的层。
+- **ShiftIntoMenuPlanner（纯逻辑单测）**：给定来源物品 + placeable 槽当前内容，验证分发计划正确（先填同类未满堆叠、再填空槽、遵守 `maxStackSize`、部分放入、无空间返回空计划、跳过被异类占用的非空非同类槽）。
 - **RealChestMenu 集成测试**：MockBukkit 仿真 `InventoryClickEvent`/`InventoryDragEvent`/`InventoryOpenEvent`/`InventoryCloseEvent`，验证事件路由、onClick/onTake/onPlace 触发与取消、getItem/setItem、MenuOpen/Close。MockBukkit 对真实 Inventory 事件的支持优于 packet 层——这是改真实容器的又一收益。
 - **PlayerOverlay**：沿用现有 packet 层可测部分（slot 声明透传、更新循环、事件派发的单测）+ 手动验证包层渲染。
 - **回归**：保留并适配现有仍适用的菜单测试；删除随 `ChestClickLogic`/`ChestClickEngine` 一并退役的测试。
@@ -152,7 +154,7 @@
 
 ## 8. 风险与取舍
 
-- **shift-click/拖拽/数字键/双击的 per-slot 放行门**是真实容器路线的固有复杂度，需枚举 `InventoryAction` 全集并保守处理（§4.3）。但有 Canvas/InvUI 成熟范式可循，且远比 packet 路线"重新实现整台状态机"轻。保守取消（COLLECT_TO_CURSOR 双击收集、shift 入菜单）在 v1 可接受：这两者的目标 slot 由 Bukkit 跨格分发、无法逐格约束，放行会污染不可变展示 slot，故 v1 取消；placeable 槽的放入靠光标直接 `PLACE_*` 与逐格明确的拖拽（`InventoryDragEvent`）完成。后续可精细化为"仅向 placeable 分发"。
+- **shift-click/拖拽/数字键/双击的 per-slot 放行门**是真实容器路线的固有复杂度，需枚举 `InventoryAction` 全集并逐类处理（§4.3）。有 Canvas/InvUI 成熟范式可循，且远比 packet 路线"重新实现整台状态机"轻。其中 shift-入菜单采用手动受控分发（仅向 placeable 槽、纯函数 `ShiftIntoMenuPlanner`），拖拽按逐格明确目标放行，直接光标 `PLACE_*` 原生放入。**唯一在 v1 保守取消的是 `COLLECT_TO_CURSOR`（双击收集）**——它跨全库聚合匹配物品到光标、目标不确定且方向为"取"，逐格约束成本高、收益低，v1 取消，后续可精细化。
 - **共享单实例 + 主线程更新**：多观看者共享一个真实 Inventory，`onUpdate` 主线程 `setItem` 广播给所有观看者，语义与现状一致。
 - **标题降级**：富文本 → legacy 颜色码，「保持 spigot-api」的取舍，已知可接受。
 
@@ -160,7 +162,7 @@
 
 - 不把 PlayerOverlay 改为真实容器（玩家自身背包窗口无法作为可 open 的容器）。
 - 不为 ChestMenu 保留 virtual 实现（大爆炸替换）。
-- v1 不精细化 shift 入菜单与双击收集的逐格分发（一律取消）；placeable 放入靠光标直接放置与逐格明确的拖拽。
+- v1 不处理 `COLLECT_TO_CURSOR`（双击收集）的逐格约束（一律取消）。shift-入菜单已在 v1 支持（仅向 placeable 槽的受控分发，§4.3）。
 - 不改动 Arena/Feature 等其它子系统（除 `SpectatorService` 的必要调用方迁移）。
 
 ## 10. 建议实现顺序
