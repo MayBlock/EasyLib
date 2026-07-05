@@ -5,6 +5,8 @@ import com.github.mayblock.easylib.api.bukkit.menu.MenuEvent
 import com.github.mayblock.easylib.api.bukkit.menu.MenuOpenEvent
 import com.github.mayblock.easylib.api.bukkit.menu.slot.SlotClickEvent
 import com.github.mayblock.easylib.api.bukkit.menu.slot.InventoryClickEvent
+import com.github.mayblock.easylib.api.bukkit.menu.slot.SlotTakeEvent
+import com.github.mayblock.easylib.api.bukkit.menu.slot.SlotPlaceEvent
 import com.github.mayblock.easylib.api.bukkit.menu.type.chest.ChestMenu
 import com.github.mayblock.easylib.api.bukkit.menu.type.chest.ChestMenuType
 import com.github.mayblock.easylib.api.event.EventListener
@@ -88,4 +90,87 @@ internal class RealChestMenu(
     }
 
     val scheduler: TaskScheduler get() = taskScheduler
+
+    /** 由 [MenuInteractionListener] 在主线程调用：按放行门决策处理一次点击。 */
+    fun handleClick(e: org.bukkit.event.inventory.InventoryClickEvent) {
+        val player = e.whoClicked as? Player ?: return
+        val rawSlot = e.rawSlot
+        val isTop = rawSlot in 0 until type.size
+        // 信息性 onClick（已声明的顶部槽，任意点击，先于门/转移事件）
+        if (isTop && specs.containsKey(rawSlot)) {
+            bus.emit(InventoryClickEvent(this, player, rawSlot, e.click))
+        }
+        val spec = if (isTop) specs[rawSlot] else null
+        val decision = ChestSlotGate.decide(isTop, rawSlot, e.action, spec?.movable ?: false, spec?.placeable ?: false, hidePlayerInventory)
+        when (decision) {
+            is SlotDecision.Deny -> e.isCancelled = true
+            is SlotDecision.AllowNative -> {}
+            is SlotDecision.FireTake -> {
+                val ev = SlotTakeEvent(this, decision.slot, player, (e.currentItem ?: ItemStack(Material.AIR)).clone(), targetSlot = -1)
+                bus.emit(ev)
+                if (ev.isCancelled) e.isCancelled = true
+            }
+            is SlotDecision.FirePlace -> {
+                val ev = SlotPlaceEvent(this, decision.slot, player, (e.cursor ?: ItemStack(Material.AIR)).clone(), sourceSlot = -1)
+                bus.emit(ev)
+                if (ev.isCancelled) e.isCancelled = true
+            }
+            is SlotDecision.FireSwap -> {
+                val take = SlotTakeEvent(this, decision.slot, player, (e.currentItem ?: ItemStack(Material.AIR)).clone(), targetSlot = -1)
+                val place = SlotPlaceEvent(this, decision.slot, player, (e.cursor ?: ItemStack(Material.AIR)).clone(), sourceSlot = -1)
+                bus.emit(take); bus.emit(place)
+                if (take.isCancelled || place.isCancelled) e.isCancelled = true
+            }
+            is SlotDecision.ShiftIntoMenu -> {
+                e.isCancelled = true
+                handleShiftIntoMenu(player, e)
+            }
+            else -> error("Unhandled SlotDecision: $decision")
+        }
+    }
+
+    private fun handleShiftIntoMenu(player: Player, e: org.bukkit.event.inventory.InventoryClickEvent) {
+        val source = e.currentItem?.takeUnless { it.isEmptyStack() } ?: return
+        val placeable = specs.filterValues { it.placeable }.keys.sorted().map { it to bukkitInventory.getItem(it) }
+        val plan = ShiftIntoMenuPlanner.plan(source, placeable)
+        var placedTotal = 0
+        for (p in plan) {
+            val placing = source.clone().apply { amount = p.amount }
+            val ev = SlotPlaceEvent(this, p.slot, player, placing.clone(), sourceSlot = e.slot)
+            bus.emit(ev)
+            if (ev.isCancelled) continue
+            val existing = bukkitInventory.getItem(p.slot)
+            if (existing == null || existing.isEmptyStack()) bukkitInventory.setItem(p.slot, placing)
+            else existing.amount += p.amount
+            placedTotal += p.amount
+        }
+        if (placedTotal > 0) {
+            val remaining = source.amount - placedTotal
+            e.currentItem = if (remaining <= 0) null else source.clone().apply { amount = remaining }
+            player.updateInventory()
+        }
+    }
+
+    /** 由监听器在主线程调用：按 spec §4.3 处理一次拖拽（仅向 placeable 顶部槽放行，否则整体取消）。 */
+    fun handleDrag(e: org.bukkit.event.inventory.InventoryDragEvent) {
+        val player = e.whoClicked as? Player ?: return
+        val topRaw = e.rawSlots.filter { it in 0 until type.size }
+        if (topRaw.isEmpty()) { // 仅在底部（玩家背包）内拖拽
+            if (hidePlayerInventory) e.isCancelled = true
+            return
+        }
+        if (topRaw.any { specs[it]?.placeable != true }) { e.isCancelled = true; return } // 触及不可放置顶部槽
+        for (slot in topRaw) {
+            val newItem = e.newItems[slot] ?: continue
+            val ev = SlotPlaceEvent(this, slot, player, newItem.clone(), sourceSlot = -1)
+            bus.emit(ev)
+            if (ev.isCancelled) { e.isCancelled = true; return } // 原生拖拽只能整体取消
+        }
+    }
+
+    /** 关窗/断线：publishClose + 若隐藏则恢复真实背包显示。 */
+    fun handleClose(player: Player) {
+        publishClose(player)
+        if (hidePlayerInventory) player.updateInventory()
+    }
 }
