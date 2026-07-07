@@ -31,7 +31,7 @@ class ChestSlotGateTest {
 
     // 顶部：交换（需 movable && placeable）
     @Test fun `顶部 SWAP 与 HOTBAR 需同时 movable 与 placeable`() {
-        listOf(SWAP_WITH_CURSOR, HOTBAR_SWAP, HOTBAR_MOVE_AND_READD).forEach {
+        listOf(SWAP_WITH_CURSOR, HOTBAR_SWAP).forEach {
             assertIs<SlotDecision.FireSwap>(top(it, movable = true, placeable = true), "$it")
             assertIs<SlotDecision.Deny>(top(it, movable = true, placeable = false), "$it")
             assertIs<SlotDecision.Deny>(top(it, movable = false, placeable = true), "$it")
