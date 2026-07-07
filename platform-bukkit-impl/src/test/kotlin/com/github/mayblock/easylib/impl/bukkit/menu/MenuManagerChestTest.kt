@@ -7,6 +7,8 @@ import com.github.mayblock.easylib.impl.bukkit.menu.type.chest.RealChestMenu
 import io.mockk.mockk
 import net.kyori.adventure.text.Component
 import org.bukkit.Material
+import org.bukkit.event.inventory.InventoryCloseEvent
+import org.bukkit.event.inventory.InventoryOpenEvent
 import org.mockbukkit.mockbukkit.MockBukkit
 import kotlin.test.AfterTest
 import kotlin.test.BeforeTest
@@ -30,7 +32,7 @@ class MenuManagerChestTest {
             page(Component.text("t")) { slot(0, Material.DIAMOND) }
         }
         assertTrue(menu is RealChestMenu)
-        assertEquals(Material.DIAMOND, (menu as RealChestMenu).bukkitInventory.getItem(0)!!.type)
+        assertEquals(Material.DIAMOND, menu.bukkitInventory.getItem(0)!!.type)
     }
 
     @Test fun `placeable 且 hide=true 构建期报错`() {
@@ -50,10 +52,10 @@ class MenuManagerChestTest {
         } as RealChestMenu
         val p = server.addPlayer()
         val view = p.openInventory(menu.bukkitInventory)!!
-        val listener = com.github.mayblock.easylib.impl.bukkit.menu.MenuInteractionListener()
-        listener.onOpen(org.bukkit.event.inventory.InventoryOpenEvent(view))
+        val listener = MenuInteractionListener()
+        listener.onOpen(InventoryOpenEvent(view))
         assertTrue(mgr.hasActiveMenu(p))
-        listener.onClose(org.bukkit.event.inventory.InventoryCloseEvent(view))
+        listener.onClose(InventoryCloseEvent(view))
         assertFalse(mgr.hasActiveMenu(p))
     }
 }

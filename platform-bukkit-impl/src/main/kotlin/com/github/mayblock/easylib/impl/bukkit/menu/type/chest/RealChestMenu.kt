@@ -150,7 +150,7 @@ internal class RealChestMenu(
 
     override fun destroy() {
         if (destroyed) return
-        bukkitInventory.viewers.toList().forEach { it.closeInventory() }
+        bukkitInventory.viewers.forEach { it.closeInventory() }
         stopUpdates()
         if (hidePacketSubDelegate.isInitialized()) hidePacketSub?.dispose()
         bus.unsubscribeAll()

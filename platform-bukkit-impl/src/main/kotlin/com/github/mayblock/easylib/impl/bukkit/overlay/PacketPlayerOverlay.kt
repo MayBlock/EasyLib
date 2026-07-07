@@ -54,7 +54,11 @@ internal class PacketPlayerOverlay(
     override fun repaint(index: Int) {
         activeViewers.toList().forEach { player ->
             if (!player.isOnline) return@forEach
-            player.sendPackets { forPlayer { updateItem(windowId, index, grid.packetItem(index)) } }
+            player.sendPackets {
+                forPlayer {
+                    updateItem(windowId, index, grid.packetItem(index))
+                }
+            }
         }
     }
 

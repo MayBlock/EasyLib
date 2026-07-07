@@ -25,7 +25,9 @@ class MenuManager(
 
     private val menus = mutableListOf<Menu>()
     private val activeMenus = mutableMapOf<Player, Menu>()
-    private val listener = MenuInteractionListener().also { Bukkit.getPluginManager().registerEvents(it, plugin) }
+    private val listener = MenuInteractionListener().also {
+        Bukkit.getPluginManager().registerEvents(it, plugin)
+    }
 
     override fun getActiveMenu(player: Player): Menu? = activeMenus[player]
     override fun hasActiveMenu(player: Player): Boolean = activeMenus.containsKey(player)
