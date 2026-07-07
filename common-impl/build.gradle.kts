@@ -6,7 +6,6 @@ plugins {
 
 dependencies {
     implementation(project(":common-api"))
-    api(libs.kotlinReflect)
     api(libs.bundles.kotlinxEcosystem)
     api(libs.slf4jApi)
     implementation(libs.boostedYaml)
