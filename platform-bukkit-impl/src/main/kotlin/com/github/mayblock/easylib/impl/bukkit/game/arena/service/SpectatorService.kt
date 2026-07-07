@@ -2,7 +2,7 @@ package com.github.mayblock.easylib.impl.bukkit.game.arena.service
 
 import com.github.mayblock.easylib.api.bukkit.game.arena.BukkitArena
 import com.github.mayblock.easylib.api.bukkit.game.arena.BukkitArenaPlayer
-import com.github.mayblock.easylib.api.bukkit.menu.type.player.dsl.PlayerMenuScope
+import com.github.mayblock.easylib.api.bukkit.overlay.dsl.PlayerOverlayScope
 import com.github.mayblock.easylib.api.service.Service
 import com.github.mayblock.easylib.api.service.ServiceKey
 import com.github.mayblock.easylib.impl.bukkit.BukkitEasyLib.Companion.api
@@ -14,10 +14,10 @@ import java.util.*
 
 class SpectatorService<A : BukkitArena<out BukkitArenaPlayer, *>>(
     private val arena: A,
-    playerInventory: (PlayerMenuScope.() -> Unit)? = null,
+    playerInventory: (PlayerOverlayScope.() -> Unit)? = null,
 ) : Service {
 
-    val virtualPlayerInventory = api.menuFactory.createPlayerInventoryMenu(playerInventory ?: {})
+    val playerOverlay = api.overlayFactory.create(playerInventory ?: {})
 
     companion object Key : ServiceKey<SpectatorService<*>>("SpectatorService")
 
@@ -89,7 +89,7 @@ class SpectatorService<A : BukkitArena<out BukkitArenaPlayer, *>>(
                 isFlying = true
                 allowFlight = true
             }
-            virtualPlayerInventory.activate(player)
+            playerOverlay.show(player)
         }
 
         fun restore() {
@@ -97,7 +97,7 @@ class SpectatorService<A : BukkitArena<out BukkitArenaPlayer, *>>(
             if (watching != null) {
                 stopWatching()
             }
-            virtualPlayerInventory.deactivate(player)
+            playerOverlay.hide(player)
         }
     }
 }

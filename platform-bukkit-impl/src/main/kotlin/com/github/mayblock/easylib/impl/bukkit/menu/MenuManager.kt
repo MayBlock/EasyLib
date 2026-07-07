@@ -8,21 +8,17 @@ import com.github.mayblock.easylib.api.bukkit.menu.MenuRegistry
 import com.github.mayblock.easylib.api.bukkit.menu.type.chest.ChestMenu
 import com.github.mayblock.easylib.api.bukkit.menu.type.chest.ChestMenuType
 import com.github.mayblock.easylib.api.bukkit.menu.type.chest.dsl.PageableChestMenuScope
-import com.github.mayblock.easylib.api.bukkit.menu.type.player.PlayerInventoryMenu
-import com.github.mayblock.easylib.api.bukkit.menu.type.player.dsl.PlayerMenuScope
 import com.github.mayblock.easylib.api.event.on
 import com.github.mayblock.easylib.api.scheduler.TaskScheduler
 import com.github.mayblock.easylib.impl.bukkit.menu.type.chest.RealChestMenu
 import com.github.mayblock.easylib.impl.bukkit.menu.type.chest.builder.PageableChestMenuBuilder
-import com.github.mayblock.easylib.impl.bukkit.menu.type.player.VirtualPlayerInventoryMenu
-import com.github.mayblock.easylib.impl.bukkit.menu.type.player.builder.PlayerMenuBuilder
 import org.bukkit.Bukkit
 import org.bukkit.entity.Player
 import org.bukkit.event.HandlerList
 import org.bukkit.plugin.Plugin
 import java.io.Closeable
 
-class VirtualMenuManager(
+class MenuManager(
     private val taskScheduler: TaskScheduler,
     plugin: Plugin,
 ) : MenuFactory, MenuRegistry, Closeable {
@@ -34,9 +30,6 @@ class VirtualMenuManager(
     override fun getActiveMenu(player: Player): Menu? = activeMenus[player]
     override fun hasActiveMenu(player: Player): Boolean = activeMenus.containsKey(player)
     override fun getViewers(menu: Menu): Set<Player> = activeMenus.filterValues { it === menu }.keys
-
-    override fun createPlayerInventoryMenu(builder: PlayerMenuScope.() -> Unit): PlayerInventoryMenu =
-        register(PlayerMenuBuilder { slots -> VirtualPlayerInventoryMenu(taskScheduler, slots) }.apply(builder).build())
 
     override fun createChestMenu(type: ChestMenuType, hidePlayerInventory: Boolean, builder: PageableChestMenuScope.() -> Unit): ChestMenu =
         register(

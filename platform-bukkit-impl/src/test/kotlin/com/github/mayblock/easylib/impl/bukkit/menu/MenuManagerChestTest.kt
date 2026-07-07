@@ -16,13 +16,13 @@ import kotlin.test.assertFailsWith
 import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 
-class VirtualMenuManagerChestTest {
+class MenuManagerChestTest {
 
     private lateinit var server: org.mockbukkit.mockbukkit.ServerMock
     @BeforeTest fun setUp() { server = MockBukkit.mock() }
     @AfterTest fun tearDown() { MockBukkit.unmock() }
 
-    private fun manager() = VirtualMenuManager(mockk<TaskScheduler>(relaxed = true), MockBukkit.createMockPlugin())
+    private fun manager() = MenuManager(mockk<TaskScheduler>(relaxed = true), MockBukkit.createMockPlugin())
 
     @Test fun `createChestMenu 产出真实容器菜单`() {
         val mgr = manager()
