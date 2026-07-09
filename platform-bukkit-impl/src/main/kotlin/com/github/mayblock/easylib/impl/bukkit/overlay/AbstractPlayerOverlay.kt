@@ -83,7 +83,10 @@ internal abstract class AbstractPlayerOverlay(
     /** 注册本覆盖层的包监听器（类型相关：包 → 事件映射）。 */
     protected abstract fun registerPacketListener(): Disposable
 
-    /** 观察者离开 / 覆盖层销毁时的清理（类型相关，如还原背包）。 */
+    /**
+     * 观察者离开（hide）与覆盖层销毁时的清理钩子（类型相关，如还原背包）。
+     * 销毁路径由本基类调用；hide 路径由子类的 hide 实现在成功移除观察者后调用。
+     */
     protected open fun onHide(player: Player) {}
 
     final override fun destroy() {

@@ -44,7 +44,7 @@ internal class PacketPlayerOverlay(
 
     override fun hide(player: Player): Boolean {
         check(!isDestroyed) { "this overlay is destroyed!" }
-        return removeViewer(player).ifTrue { player.updateInventory() }
+        return removeViewer(player).ifTrue { onHide(player) }
     }
 
     override fun onHide(player: Player) {
