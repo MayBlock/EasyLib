@@ -195,7 +195,6 @@ internal class RealChestMenu(
                 e.isCancelled = true
                 handleShiftIntoMenu(player, e)
             }
-            else -> error("Unhandled SlotDecision: $decision")
         }
     }
 

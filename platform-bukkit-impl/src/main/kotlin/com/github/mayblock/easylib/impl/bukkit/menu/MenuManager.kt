@@ -33,21 +33,24 @@ class MenuManager(
     override fun hasActiveMenu(player: Player): Boolean = activeMenus.containsKey(player)
     override fun getViewers(menu: Menu): Set<Player> = activeMenus.filterValues { it === menu }.keys
 
-    override fun createChestMenu(type: ChestMenuType, hidePlayerInventory: Boolean, builder: PageableChestMenuScope.() -> Unit): ChestMenu =
-        register(
-            PageableChestMenuBuilder(type) { title, slots ->
-                RealChestMenu(taskScheduler, title, type, slots, hidePlayerInventory)
-            }.apply(builder).build()
-        )
+    override fun createChestMenu(
+        type: ChestMenuType,
+        hidePlayerInventory: Boolean,
+        builder: PageableChestMenuScope.() -> Unit
+    ): ChestMenu =
+        PageableChestMenuBuilder(type) { title, slots ->
+            RealChestMenu(taskScheduler, title, type, slots, hidePlayerInventory)
+        }.apply(builder)
+            .build()
+            .let(::register)
 
     /** 登记菜单，并通过其事件源跟踪活跃观察者（开/关菜单驱动 [activeMenus]）。 */
     private fun <M : Menu> register(menu: M): M {
-        menus += menu
         menu.on {
             on<MenuOpenEvent> { activeMenus[player] = menu }
             on<MenuCloseEvent> { if (activeMenus[player] === menu) activeMenus.remove(player) }
         }
-        return menu
+        return menu.also(menus::add)
     }
 
     override fun close() {

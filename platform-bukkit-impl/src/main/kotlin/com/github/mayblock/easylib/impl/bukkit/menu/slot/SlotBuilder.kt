@@ -17,7 +17,7 @@ import org.bukkit.inventory.ItemStack
  * 因此把 `C.()->Unit` 当作 `SlotClickEvent.()->Unit` 存储是安全的。
  */
 internal class SlotBuilder<C : SlotClickEvent>(
-    private val clickType: Class<C>,
+    private val clickType: Class<out C>,
 ) : SlotScope<C> {
 
     private val clicks = mutableListOf<ClickHandler>()

@@ -17,7 +17,7 @@ class OverlayManager(
         PlayerOverlayBuilder { slots -> PacketPlayerOverlay(taskScheduler, slots) }
             .apply(builder)
             .build()
-            .also { overlays += it }
+            .also(overlays::add)
 
     override fun close() {
         overlays.forEach { it.destroy() }
