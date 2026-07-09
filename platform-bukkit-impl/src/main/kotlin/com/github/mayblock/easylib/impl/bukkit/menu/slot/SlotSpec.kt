@@ -29,5 +29,6 @@ internal class ClickHandler(
 
 internal class UpdateRule(
     val trigger: TaskScheduler.Trigger,
+    val priority: Priority,
     val block: SlotUpdateEvent.() -> Unit,
 )

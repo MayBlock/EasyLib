@@ -29,7 +29,7 @@ internal class SlotBuilder<C : SlotClickEvent>(
     }
 
     override fun onUpdate(trigger: TaskScheduler.Trigger, priority: Priority, block: SlotUpdateEvent.() -> Unit) {
-        updates += UpdateRule(trigger, block)
+        updates += UpdateRule(trigger, priority, block)
     }
 
     override fun onTake(priority: Priority, block: SlotTakeEvent.() -> Unit) {

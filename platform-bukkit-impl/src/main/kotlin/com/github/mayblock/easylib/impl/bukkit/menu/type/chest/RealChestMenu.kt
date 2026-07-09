@@ -246,13 +246,17 @@ internal class RealChestMenu(
 
     private fun startUpdates() {
         specs.forEach { (index, spec) ->
-            spec.updateRules.forEach { rule ->
+            spec.updateRules.groupBy { it.trigger }.forEach { (ruleTrigger, rules) ->
+                // 与事件总线同约定：priority 小值先执行。同 trigger 规则共享同一事件对象
+                // 串行执行（后序规则可见前序修改），块全部结束后统一写入容器一次。
+                val ordered = rules.sortedBy { it.priority }
                 updateTaskIds += taskScheduler.scheduleTask {
-                    trigger = rule.trigger
+                    trigger = ruleTrigger
                     isAsync = false // 真实容器 setItem 必须主线程
                     onTick = {
                         val current = bukkitInventory.getItem(index) ?: ItemStack(Material.AIR)
-                        val event = SlotUpdateEvent(this@RealChestMenu, index, current.clone()).apply(rule.block)
+                        val event = SlotUpdateEvent(this@RealChestMenu, index, current.clone())
+                        ordered.forEach { rule -> rule.block(event) }
                         if (event.item != current) bukkitInventory.setItem(index, event.item)
                     }
                 }

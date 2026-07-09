@@ -2,6 +2,7 @@ package com.github.mayblock.easylib.impl.bukkit.menu.type.chest
 
 import com.github.mayblock.easylib.api.bukkit.menu.slot.InventoryClickEvent
 import com.github.mayblock.easylib.api.scheduler.TaskScheduler
+import com.github.mayblock.easylib.api.util.Priority
 import com.github.mayblock.easylib.api.bukkit.menu.type.chest.ChestMenuType
 import com.github.mayblock.easylib.impl.bukkit.menu.slot.SlotBuilder
 import net.kyori.adventure.text.Component
@@ -38,5 +39,22 @@ class RealChestMenuUpdateTest {
         assertEquals(Material.CLOCK, m.bukkitInventory.getItem(4)!!.type)
         assertEquals(5, m.bukkitInventory.getItem(4)!!.amount)
         assertEquals(listOf(false), scheduler.asyncFlags) // 主线程（非异步）
+    }
+
+    @Test fun `同槽同 trigger 规则合并为一个任务，按 priority 串行且一次写入`() {
+        val scheduler = AsyncTrackingScheduler()
+        val spec = SlotBuilder(InventoryClickEvent::class.java).apply {
+            // 声明顺序故意与 priority 相反；两个 Interval 独立构造，靠值相等归组
+            onUpdate(trigger = TaskScheduler.Trigger.Interval(1.seconds), priority = Priority(20)) {
+                item.amount += 1 // 低优先级后执行：应看到高优先级的结果并在其上累加
+            }
+            onUpdate(trigger = TaskScheduler.Trigger.Interval(1.seconds), priority = Priority(1)) {
+                item = ItemStack(Material.CLOCK, 1) // 高优先级（小值）先执行
+            }
+        }.build(ItemStack(Material.PAPER))
+        val m = RealChestMenu(scheduler, Component.text("t"), ChestMenuType.GENERIC_9X3, mapOf(4 to spec), hidePlayerInventory = false)
+        assertEquals(Material.CLOCK, m.bukkitInventory.getItem(4)!!.type)
+        assertEquals(2, m.bukkitInventory.getItem(4)!!.amount) // 串行可见前序结果
+        assertEquals(listOf(false), scheduler.asyncFlags) // 合并为一个任务（仍主线程）
     }
 }

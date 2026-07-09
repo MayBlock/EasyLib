@@ -25,5 +25,6 @@ internal class OverlayHandler(
 
 internal class OverlayUpdateRule(
     val trigger: TaskScheduler.Trigger,
+    val priority: Priority,
     val block: OverlayUpdateScope.() -> Unit,
 )

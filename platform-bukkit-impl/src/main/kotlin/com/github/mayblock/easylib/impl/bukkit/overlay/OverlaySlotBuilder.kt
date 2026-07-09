@@ -31,7 +31,7 @@ internal class OverlaySlotBuilder : OverlaySlotScope {
     }
 
     override fun onUpdate(trigger: TaskScheduler.Trigger, priority: Priority, block: OverlayUpdateScope.() -> Unit) {
-        updates += OverlayUpdateRule(trigger, block)
+        updates += OverlayUpdateRule(trigger, priority, block)
     }
 
     fun build(item: ItemStack): OverlaySlotSpec =

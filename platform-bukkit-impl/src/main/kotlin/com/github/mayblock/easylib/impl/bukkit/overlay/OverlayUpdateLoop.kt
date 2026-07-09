@@ -5,7 +5,8 @@ import com.github.mayblock.easylib.api.scheduler.TaskScheduler
 import org.bukkit.inventory.ItemStack
 
 /**
- * 覆盖槽更新调度：每个 [OverlayUpdateRule] 各按自己的 trigger 排程。
+ * 覆盖槽更新调度：同一槽位上 trigger 相等（值语义）的 [OverlayUpdateRule] 合并为一个任务，
+ * 按 priority 升序串行执行；不同 trigger 各自排程。
  * 与覆盖层类型解耦——只通过 [repaint] 回调把变更同步给观察者。overlay 纯发包，**保持异步**。
  */
 internal class OverlayUpdateLoop(
@@ -23,14 +24,18 @@ internal class OverlayUpdateLoop(
 
     fun start() {
         grid.forEachUpdatable { index, slot ->
-            slot.updateRules.forEach { rule ->
+            slot.updateRules.groupBy { it.trigger }.forEach { (ruleTrigger, rules) ->
+                // 与事件总线同约定：priority 小值先执行。同 trigger 规则共享同一事务上下文
+                // 串行执行（后序规则可见前序修改），块全部结束后统一提交一次。
+                val ordered = rules.sortedBy { it.priority }
                 taskIds += scheduler.scheduleTask {
-                    trigger = rule.trigger
+                    trigger = ruleTrigger
                     isAsync = true
                     onTick = {
                         val before = slot.item
-                        val scope = UpdateScope(index, before.clone()).apply(rule.block)
-                        // 提交提案：仅当块确实改了物品（值比较），且本 tick 无人直接写入本槽
+                        val scope = UpdateScope(index, before.clone())
+                        ordered.forEach { rule -> rule.block(scope) }
+                        // 提交提案：仅当规则确实改了物品（值比较），且本 tick 无人直接写入本槽
                         // （写时克隆 ⇒ 每次写入都是新对象，=== 即版本戳）。有写入则提案作废，
                         // 绝不用过期提案回滚更新的值。
                         if (scope.item != before && slot.item === before) {

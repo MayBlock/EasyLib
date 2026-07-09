@@ -1,6 +1,7 @@
 package com.github.mayblock.easylib.impl.bukkit.overlay
 
 import com.github.mayblock.easylib.api.scheduler.TaskScheduler
+import com.github.mayblock.easylib.api.util.Priority
 import org.bukkit.Material
 import org.bukkit.inventory.ItemStack
 import org.mockbukkit.mockbukkit.MockBukkit
@@ -50,6 +51,28 @@ class OverlayUpdateLoopTest {
         assertEquals(Material.CLOCK, grid[4]!!.item.type) // 赋值内容已生效
         template.amount = 99 // tick 之后外部继续改模板
         assertEquals(1, grid[4]!!.item.amount) // 内部存的是副本，不受影响
+    }
+
+    @Test
+    fun `同槽同 trigger 规则合并为一个任务，按 priority 串行且一次提交`() {
+        val scheduler = AsyncTrackingScheduler()
+        val spec = OverlaySlotBuilder().apply {
+            // 声明顺序故意与 priority 相反；两个 Interval 独立构造，靠值相等归组
+            onUpdate(TaskScheduler.Trigger.Interval(1.seconds), priority = Priority(20)) {
+                item.amount += 1 // 低优先级后执行：应看到高优先级的结果并在其上累加
+            }
+            onUpdate(TaskScheduler.Trigger.Interval(1.seconds), priority = Priority(1)) {
+                item = ItemStack(Material.CLOCK, 1) // 高优先级（小值）先执行
+            }
+        }.build(ItemStack(Material.PAPER, 1))
+        val grid = SlotGrid(mapOf(4 to spec))
+        val repaints = mutableListOf<Int>()
+        OverlayUpdateLoop(grid, scheduler) { repaints += it }.start()
+
+        assertEquals(Material.CLOCK, grid[4]!!.item.type) // 先 CLOCK…
+        assertEquals(2, grid[4]!!.item.amount) // …后 +1，可见前序结果
+        assertEquals(listOf(4), repaints) // 单次提交/重绘
+        assertEquals(listOf(true), scheduler.asyncFlags) // 合并为一个任务（仍异步）
     }
 
     @Test

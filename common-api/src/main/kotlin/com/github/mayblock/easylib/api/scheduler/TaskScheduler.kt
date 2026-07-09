@@ -21,10 +21,11 @@ interface TaskScheduler {
         val onTick: () -> Unit
     }
 
+    /** 触发器为值语义（data）：参数相同的触发器相等，调度方可据此把同触发器的任务归组。 */
     sealed interface Trigger {
         object Once : Trigger
-        class Delay(val delay: Duration) : Trigger
-        class Interval(val period: Duration) : Trigger
+        data class Delay(val delay: Duration) : Trigger
+        data class Interval(val period: Duration) : Trigger
     }
 
     @DslMarker
