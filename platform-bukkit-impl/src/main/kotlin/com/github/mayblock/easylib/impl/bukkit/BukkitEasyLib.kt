@@ -34,7 +34,7 @@ class BukkitEasyLib(
     override val promptApi: PromptApi by lazy { PromptApiImpl }
     override val itemExtensionApi = ItemExtensionApiImpl(plugin)
     override val menuFactory = MenuManager(taskScheduler, plugin)
-    override val overlayFactory = OverlayManager(taskScheduler)
+    override val overlayFactory = OverlayManager(taskScheduler, plugin)
     override val commandRegistry = BukkitCommandRegistry(plugin)
     val packetManager: PacketManager<Player> = BukkitPacketManager
 

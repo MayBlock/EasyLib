@@ -14,7 +14,7 @@ class OverlayShowEvent(
     val player: Player,
 ) : OverlayEvent
 
-/** 覆盖层对某玩家关闭（hide / 销毁时逐个移除）时派发；玩家断线不会自动派发。 */
+/** 覆盖层对某玩家关闭（hide / 销毁时逐个移除 / 断线）时派发。 */
 class OverlayHideEvent(
     override val overlay: PlayerOverlay,
     val player: Player,

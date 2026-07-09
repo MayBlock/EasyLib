@@ -77,6 +77,14 @@ internal abstract class AbstractPlayerOverlay(
     protected fun removeViewer(player: Player): Boolean =
         viewers.remove(player).also { if (it) publish(OverlayHideEvent(this, player)) }
 
+    /**
+     * 玩家断线时的清理（由 [OverlayQuitListener] 调用）：移除观察者并派发 [OverlayHideEvent]。
+     * 不调用 [onHide]——客户端已断开，无需也无法还原其视觉。
+     */
+    internal fun onPlayerQuit(player: Player) {
+        removeViewer(player)
+    }
+
     /** 把某槽当前物品重绘给所有在线观察者（类型相关）。 */
     protected abstract fun repaint(index: Int)
 

@@ -2,13 +2,17 @@ package com.github.mayblock.easylib.impl.bukkit.overlay
 
 import com.github.mayblock.easylib.api.bukkit.overlay.OverlayClickEvent
 import com.github.mayblock.easylib.api.bukkit.overlay.OverlayEvent
+import com.github.mayblock.easylib.api.bukkit.overlay.OverlayHideEvent
+import com.github.mayblock.easylib.api.event.on
 import com.github.mayblock.easylib.api.scheduler.TaskScheduler
 import com.github.mayblock.easylib.api.util.Disposable
 import com.github.mayblock.easylib.impl.bukkit.menu.isEmptyStack
+import io.mockk.every
 import io.mockk.mockk
 import org.bukkit.Material
 import org.bukkit.entity.Player
 import org.bukkit.event.inventory.ClickType
+import org.bukkit.event.player.PlayerQuitEvent
 import org.bukkit.inventory.ItemStack
 import org.mockbukkit.mockbukkit.MockBukkit
 import kotlin.test.AfterTest
@@ -26,7 +30,7 @@ private class TestOverlay(
     val repaints = mutableListOf<Int>()
     override fun repaint(index: Int) { repaints += index }
     override fun registerPacketListener(): Disposable = Disposable { }
-    override fun show(player: Player) {}
+    override fun show(player: Player) { addViewer(player) }
     override fun hide(player: Player): Boolean = false
     fun emit(event: OverlayEvent) = publish(event)
 }
@@ -88,6 +92,34 @@ class AbstractPlayerOverlayTest {
         o.emit(OverlayClickEvent(o, 3, player, ClickType.LEFT))
         o.emit(OverlayClickEvent(o, 4, player, ClickType.LEFT))
         assertEquals(1, clicks)
+    }
+
+    @Test
+    fun `onPlayerQuit 移除观察者并派发 OverlayHideEvent，幂等`() {
+        val o = TestOverlay(mapOf(3 to specOf(ItemStack(Material.STONE))))
+        val p = mockk<Player>(relaxed = true)
+        o.show(p)
+        var hides = 0
+        o.on { on<OverlayHideEvent> { hides++ } }
+        o.onPlayerQuit(p)
+        assertEquals(0, o.activeViewers.size)
+        assertEquals(1, hides)
+        o.onPlayerQuit(p) // 已不在观察者集合：不重复派发
+        assertEquals(1, hides)
+    }
+
+    @Test
+    fun `OverlayQuitListener 把断线玩家从所有覆盖层移除`() {
+        val o1 = TestOverlay(mapOf(3 to specOf(ItemStack(Material.STONE))))
+        val o2 = TestOverlay(mapOf(4 to specOf(ItemStack(Material.STONE))))
+        val p = mockk<Player>(relaxed = true)
+        o1.show(p)
+        o2.show(p)
+        val e = mockk<PlayerQuitEvent>()
+        every { e.player } returns p
+        OverlayQuitListener { listOf(o1, o2) }.onQuit(e)
+        assertEquals(0, o1.activeViewers.size)
+        assertEquals(0, o2.activeViewers.size)
     }
 
     @Test
