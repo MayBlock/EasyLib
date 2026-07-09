@@ -1,6 +1,7 @@
 # Menu 子系统架构重设计（Spec）
 
-> 状态：待评审 · 目标模块：`platform-bukkit-api` / `platform-bukkit-impl` / `common-api`
+> 状态：**已实施并被后续设计部分取代（存档）** —— 本文的声明/运行态分离与菜单级总线已落地；其后 ChestMenu 已真实容器化、PlayerInventoryMenu 已独立为 PlayerOverlay（见 `superpowers/specs/2026-07-05-menu-real-container-and-player-overlay-design.md`）。类名以当前代码为准：`VirtualMenuManager` → `MenuManager`、`VirtualChestMenu` → `RealChestMenu`。
+> 原状态：待评审 · 目标模块：`platform-bukkit-api` / `platform-bukkit-impl` / `common-api`
 > 关联：菜单系统当前处于「`MenuApi`→`MenuFactory`/`MenuRegistry`、`Slot` 重构为 `EventBus<SlotEvent>`」的半完成状态，核心实现（`VirtualChestMenu`、`VirtualPlayerInventoryMenu`、`SlotUpdateScheduler`）不可编译。
 
 ## 1. 背景与现状

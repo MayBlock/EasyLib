@@ -14,12 +14,15 @@ import org.bukkit.inventory.ItemStack
 interface Menu : Destroyable, EventSource<MenuEvent> {
     fun open(player: Player)
 
-    /** 某声明槽位的当前虚拟物品；未声明的槽位或当前为空（AIR/数量≤0）返回 null。 */
+    /**
+     * 某槽位的当前物品（直接读真实容器）；槽位为空（AIR/数量≤0）返回 null。
+     * @throws IllegalArgumentException 槽位索引越界（超出菜单容量）
+     */
     fun getItem(index: Int): ItemStack?
 
     /**
-     * 改写某声明槽位的虚拟物品并重绘给所有观看者；`null` 等价于清空（AIR）。
-     * @throws IllegalArgumentException 槽位未在构建时声明
+     * 改写某槽位的物品（直接写真实共享容器，所有观看者立即可见）；`null` 等价于清空（AIR）。
+     * @throws IllegalArgumentException 槽位索引越界（超出菜单容量）
      */
     fun setItem(index: Int, item: ItemStack?)
 }

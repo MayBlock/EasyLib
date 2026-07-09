@@ -16,14 +16,14 @@ interface SlotScope<out C : SlotClickEvent> {
     fun onUpdate(trigger: TaskScheduler.Trigger, priority: Priority = Priority.DEFAULT, block: SlotUpdateEvent.() -> Unit)
 
     /**
-     * 物品被从本槽位取出（见 [SlotTakeEvent] 的回调职责契约）。
-     * v1 仅箱子菜单会派发；玩家背包菜单声明后不会触发。
+     * 物品被从本槽位取出时的把关点（回调只把关/观察，不搬运物品，契约见 [SlotTakeEvent]）。
+     * 目前仅箱子菜单使用本 DSL 并派发该事件。
      */
     fun onTake(priority: Priority = Priority.DEFAULT, block: SlotTakeEvent.() -> Unit)
 
     /**
-     * 玩家物品被放入本槽位（见 [SlotPlaceEvent] 的回调职责契约）。
-     * v1 仅箱子菜单会派发；玩家背包菜单声明后不会触发。
+     * 玩家物品被放入本槽位时的把关点（回调只把关/观察，不搬运物品，契约见 [SlotPlaceEvent]）。
+     * 目前仅箱子菜单使用本 DSL 并派发该事件。
      */
     fun onPlace(priority: Priority = Priority.DEFAULT, block: SlotPlaceEvent.() -> Unit)
 }

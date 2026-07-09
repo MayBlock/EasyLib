@@ -59,6 +59,8 @@ internal object ChestSlotGate {
             InventoryAction.PLACE_ALL, InventoryAction.PLACE_SOME, InventoryAction.PLACE_ONE ->
                 if (placeable) SlotDecision.FirePlace(slot) else SlotDecision.Deny
 
+            // HOTBAR_MOVE_AND_READD：Spigot 1.20.6 起服务器不再发送（并入 HOTBAR_SWAP），
+            // 保留分支以兼容更早版本的运行时（相关测试已按 1.20.6 行为删除）。
             InventoryAction.SWAP_WITH_CURSOR, InventoryAction.HOTBAR_SWAP, InventoryAction.HOTBAR_MOVE_AND_READD ->
                 if (movable && placeable) SlotDecision.FireSwap(slot) else SlotDecision.Deny
 

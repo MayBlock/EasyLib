@@ -6,14 +6,14 @@ import org.bukkit.entity.Player
 import org.bukkit.inventory.ItemStack
 
 /**
- * 玩家把菜单槽位中的物品取出到自己背包时派发（可取消）。
+ * 玩家把菜单槽位中的物品取出（拿到光标、shift 移入背包或丢出）时派发（可取消）。
  *
- * 引擎只维护虚拟层：未取消时，**真实物品的给予由订阅方负责**（如 `player.inventory.addItem(item)`），
- * 引擎随后会重同步客户端视觉。取消则虚拟光标维持原状。
+ * 物品移动由 Bukkit 原生完成：未取消时原生点击照常执行，**订阅方只把关/观察，不要再手动给予物品**
+ * （会导致复制）；取消则整个原生点击被取消，物品维持原状。
  *
  * @param index 物品来源的菜单槽位
  * @param item 被取走物品的副本
- * @param targetSlot 玩家点击的目标真实背包槽位（Bukkit `PlayerInventory` 语义 0-35），供回调精确放置
+ * @param targetSlot 目标真实背包槽位（best-effort）；原生取出通常无法得知，取不到时为 -1
  */
 class SlotTakeEvent(
     menu: Menu,
@@ -25,14 +25,15 @@ class SlotTakeEvent(
 ) : SlotClickEvent(menu, index, player), Event.Cancellable
 
 /**
- * 玩家把自己背包的物品放入菜单槽位时派发（可取消）。
+ * 玩家把物品放入菜单槽位时派发（可取消）。
  *
- * 引擎只维护虚拟层：未取消时，**真实物品的扣除由订阅方负责**（按 [item] 的数量从 [sourceSlot] 扣除），
- * 引擎随后提交虚拟槽位并调用 `player.updateInventory()` 渲染扣除结果。取消则回滚重刷。
+ * 物品移动通常由 Bukkit 原生完成（光标放置/拖拽），**订阅方只把关/观察，不要再手动扣除物品**；
+ * 唯一例外是 shift-入菜单：引擎取消原生事件后自行向 placeable 槽分发、扣减来源格并调用
+ * `player.updateInventory()`。取消语义：光标/拖拽路径取消整个原生事件；shift 多目标分发仅跳过被取消的槽。
  *
  * @param index 放入的目标菜单槽位
- * @param item 待放入物品的副本（右键放置时数量可能小于光标持有量）
- * @param sourceSlot 物品来源的真实背包槽位（Bukkit `PlayerInventory` 语义 0-35）
+ * @param item 待放入物品的副本（shift/拖拽多目标分发时为该槽对应的量；光标放置时为整个光标堆叠）
+ * @param sourceSlot 物品来源的真实背包槽位（best-effort）；仅 shift-入菜单可得，其余路径为 -1
  */
 class SlotPlaceEvent(
     menu: Menu,

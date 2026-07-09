@@ -29,8 +29,8 @@ interface ChestMenuScope {
 
     /**
      * 声明一个槽位。
-     * @param movable 槽中物品可被玩家拿起（真实给予经 `onTake` 回调，见 [SlotTakeEvent]）
-     * @param placeable 玩家可把自己背包的物品放入本槽（真实扣除经 `onPlace` 回调，见 [SlotPlaceEvent]；
+     * @param movable 槽中物品可被玩家拿起（取出前经 `onTake` 把关，见 [SlotTakeEvent]；物品移动由原生完成）
+     * @param placeable 玩家可把自己背包的物品放入本槽（放入前经 `onPlace` 把关，见 [SlotPlaceEvent]；
      *   要求菜单以 `hidePlayerInventory = false` 创建）
      */
     fun slot(

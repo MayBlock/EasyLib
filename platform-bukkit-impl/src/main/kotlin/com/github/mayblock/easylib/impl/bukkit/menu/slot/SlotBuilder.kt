@@ -44,8 +44,8 @@ internal class SlotBuilder<C : SlotClickEvent>(
         SlotSpec(item, clicks.toList(), updates.toList(), movable, placeable)
 
     /**
-     * 事件总线会吞掉监听器异常（记日志后继续）。take/place 回调承担「真实物品给予/扣除」职责，
-     * 半途异常必须视为取消，否则会出现「虚拟层已提交、真实操作未完成」的不一致。
+     * 事件总线会吞掉监听器异常（记日志后继续）。take/place 回调是放行门：
+     * 半途异常必须视为取消，否则异常被吞后原生/引擎仍会完成物品移动，等于「未把关即放行」。
      * 这里先置取消再重新抛出，日志仍由总线负责。
      */
     private fun <E> cancellingOnException(block: E.() -> Unit): SlotClickEvent.() -> Unit
