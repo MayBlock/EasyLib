@@ -3,8 +3,8 @@ package com.github.mayblock.easylib.impl.bukkit.overlay
 import com.github.mayblock.easylib.api.bukkit.overlay.OverlayClickEvent
 import com.github.mayblock.easylib.api.bukkit.overlay.OverlayInteractEvent
 import com.github.mayblock.easylib.api.bukkit.overlay.OverlaySlotEvent
-import com.github.mayblock.easylib.api.bukkit.overlay.OverlayUpdateEvent
 import com.github.mayblock.easylib.api.bukkit.overlay.dsl.OverlaySlotScope
+import com.github.mayblock.easylib.api.bukkit.overlay.dsl.OverlayUpdateScope
 import com.github.mayblock.easylib.api.scheduler.TaskScheduler
 import com.github.mayblock.easylib.api.util.Priority
 import org.bukkit.inventory.ItemStack
@@ -30,7 +30,7 @@ internal class OverlaySlotBuilder : OverlaySlotScope {
         handlers += OverlayHandler(priority, OverlayInteractEvent::class.java, block as OverlaySlotEvent.() -> Unit)
     }
 
-    override fun onUpdate(trigger: TaskScheduler.Trigger, priority: Priority, block: OverlayUpdateEvent.() -> Unit) {
+    override fun onUpdate(trigger: TaskScheduler.Trigger, priority: Priority, block: OverlayUpdateScope.() -> Unit) {
         updates += OverlayUpdateRule(trigger, block)
     }
 

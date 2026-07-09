@@ -29,7 +29,7 @@ internal abstract class AbstractPlayerOverlay(
     private val viewers = mutableSetOf<Player>()
     val activeViewers: Set<Player> get() = viewers
 
-    private val updateLoop = OverlayUpdateLoop(this, grid, scheduler, ::repaint)
+    private val updateLoop = OverlayUpdateLoop(grid, scheduler, ::repaint)
     private var packetListener: Disposable? = null
 
     final override var isDestroyed: Boolean = false

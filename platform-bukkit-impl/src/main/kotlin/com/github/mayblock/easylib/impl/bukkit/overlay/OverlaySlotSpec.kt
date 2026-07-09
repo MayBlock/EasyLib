@@ -1,7 +1,7 @@
 package com.github.mayblock.easylib.impl.bukkit.overlay
 
 import com.github.mayblock.easylib.api.bukkit.overlay.OverlaySlotEvent
-import com.github.mayblock.easylib.api.bukkit.overlay.OverlayUpdateEvent
+import com.github.mayblock.easylib.api.bukkit.overlay.dsl.OverlayUpdateScope
 import com.github.mayblock.easylib.api.scheduler.TaskScheduler
 import com.github.mayblock.easylib.api.util.Priority
 import org.bukkit.inventory.ItemStack
@@ -25,5 +25,5 @@ internal class OverlayHandler(
 
 internal class OverlayUpdateRule(
     val trigger: TaskScheduler.Trigger,
-    val block: OverlayUpdateEvent.() -> Unit,
+    val block: OverlayUpdateScope.() -> Unit,
 )

@@ -1,8 +1,6 @@
 package com.github.mayblock.easylib.impl.bukkit.overlay
 
-import com.github.mayblock.easylib.api.bukkit.overlay.PlayerOverlay
 import com.github.mayblock.easylib.api.scheduler.TaskScheduler
-import io.mockk.mockk
 import org.bukkit.Material
 import org.bukkit.inventory.ItemStack
 import org.mockbukkit.mockbukkit.MockBukkit
@@ -32,7 +30,7 @@ class OverlayUpdateLoopTest {
         }.build(ItemStack(Material.AIR))
         val grid = SlotGrid(mapOf(4 to spec))
         val repaints = mutableListOf<Int>()
-        OverlayUpdateLoop(mockk<PlayerOverlay>(), grid, scheduler, { repaints += it }).start()
+        OverlayUpdateLoop(grid, scheduler, { repaints += it }).start()
 
         assertEquals(Material.CLOCK, grid[4]!!.item.type)
         assertEquals(listOf(4), repaints)
@@ -47,10 +45,29 @@ class OverlayUpdateLoopTest {
             onUpdate(TaskScheduler.Trigger.Interval(1.seconds)) { item = template }
         }.build(ItemStack(Material.AIR))
         val grid = SlotGrid(mapOf(4 to spec))
-        OverlayUpdateLoop(mockk<PlayerOverlay>(), grid, scheduler) { }.start()
+        OverlayUpdateLoop(grid, scheduler) { }.start()
 
         assertEquals(Material.CLOCK, grid[4]!!.item.type) // 赋值内容已生效
         template.amount = 99 // tick 之后外部继续改模板
         assertEquals(1, grid[4]!!.item.amount) // 内部存的是副本，不受影响
+    }
+
+    @Test
+    fun `tick 内对本槽的直接写入优先于提案，不被过期提案回滚`() {
+        val scheduler = AsyncTrackingScheduler()
+        lateinit var gridRef: SlotGrid
+        val spec = OverlaySlotBuilder().apply {
+            onUpdate(TaskScheduler.Trigger.Interval(1.seconds)) {
+                item = ItemStack(Material.CLOCK, 2) // 本 tick 的提案
+                gridRef[4]!!.item = ItemStack(Material.DIAMOND) // tick 内有人直接写入（setItem 的底层路径）
+            }
+        }.build(ItemStack(Material.PAPER))
+        val grid = SlotGrid(mapOf(4 to spec))
+        gridRef = grid
+        val repaints = mutableListOf<Int>()
+        OverlayUpdateLoop(grid, scheduler) { repaints += it }.start()
+
+        assertEquals(Material.DIAMOND, grid[4]!!.item.type) // 直接写入胜出，过期提案作废
+        assertEquals(emptyList<Int>(), repaints) // 提案未提交 → loop 不触发重绘
     }
 }

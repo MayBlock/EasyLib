@@ -2,7 +2,6 @@ package com.github.mayblock.easylib.api.bukkit.overlay
 
 import org.bukkit.entity.Player
 import org.bukkit.event.inventory.ClickType
-import org.bukkit.inventory.ItemStack
 
 /** 与某槽位相关的覆盖层事件。 */
 interface OverlaySlotEvent : OverlayEvent {
@@ -29,10 +28,3 @@ class OverlayInteractEvent(
         RIGHT_CLICK,
     }
 }
-
-/** 更新循环按 update rule 触发；回调改写 [item] 后引擎重绘该槽（无 player，广播语义）。 */
-class OverlayUpdateEvent(
-    override val overlay: PlayerOverlay,
-    override val index: Int,
-    var item: ItemStack,
-) : OverlaySlotEvent
