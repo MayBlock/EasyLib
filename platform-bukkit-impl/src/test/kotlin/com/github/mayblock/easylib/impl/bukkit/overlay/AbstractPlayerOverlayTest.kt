@@ -49,6 +49,22 @@ class AbstractPlayerOverlayTest {
     }
 
     @Test
+    fun `getItem 返回防御副本，改动返回值不波及 overlay 内部`() {
+        val o = TestOverlay(mapOf(3 to specOf(ItemStack(Material.STONE, 1))))
+        o.getItem(3)!!.amount = 99 // 外部拿到后原地改
+        assertEquals(1, o.getItem(3)!!.amount) // 内部不受影响
+    }
+
+    @Test
+    fun `setItem 存入防御副本，改动入参不波及 overlay 内部`() {
+        val o = TestOverlay(mapOf(3 to specOf(ItemStack(Material.AIR))))
+        val input = ItemStack(Material.DIAMOND, 1)
+        o.setItem(3, input)
+        input.amount = 99 // 入参在 setItem 之后被外部改
+        assertEquals(1, o.getItem(3)!!.amount) // 内部存的是副本，不受影响
+    }
+
+    @Test
     fun `setItem 写入声明槽并触发 repaint，null 等价 AIR`() {
         val o = TestOverlay(mapOf(3 to specOf(ItemStack(Material.AIR))))
         o.setItem(3, ItemStack(Material.DIAMOND, 2))

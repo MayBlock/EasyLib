@@ -19,11 +19,12 @@ interface PlayerOverlay : Destroyable, EventSource<OverlayEvent> {
     /** 对该玩家关闭覆盖层并还原真实背包渲染；此前未开启返回 false。 */
     fun hide(player: Player): Boolean
 
-    /** 某声明槽位的当前虚拟物品；未声明或为空（AIR/数量≤0）返回 null。 */
+    /** 某声明槽位当前虚拟物品的**拷贝**；未声明或为空（AIR/数量≤0）返回 null。改动返回值不影响覆盖层。 */
     fun getItem(index: Int): ItemStack?
 
     /**
      * 改写某声明槽位的虚拟物品并重绘给所有观察者；`null` 等价清空（AIR）。
+     * 存入的是 [item] 的**拷贝**：调用后继续改动原对象不影响覆盖层。
      * @throws IllegalArgumentException 槽位未在构建时声明
      */
     fun setItem(index: Int, item: ItemStack?)

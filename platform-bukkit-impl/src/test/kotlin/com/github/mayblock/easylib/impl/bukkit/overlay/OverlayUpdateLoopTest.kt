@@ -38,4 +38,19 @@ class OverlayUpdateLoopTest {
         assertEquals(listOf(4), repaints)
         assertEquals(listOf(true), scheduler.asyncFlags) // overlay 保持异步
     }
+
+    @Test
+    fun `update 规则赋值的外部对象以副本存入，事后改动不波及内部`() {
+        val scheduler = AsyncTrackingScheduler()
+        val template = ItemStack(Material.CLOCK, 1) // 规则块持有的外部模板（惯用写法）
+        val spec = OverlaySlotBuilder().apply {
+            onUpdate(TaskScheduler.Trigger.Interval(1.seconds)) { item = template }
+        }.build(ItemStack(Material.AIR))
+        val grid = SlotGrid(mapOf(4 to spec))
+        OverlayUpdateLoop(mockk<PlayerOverlay>(), grid, scheduler) { }.start()
+
+        assertEquals(Material.CLOCK, grid[4]!!.item.type) // 赋值内容已生效
+        template.amount = 99 // tick 之后外部继续改模板
+        assertEquals(1, grid[4]!!.item.amount) // 内部存的是副本，不受影响
+    }
 }

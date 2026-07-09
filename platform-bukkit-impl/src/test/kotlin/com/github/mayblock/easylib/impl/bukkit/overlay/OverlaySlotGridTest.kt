@@ -9,7 +9,7 @@ import kotlin.test.BeforeTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNull
-import kotlin.test.assertSame
+import kotlin.test.assertNotSame
 
 class OverlaySlotGridTest {
 
@@ -45,6 +45,15 @@ class OverlaySlotGridTest {
         assertEquals(Material.STONE, s.item.type)
         val diamond = ItemStack(Material.DIAMOND)
         s.item = diamond
-        assertSame(diamond, s.item)
+        assertEquals(diamond, s.item) // 写入内容生效
+        assertNotSame(diamond, s.item) // 写时克隆：存的是副本，外部引用改不到内部
+    }
+
+    @Test
+    fun `LiveSlot 持有 spec 物品的独立副本，构建后改原对象不波及内部`() {
+        val template = ItemStack(Material.STONE, 1)
+        val s = LiveSlot(OverlaySlotBuilder().build(template))
+        template.amount = 99 // 外部（DSL 调用者）仍握着原对象并原地改
+        assertEquals(1, s.item.amount) // 内部副本不受影响，缓存 key 稳定
     }
 }

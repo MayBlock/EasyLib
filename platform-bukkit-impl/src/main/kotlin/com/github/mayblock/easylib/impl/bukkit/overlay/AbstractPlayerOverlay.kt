@@ -40,7 +40,7 @@ internal abstract class AbstractPlayerOverlay(
         specs.forEach { (index, spec) ->
             spec.handlers.forEach { handler ->
                 bus.subscribe(
-                    EventListener<OverlaySlotEvent>(
+                    EventListener(
                         handler.type,
                         null,
                         { if (index == this.index) handler.block(this) },
@@ -57,8 +57,10 @@ internal abstract class AbstractPlayerOverlay(
         packetListener = registerPacketListener()
     }
 
+    // 拷贝语义：读侧 getItem 出参克隆（外部拿不到活引用）；写侧所有权由 LiveSlot 写时克隆
+    // 统一强制（覆盖 setItem、构造、更新循环全部写入路径），故此处无需再 clone 入参。
     final override fun getItem(index: Int): ItemStack? =
-        grid[index]?.item?.takeUnless { it.isEmptyStack() }
+        grid[index]?.item?.takeUnless { it.isEmptyStack() }?.clone()
 
     final override fun setItem(index: Int, item: ItemStack?) {
         val slot = requireNotNull(grid[index]) { "slot $index is not declared on this overlay" }

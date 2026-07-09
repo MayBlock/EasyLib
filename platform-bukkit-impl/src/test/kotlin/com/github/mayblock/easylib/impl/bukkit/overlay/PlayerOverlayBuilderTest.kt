@@ -5,12 +5,14 @@ import com.github.mayblock.easylib.api.bukkit.overlay.PlayerOverlay
 import com.github.mayblock.easylib.api.bukkit.overlay.dsl.slot
 import io.mockk.mockk
 import org.bukkit.Material
+import org.bukkit.inventory.ItemStack
 import org.mockbukkit.mockbukkit.MockBukkit
 import kotlin.test.AfterTest
 import kotlin.test.BeforeTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
+import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 
 class PlayerOverlayBuilderTest {
@@ -39,6 +41,16 @@ class PlayerOverlayBuilderTest {
     fun `range slot 共享同一 spec 铺满区间`() {
         build { slot(1..3, Material.PAPER) }
         assertEquals(setOf(1, 2, 3), captured.keys)
+    }
+
+    @Test
+    fun `slot 的 item 以副本存入，metadata 应用于副本而非调用者对象`() {
+        val template = ItemStack(Material.DIAMOND, 1)
+        build { slot(0, template, metadata = { isUnbreakable = true }) }
+        assertFalse(template.itemMeta!!.isUnbreakable) // 调用者对象未被原地修改
+        assertTrue(captured[0]!!.item.itemMeta!!.isUnbreakable) // metadata 生效在内部副本上
+        template.amount = 99 // 声明后外部继续改模板
+        assertEquals(1, captured[0]!!.item.amount) // 内部不受影响
     }
 
     @Test

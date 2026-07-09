@@ -40,9 +40,11 @@ internal class PlayerOverlayBuilder(
         metadata: ItemMeta.() -> Unit,
         block: (OverlaySlotScope.() -> Unit)?,
     ): OverlaySlotSpec {
+        // 基于副本应用 metadata：不原地修改调用者的 item，spec 持有自己的对象。
+        val owned = item.clone().also { it.itemMeta = it.itemMeta?.also(metadata) }
         return OverlaySlotBuilder()
             .apply { block?.invoke(this) }
-            .build(item.also { item.itemMeta = item.itemMeta?.also(metadata) })
+            .build(owned)
     }
 
     fun build(): PlayerOverlay = factory(slots)
