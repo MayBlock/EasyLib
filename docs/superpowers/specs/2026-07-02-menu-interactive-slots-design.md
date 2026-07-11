@@ -82,7 +82,7 @@ interface ChestMenuScope {
 }
 ```
 
-初始为空的可放置 slot 用 `ItemStack(Material.AIR)` 声明。`PlayerMenuScope.slot` 不变（其 `SlotSpec` 的两个 flag 恒为 false）。
+初始为空的可放置 slot 用 `item(Material.AIR)` 声明。`PlayerMenuScope.slot` 不变（其 `SlotSpec` 的两个 flag 恒为 false）。
 
 ### 4.3 新事件
 
@@ -173,7 +173,7 @@ per-player 虚拟光标：`CursorStack(item: ItemStack, origin: Origin)`，`Orig
 ## 6. 构建期校验与错误处理
 
 - `hidePlayerInventory = true` 且任何页声明了 `placeable` slot：静态矛盾（背包不可见则玩家永远无法拿起物品来放置），构建时 `require` 失败并给出明确消息。
-- `movable`/`placeable` 对 `ItemStack(AIR)` 初始 slot 合法（placeable 的典型形态）。
+- `movable`/`placeable` 对 `item(AIR)` 初始 slot 合法（placeable 的典型形态）。
 - 事件回调抛异常：`SimpleEventBus` 会捕获监听器异常并记日志（不外传），因此经 `onTake`/`onPlace` DSL 注册的回调由构建器包装——异常时先将事件置为取消再重新抛出（日志仍由总线负责），保证「虚拟层不因半失败的真实操作而提交」；经 `menu.on{}` 直接订阅的监听器不受此包装，其异常安全由订阅方自理。
 - commit 前校验 `player.isOnline` 与 `player in activeViewers`，不满足则丢弃本次操作。
 
@@ -201,13 +201,13 @@ val factory = EasyLibApi.api.bukkitApi().menuFactory
 val trade = factory.createChestMenu(ChestMenuType.GENERIC_9X3, hidePlayerInventory = false) {
     page(Component.text("交易")) {
         // 可被拿走的奖励：回调负责真实给予
-        slot(11, ItemStack(Material.DIAMOND), movable = true) {
+        slot(11, item(Material.DIAMOND), movable = true) {
             onTake {                                        // this: SlotTakeEvent(item, targetSlot, ...)
                 if (player.inventory.addItem(item).isNotEmpty()) isCancelled = true  // 背包满 → 取消
             }
         }
         // 玩家可放入物品的投入口（初始为空）：回调负责真实扣除
-        slot(15, ItemStack(Material.AIR), placeable = true) {
+        slot(15, item(Material.AIR), placeable = true) {
             onPlace {                                       // this: SlotPlaceEvent(item, sourceSlot, ...)
                 val src = player.inventory.getItem(sourceSlot)
                 if (src?.isSimilar(item) != true || src.amount < item.amount) { isCancelled = true; return@onPlace }

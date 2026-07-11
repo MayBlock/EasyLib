@@ -3,13 +3,13 @@ package com.github.mayblock.easylib.impl.bukkit.overlay
 import com.github.mayblock.easylib.api.bukkit.overlay.OverlayEvent
 import com.github.mayblock.easylib.api.bukkit.overlay.OverlayHideEvent
 import com.github.mayblock.easylib.api.bukkit.overlay.OverlayShowEvent
-import com.github.mayblock.easylib.api.bukkit.overlay.OverlaySlotEvent
 import com.github.mayblock.easylib.api.bukkit.overlay.PlayerOverlay
 import com.github.mayblock.easylib.api.event.EventListener
 import com.github.mayblock.easylib.api.event.EventSource
 import com.github.mayblock.easylib.api.scheduler.TaskScheduler
 import com.github.mayblock.easylib.api.util.Disposable
-import com.github.mayblock.easylib.impl.bukkit.menu.isEmptyStack
+import com.github.mayblock.easylib.impl.bukkit.util.isEmptyStack
+import com.github.mayblock.easylib.impl.bukkit.util.item
 import com.github.mayblock.easylib.impl.event.SimpleEventBus
 import org.bukkit.Material
 import org.bukkit.entity.Player
@@ -64,7 +64,7 @@ internal abstract class AbstractPlayerOverlay(
 
     final override fun setItem(index: Int, item: ItemStack?) {
         val slot = requireNotNull(grid[index]) { "slot $index is not declared on this overlay" }
-        slot.item = item ?: ItemStack(Material.AIR)
+        slot.item = item ?: item(Material.AIR)
         repaint(index)
     }
 

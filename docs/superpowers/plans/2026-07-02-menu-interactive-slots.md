@@ -74,14 +74,14 @@ class SlotBuilderTest {
 
     @Test
     fun `build 默认 movable 与 placeable 为 false`() {
-        val spec = builder().build(ItemStack(Material.STONE))
+      val spec = builder().build(item(Material.STONE))
         assertFalse(spec.movable)
         assertFalse(spec.placeable)
     }
 
     @Test
     fun `build 透传 movable 与 placeable`() {
-        val spec = builder().build(ItemStack(Material.STONE), movable = true, placeable = true)
+      val spec = builder().build(item(Material.STONE), movable = true, placeable = true)
         assertTrue(spec.movable)
         assertTrue(spec.placeable)
     }
@@ -91,7 +91,7 @@ class SlotBuilderTest {
         val spec = builder().apply {
             onTake { }
             onPlace { }
-        }.build(ItemStack(Material.STONE))
+        }.build(item(Material.STONE))
         assertEquals(
             listOf<Class<*>>(SlotTakeEvent::class.java, SlotPlaceEvent::class.java),
             spec.clickHandlers.map { it.type },
@@ -102,8 +102,8 @@ class SlotBuilderTest {
     fun `take 回调抛异常时事件被置为取消且异常继续外抛`() {
         val spec = builder().apply {
             onTake { throw IllegalStateException("boom") }
-        }.build(ItemStack(Material.STONE))
-        val event = SlotTakeEvent(mockk<Menu>(), 0, mockk<Player>(), ItemStack(Material.STONE), targetSlot = 0)
+        }.build(item(Material.STONE))
+      val event = SlotTakeEvent(mockk<Menu>(), 0, mockk<Player>(), item(Material.STONE), targetSlot = 0)
         assertFailsWith<IllegalStateException> { spec.clickHandlers.single().block(event) }
         assertTrue(event.isCancelled)
     }
@@ -112,8 +112,8 @@ class SlotBuilderTest {
     fun `place 回调抛异常时事件被置为取消且异常继续外抛`() {
         val spec = builder().apply {
             onPlace { throw IllegalStateException("boom") }
-        }.build(ItemStack(Material.STONE))
-        val event = SlotPlaceEvent(mockk<Menu>(), 0, mockk<Player>(), ItemStack(Material.STONE), sourceSlot = 3)
+        }.build(item(Material.STONE))
+      val event = SlotPlaceEvent(mockk<Menu>(), 0, mockk<Player>(), item(Material.STONE), sourceSlot = 3)
         assertFailsWith<IllegalStateException> { spec.clickHandlers.single().block(event) }
         assertTrue(event.isCancelled)
     }
@@ -372,22 +372,22 @@ class AbstractVirtualMenuTest {
 
     @Test
     fun `getItem 返回声明槽位的当前物品`() {
-        val menu = TestMenu(mapOf(3 to specOf(ItemStack(Material.STONE, 5))))
+      val menu = TestMenu(mapOf(3 to specOf(item(Material.STONE, 5))))
         assertEquals(Material.STONE, menu.getItem(3)!!.type)
         assertEquals(5, menu.getItem(3)!!.amount)
     }
 
     @Test
     fun `getItem 对未声明槽位与 AIR 槽位返回 null`() {
-        val menu = TestMenu(mapOf(3 to specOf(ItemStack(Material.AIR))))
+      val menu = TestMenu(mapOf(3 to specOf(item(Material.AIR))))
         assertNull(menu.getItem(3))
         assertNull(menu.getItem(4))
     }
 
     @Test
     fun `setItem 写入声明槽位并触发 repaint，null 等价 AIR`() {
-        val menu = TestMenu(mapOf(3 to specOf(ItemStack(Material.AIR))))
-        menu.setItem(3, ItemStack(Material.DIAMOND, 2))
+      val menu = TestMenu(mapOf(3 to specOf(item(Material.AIR))))
+      menu.setItem(3, item(Material.DIAMOND, 2))
         assertEquals(Material.DIAMOND, menu.getItem(3)!!.type)
         menu.setItem(3, null)
         assertNull(menu.getItem(3))
@@ -396,27 +396,27 @@ class AbstractVirtualMenuTest {
 
     @Test
     fun `setItem 对未声明槽位抛 IllegalArgumentException`() {
-        val menu = TestMenu(mapOf(3 to specOf(ItemStack(Material.AIR))))
-        assertFailsWith<IllegalArgumentException> { menu.setItem(4, ItemStack(Material.DIAMOND)) }
+      val menu = TestMenu(mapOf(3 to specOf(item(Material.AIR))))
+      assertFailsWith<IllegalArgumentException> { menu.setItem(4, item(Material.DIAMOND)) }
     }
 
     @Test
     fun `onTake 声明经总线按 index 过滤派发`() {
         var takeCalls = 0
         val menu = TestMenu(
-            mapOf(3 to specOf(ItemStack(Material.STONE)) { onTake { takeCalls++ } }),
+          mapOf(3 to specOf(item(Material.STONE)) { onTake { takeCalls++ } }),
         )
         val player = mockk<Player>(relaxed = true)
-        menu.emit(SlotTakeEvent(menu, 3, player, ItemStack(Material.STONE), targetSlot = 0))
-        menu.emit(SlotTakeEvent(menu, 4, player, ItemStack(Material.STONE), targetSlot = 0))
+      menu.emit(SlotTakeEvent(menu, 3, player, item(Material.STONE), targetSlot = 0))
+      menu.emit(SlotTakeEvent(menu, 4, player, item(Material.STONE), targetSlot = 0))
         assertEquals(1, takeCalls)
     }
 
     @Test
     fun `isEmptyStack 判定 null、AIR 与非空`() {
         assertTrue((null as ItemStack?).isEmptyStack())
-        assertTrue(ItemStack(Material.AIR).isEmptyStack())
-        assertTrue(!ItemStack(Material.STONE).isEmptyStack())
+      assertTrue(item(Material.AIR).isEmptyStack())
+      assertTrue(!item(Material.STONE).isEmptyStack())
     }
 }
 ```
@@ -481,7 +481,7 @@ internal fun org.bukkit.inventory.ItemStack?.isEmptyStack(): Boolean =
 
     final override fun setItem(index: Int, item: ItemStack?) {
         val slot = requireNotNull(grid[index]) { "slot $index is not declared on this menu" }
-        slot.item = item ?: ItemStack(Material.AIR)
+      slot.item = item ?: item(Material.AIR)
         repaint(index)
     }
 ```
@@ -559,22 +559,22 @@ class ChestClickLogicTest {
 
     @Test
     fun `左键 movable 槽位拿起全部`() {
-        val d = logic().decide(5, false, null, view(ItemStack(Material.STONE, 5), movable = true), null)
+      val d = logic().decide(5, false, null, view(item(Material.STONE, 5), movable = true), null)
         assertIs<ClickDecision.PickupFromMenu>(d)
         assertEquals(5, d.slot); assertEquals(5, d.amount)
     }
 
     @Test
     fun `右键 movable 槽位拿起向上取整的一半`() {
-        val d = logic().decide(5, true, null, view(ItemStack(Material.STONE, 5), movable = true), null)
+      val d = logic().decide(5, true, null, view(item(Material.STONE, 5), movable = true), null)
         assertIs<ClickDecision.PickupFromMenu>(d)
         assertEquals(3, d.amount)
     }
 
     @Test
     fun `非 movable、空物品、未声明槽位一律拒绝`() {
-        assertIs<ClickDecision.Deny>(logic().decide(5, false, null, view(ItemStack(Material.STONE), movable = false), null))
-        assertIs<ClickDecision.Deny>(logic().decide(5, false, null, view(ItemStack(Material.AIR), movable = true), null))
+      assertIs<ClickDecision.Deny>(logic().decide(5, false, null, view(item(Material.STONE), movable = false), null))
+      assertIs<ClickDecision.Deny>(logic().decide(5, false, null, view(item(Material.AIR), movable = true), null))
         assertIs<ClickDecision.Deny>(logic().decide(5, false, null, null, null))
     }
 
@@ -582,9 +582,17 @@ class ChestClickLogicTest {
 
     @Test
     fun `背包区拿起需要 hide=false、存在 placeable 槽且槽位有物品`() {
-        assertIs<ClickDecision.PickupFromInventory>(logic().decide(30, false, null, null, ItemStack(Material.EMERALD)))
-        assertIs<ClickDecision.Deny>(logic(hide = true, hasPlaceable = false).decide(30, false, null, null, ItemStack(Material.EMERALD)))
-        assertIs<ClickDecision.Deny>(logic(hasPlaceable = false).decide(30, false, null, null, ItemStack(Material.EMERALD)))
+      assertIs<ClickDecision.PickupFromInventory>(logic().decide(30, false, null, null, item(Material.EMERALD)))
+      assertIs<ClickDecision.Deny>(
+        logic(hide = true, hasPlaceable = false).decide(
+          30,
+          false,
+          null,
+          null,
+          item(Material.EMERALD)
+        )
+      )
+      assertIs<ClickDecision.Deny>(logic(hasPlaceable = false).decide(30, false, null, null, item(Material.EMERALD)))
         assertIs<ClickDecision.Deny>(logic().decide(30, false, null, null, null))
     }
 
@@ -592,7 +600,7 @@ class ChestClickLogicTest {
 
     @Test
     fun `菜单源光标放入空 placeable 槽位（左键全放、右键放一）`() {
-        val cursor = menuCursor(ItemStack(Material.STONE, 4), origin = 2)
+      val cursor = menuCursor(item(Material.STONE, 4), origin = 2)
         val left = logic().decide(5, false, cursor, view(null, placeable = true), null)
         assertIs<ClickDecision.PlaceInMenu>(left)
         assertEquals(4, left.amount); assertTrue(!left.fromInventory)
@@ -603,37 +611,37 @@ class ChestClickLogicTest {
 
     @Test
     fun `放回来源槽位不要求 placeable`() {
-        val cursor = menuCursor(ItemStack(Material.STONE, 4), origin = 5)
+      val cursor = menuCursor(item(Material.STONE, 4), origin = 5)
         val d = logic().decide(5, false, cursor, view(null, movable = true, placeable = false), null)
         assertIs<ClickDecision.PlaceInMenu>(d)
     }
 
     @Test
     fun `非 placeable 且非来源槽位拒绝放置`() {
-        val cursor = menuCursor(ItemStack(Material.STONE, 4), origin = 2)
+      val cursor = menuCursor(item(Material.STONE, 4), origin = 2)
         assertIs<ClickDecision.Deny>(logic().decide(5, false, cursor, view(null, placeable = false), null))
     }
 
     @Test
     fun `同类堆叠受 maxStackSize 限制，满栈拒绝`() {
-        val cursor = menuCursor(ItemStack(Material.STONE, 10), origin = 2)
-        val d = logic().decide(5, false, cursor, view(ItemStack(Material.STONE, 60), placeable = true), null)
+      val cursor = menuCursor(item(Material.STONE, 10), origin = 2)
+      val d = logic().decide(5, false, cursor, view(item(Material.STONE, 60), placeable = true), null)
         assertIs<ClickDecision.PlaceInMenu>(d)
         assertEquals(4, d.amount) // 64 - 60
         assertIs<ClickDecision.Deny>(
-            logic().decide(5, false, cursor, view(ItemStack(Material.STONE, 64), placeable = true), null)
+          logic().decide(5, false, cursor, view(item(Material.STONE, 64), placeable = true), null)
         )
     }
 
     @Test
     fun `异类交换需要目标同时 movable 与 placeable，且真实源交换一律拒绝`() {
-        val menuOrigin = menuCursor(ItemStack(Material.STONE, 1), origin = 2)
-        val target = view(ItemStack(Material.DIRT, 1), movable = true, placeable = true)
+      val menuOrigin = menuCursor(item(Material.STONE, 1), origin = 2)
+      val target = view(item(Material.DIRT, 1), movable = true, placeable = true)
         assertIs<ClickDecision.SwapWithMenu>(logic().decide(5, false, menuOrigin, target, null))
         assertIs<ClickDecision.Deny>(
-            logic().decide(5, false, menuOrigin, view(ItemStack(Material.DIRT, 1), movable = true, placeable = false), null)
+          logic().decide(5, false, menuOrigin, view(item(Material.DIRT, 1), movable = true, placeable = false), null)
         )
-        val invOrigin = invCursor(ItemStack(Material.STONE, 1), ws = 30)
+      val invOrigin = invCursor(item(Material.STONE, 1), ws = 30)
         assertIs<ClickDecision.Deny>(logic().decide(5, false, invOrigin, target, null))
     }
 
@@ -641,7 +649,7 @@ class ChestClickLogicTest {
 
     @Test
     fun `背包源光标放入空 placeable 槽位标记 fromInventory`() {
-        val d = logic().decide(5, false, invCursor(ItemStack(Material.EMERALD, 2), 30), view(null, placeable = true), null)
+      val d = logic().decide(5, false, invCursor(item(Material.EMERALD, 2), 30), view(null, placeable = true), null)
         assertIs<ClickDecision.PlaceInMenu>(d)
         assertTrue(d.fromInventory)
     }
@@ -650,14 +658,14 @@ class ChestClickLogicTest {
 
     @Test
     fun `菜单源光标点背包区任意槽位为取出`() {
-        val d = logic().decide(30, false, menuCursor(ItemStack(Material.STONE, 1), 2), null, null)
+      val d = logic().decide(30, false, menuCursor(item(Material.STONE, 1), 2), null, null)
         assertIs<ClickDecision.DropToInventory>(d)
         assertEquals(30, d.windowSlot)
     }
 
     @Test
     fun `背包源光标仅可放回原槽位，其它拒绝`() {
-        val cursor = invCursor(ItemStack(Material.EMERALD, 1), ws = 30)
+      val cursor = invCursor(item(Material.EMERALD, 1), ws = 30)
         assertIs<ClickDecision.PutBackToInventory>(logic().decide(30, false, cursor, null, null))
         assertIs<ClickDecision.Deny>(logic().decide(31, false, cursor, null, null))
     }
@@ -680,8 +688,8 @@ class ChestClickLogicTest {
     @Test
     fun `requirePlaceableVisible 在 hide 且存在 placeable 时报错`() {
         val placeableSpec = SlotBuilder(InventoryClickEvent::class.java)
-            .build(ItemStack(Material.AIR), placeable = true)
-        val plainSpec = SlotBuilder(InventoryClickEvent::class.java).build(ItemStack(Material.STONE))
+          .build(item(Material.AIR), placeable = true)
+      val plainSpec = SlotBuilder(InventoryClickEvent::class.java).build(item(Material.STONE))
         assertFailsWith<IllegalArgumentException> {
             requirePlaceableVisible(hidePlayerInventory = true, specs = mapOf(0 to placeableSpec))
         }
@@ -905,9 +913,9 @@ class ChestMenuBuilderTest {
     @Test
     fun `slot 透传 movable 与 placeable 到 SlotSpec`() {
         val specs = buildSpecs {
-            slot(0, ItemStack(Material.STONE))
-            slot(1, ItemStack(Material.DIAMOND), movable = true)
-            slot(2, ItemStack(Material.AIR), placeable = true)
+          slot(0, item(Material.STONE))
+          slot(1, item(Material.DIAMOND), movable = true)
+          slot(2, item(Material.AIR), placeable = true)
         }
         assertFalse(specs.getValue(0).movable); assertFalse(specs.getValue(0).placeable)
         assertTrue(specs.getValue(1).movable); assertFalse(specs.getValue(1).placeable)
@@ -916,7 +924,7 @@ class ChestMenuBuilderTest {
 
     @Test
     fun `range 重载对每个槽位透传 flag`() {
-        val specs = buildSpecs { slot(3..5, ItemStack(Material.STONE), movable = true) }
+      val specs = buildSpecs { slot(3..5, item(Material.STONE), movable = true) }
         assertEquals(setOf(3, 4, 5), specs.keys)
         assertTrue(specs.values.all { it.movable })
     }
@@ -971,7 +979,7 @@ fun ChestMenuScope.slot(
     metadata: ItemMeta.() -> Unit = {},
     block: (SlotScope<InventoryClickEvent>.() -> Unit)? = null
 ) {
-    slot(index, ItemStack(type, amount), movable, placeable, metadata, block)
+  slot(index, item(type, amount), movable, placeable, metadata, block)
 }
 fun ChestMenuScope.slot(
     range: IntRange,
@@ -982,7 +990,7 @@ fun ChestMenuScope.slot(
     metadata: ItemMeta.() -> Unit = {},
     block: (SlotScope<InventoryClickEvent>.() -> Unit)? = null
 ) {
-    slot(range, ItemStack(type, amount), movable, placeable, metadata, block)
+  slot(range, item(type, amount), movable, placeable, metadata, block)
 }
 ```
 
@@ -1108,6 +1116,7 @@ internal class VirtualChestMenu(
         }
         addViewer(player)
     }
+}
 ```
 
 `hidePlayerInventoryItems` 改为（修复 off-by-one：原 `type.size - 1 until type.size + 36` 会把最后一个菜单槽位清成空气）：
@@ -1288,7 +1297,7 @@ class ChestClickEngineTest {
 
     @Test
     fun `movable 槽位左键拿起：grid 清空、光标写入、重绘`() {
-        val (engine, grid) = engine(mapOf(5 to spec(ItemStack(Material.STONE, 5), movable = true)))
+      val (engine, grid) = engine(mapOf(5 to spec(item(Material.STONE, 5), movable = true)))
         val p = player()
         click(engine, p, 5)
         assertTrue(grid[5]!!.item.type.isAir)
@@ -1300,8 +1309,8 @@ class ChestClickEngineTest {
 
     @Test
     fun `从背包拿起再放入 placeable 槽位：派发 SlotPlaceEvent 并提交`() {
-        val (engine, grid) = engine(mapOf(5 to spec(ItemStack(Material.AIR), placeable = true)))
-        val p = player(9 to ItemStack(Material.EMERALD, 3)) // 窗口槽 27 ↔ bukkit 9
+      val (engine, grid) = engine(mapOf(5 to spec(item(Material.AIR), placeable = true)))
+      val p = player(9 to item(Material.EMERALD, 3)) // 窗口槽 27 ↔ bukkit 9
         click(engine, p, 27)                                 // 视觉拿起
         assertIs<CursorOrigin.PlayerInventory>(engine.cursorOf(p)!!.origin)
         assertEquals(listOf(27), renderer.emptiedWindowSlots)
@@ -1315,8 +1324,8 @@ class ChestClickEngineTest {
 
     @Test
     fun `SlotPlaceEvent 取消：grid 不变、光标保留`() {
-        val (engine, grid) = engine(mapOf(5 to spec(ItemStack(Material.AIR), placeable = true)))
-        val p = player(9 to ItemStack(Material.EMERALD, 3))
+      val (engine, grid) = engine(mapOf(5 to spec(item(Material.AIR), placeable = true)))
+      val p = player(9 to item(Material.EMERALD, 3))
         click(engine, p, 27)
         cancelPlace = true
         click(engine, p, 5)
@@ -1326,7 +1335,7 @@ class ChestClickEngineTest {
 
     @Test
     fun `菜单源光标落入背包区：派发 SlotTakeEvent（index=来源槽），提交后光标清空`() {
-        val (engine, grid) = engine(mapOf(5 to spec(ItemStack(Material.DIAMOND, 2), movable = true)))
+      val (engine, grid) = engine(mapOf(5 to spec(item(Material.DIAMOND, 2), movable = true)))
         val p = player()
         click(engine, p, 5)
         click(engine, p, 30) // 窗口槽 30 ↔ bukkit 12
@@ -1339,7 +1348,7 @@ class ChestClickEngineTest {
 
     @Test
     fun `SlotTakeEvent 取消：光标维持`() {
-        val (engine, _) = engine(mapOf(5 to spec(ItemStack(Material.DIAMOND, 2), movable = true)))
+      val (engine, _) = engine(mapOf(5 to spec(item(Material.DIAMOND, 2), movable = true)))
         val p = player()
         click(engine, p, 5)
         cancelTake = true
@@ -1349,7 +1358,7 @@ class ChestClickEngineTest {
 
     @Test
     fun `非 PICKUP 点击一律拒绝并权威重刷`() {
-        val (engine, grid) = engine(mapOf(5 to spec(ItemStack(Material.DIAMOND, 2), movable = true)))
+      val (engine, grid) = engine(mapOf(5 to spec(item(Material.DIAMOND, 2), movable = true)))
         val p = player()
         engine.submit(
             p,
@@ -1362,7 +1371,7 @@ class ChestClickEngineTest {
 
     @Test
     fun `onViewerRemoved 把菜单源光标归还来源槽位`() {
-        val (engine, grid) = engine(mapOf(5 to spec(ItemStack(Material.DIAMOND, 2), movable = true)))
+      val (engine, grid) = engine(mapOf(5 to spec(item(Material.DIAMOND, 2), movable = true)))
         val p = player()
         click(engine, p, 5)
         engine.onViewerRemoved(p)
@@ -1532,7 +1541,7 @@ internal class ChestClickEngine(
         if (current.isEmptyStack() || d.amount > current.amount) return deny(player, snapshot)
         val taken = current.clone().apply { amount = d.amount }
         val remainderAmount = current.amount - d.amount
-        slot.item = if (remainderAmount <= 0) ItemStack(Material.AIR)
+      slot.item = if (remainderAmount <= 0) item(Material.AIR)
         else current.clone().apply { amount = remainderAmount }
         cursors[player.uniqueId] = VirtualCursor(taken, CursorOrigin.MenuSlot(d.slot))
         renderer.sendCursor(player, taken)

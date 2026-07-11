@@ -263,14 +263,14 @@ class ShiftIntoMenuPlannerTest {
     @BeforeTest fun setUp() { MockBukkit.mock() }
     @AfterTest fun tearDown() { MockBukkit.unmock() }
 
-    private fun stack(m: Material, n: Int) = ItemStack(m, n)
+  private fun item(m: Material, n: Int) = item(m, n)
 
     @Test fun `优先填同类未满堆叠，再填空槽`() {
-        val source = stack(Material.STONE, 40)
+      val source = item(Material.STONE, 40)
         val slots = listOf(
-            1 to stack(Material.STONE, 60), // 同类，剩 4
+          1 to item(Material.STONE, 60), // 同类，剩 4
             3 to null,                       // 空
-            5 to stack(Material.DIRT, 1),    // 异类，跳过
+          5 to item(Material.DIRT, 1),    // 异类，跳过
         )
         val plan = ShiftIntoMenuPlanner.plan(source, slots)
         // 先向 slot1 放 4（填满 64），余 36 放入空 slot3
@@ -278,22 +278,22 @@ class ShiftIntoMenuPlannerTest {
     }
 
     @Test fun `空间不足时只分发能放下的量`() {
-        val source = stack(Material.STONE, 100)
+      val source = item(Material.STONE, 100)
         val slots = listOf(1 to null) // 一个空槽最多 64
         assertEquals(listOf(Placement(1, 64)), ShiftIntoMenuPlanner.plan(source, slots))
     }
 
     @Test fun `无可放置空间返回空计划`() {
-        val source = stack(Material.STONE, 10)
+      val source = item(Material.STONE, 10)
         val slots = listOf(
-            1 to stack(Material.DIRT, 1),     // 异类
-            3 to stack(Material.STONE, 64),   // 同类但已满
+          1 to item(Material.DIRT, 1),     // 异类
+          3 to item(Material.STONE, 64),   // 同类但已满
         )
         assertEquals(emptyList(), ShiftIntoMenuPlanner.plan(source, slots))
     }
 
     @Test fun `按 slot 顺序分发`() {
-        val source = stack(Material.STONE, 5)
+      val source = item(Material.STONE, 5)
         val slots = listOf(7 to null, 2 to null) // 传入顺序即分发顺序
         assertEquals(listOf(Placement(7, 5)), ShiftIntoMenuPlanner.plan(source, slots))
     }
@@ -435,7 +435,7 @@ class RealChestMenuTest {
         RealChestMenu(mockk<TaskScheduler>(relaxed = true), Component.text("交易"), ChestMenuType.GENERIC_9X3, specs, hidePlayerInventory = false)
 
     @Test fun `真实容器尺寸与初始物品`() {
-        val m = menu(mapOf(11 to spec(ItemStack(Material.DIAMOND, 3))))
+      val m = menu(mapOf(11 to spec(item(Material.DIAMOND, 3))))
         assertEquals(27, m.bukkitInventory.size)
         assertEquals(Material.DIAMOND, m.bukkitInventory.getItem(11)!!.type)
         assertEquals(3, m.bukkitInventory.getItem(11)!!.amount)
@@ -443,34 +443,34 @@ class RealChestMenuTest {
     }
 
     @Test fun `getInventory 返回同一真实容器（holder 即菜单）`() {
-        val m = menu(mapOf(0 to spec(ItemStack(Material.STONE))))
+      val m = menu(mapOf(0 to spec(item(Material.STONE))))
         assertEquals(m.bukkitInventory, m.inventory)
         assertEquals(m, m.bukkitInventory.holder)
     }
 
     @Test fun `getItem setItem 读写真实容器，AIR 视为空`() {
-        val m = menu(mapOf(4 to spec(ItemStack(Material.AIR))))
+      val m = menu(mapOf(4 to spec(item(Material.AIR))))
         assertNull(m.getItem(4))
-        m.setItem(4, ItemStack(Material.EMERALD, 2))
+      m.setItem(4, item(Material.EMERALD, 2))
         assertEquals(Material.EMERALD, m.getItem(4)!!.type)
         m.setItem(4, null)
         assertNull(m.getItem(4))
     }
 
     @Test fun `setItem 越界抛异常`() {
-        val m = menu(mapOf(0 to spec(ItemStack(Material.STONE))))
-        assertFailsWith<IllegalArgumentException> { m.setItem(27, ItemStack(Material.STONE)) }
+      val m = menu(mapOf(0 to spec(item(Material.STONE))))
+      assertFailsWith<IllegalArgumentException> { m.setItem(27, item(Material.STONE)) }
     }
 
     @Test fun `specOf 暴露 slot 声明`() {
-        val s = SlotBuilder(InventoryClickEvent::class.java).build(ItemStack(Material.STONE), movable = true, placeable = true)
+      val s = SlotBuilder(InventoryClickEvent::class.java).build(item(Material.STONE), movable = true, placeable = true)
         val m = menu(mapOf(6 to s))
         assertEquals(true, m.specOf(6)!!.movable)
         assertNull(m.specOf(7))
     }
 
     @Test fun `publishOpen publishClose 走事件总线`() {
-        val m = menu(mapOf(0 to spec(ItemStack(Material.STONE))))
+      val m = menu(mapOf(0 to spec(item(Material.STONE))))
         val events = mutableListOf<MenuEvent>()
         m.on { on<MenuOpenEvent> { events += this }; on<MenuCloseEvent> { events += this } }
         val p = server.addPlayer()
@@ -480,7 +480,8 @@ class RealChestMenuTest {
 
     @Test fun `声明的 onClick 经总线按 index 过滤`() {
         var clicks = 0
-        val built = SlotBuilder(InventoryClickEvent::class.java).apply { onClick { clicks++ } }.build(ItemStack(Material.STONE))
+      val built =
+        SlotBuilder(InventoryClickEvent::class.java).apply { onClick { clicks++ } }.build(item(Material.STONE))
         val m = menu(mapOf(2 to built))
         val p = server.addPlayer()
         m.fireClickForTest(p, 2) // 见实现：仅用于测试的 publish 包装
@@ -571,7 +572,7 @@ internal class RealChestMenu(
 
     override fun setItem(index: Int, item: ItemStack?) {
         require(index in 0 until type.size) { "slot $index out of range [0, ${type.size})" }
-        bukkitInventory.setItem(index, item ?: ItemStack(Material.AIR))
+      bukkitInventory.setItem(index, item ?: item(Material.AIR))
     }
 
     fun publish(event: MenuEvent) = bus.emit(event)
@@ -678,7 +679,7 @@ class RealChestMenuClickTest {
         BukkitInventoryClickEvent(view, InventoryType.SlotType.CONTAINER, rawSlot, click, action)
 
     @Test fun `不可变槽点击被取消`() {
-        val m = menu(mapOf(5 to spec(ItemStack(Material.DIAMOND))))
+      val m = menu(mapOf(5 to spec(item(Material.DIAMOND))))
         val (_, view) = open(m)
         val e = click(view, 5, InventoryAction.PICKUP_ALL)
         m.handleClick(e)
@@ -687,7 +688,7 @@ class RealChestMenuClickTest {
 
     @Test fun `movable 槽取出触发 SlotTakeEvent 且不取消`() {
         var take = 0
-        val m = menu(mapOf(5 to spec(ItemStack(Material.DIAMOND, 2), movable = true)))
+      val m = menu(mapOf(5 to spec(item(Material.DIAMOND, 2), movable = true)))
         m.on { on<SlotTakeEvent> { take++ } }
         val (_, view) = open(m)
         val e = click(view, 5, InventoryAction.PICKUP_ALL)
@@ -697,7 +698,7 @@ class RealChestMenuClickTest {
     }
 
     @Test fun `onTake 取消则阻止取出`() {
-        val m = menu(mapOf(5 to spec(ItemStack(Material.DIAMOND, 2), movable = true)))
+      val m = menu(mapOf(5 to spec(item(Material.DIAMOND, 2), movable = true)))
         m.on { on<SlotTakeEvent> { isCancelled = true } }
         val (_, view) = open(m)
         val e = click(view, 5, InventoryAction.PICKUP_ALL)
@@ -707,10 +708,10 @@ class RealChestMenuClickTest {
 
     @Test fun `placeable 槽放入触发 SlotPlaceEvent`() {
         var place = 0
-        val m = menu(mapOf(5 to spec(ItemStack(Material.AIR), placeable = true)))
+      val m = menu(mapOf(5 to spec(item(Material.AIR), placeable = true)))
         m.on { on<SlotPlaceEvent> { place++ } }
         val (p, view) = open(m)
-        view.cursor = ItemStack(Material.EMERALD, 1)
+      view.cursor = item(Material.EMERALD, 1)
         val e = click(view, 5, InventoryAction.PLACE_ALL)
         m.handleClick(e)
         assertEquals(1, place)
@@ -719,7 +720,8 @@ class RealChestMenuClickTest {
 
     @Test fun `信息性 onClick 对已声明槽触发`() {
         var clicks = 0
-        val built = SlotBuilder(ApiInventoryClickEvent::class.java).apply { onClick { clicks++ } }.build(ItemStack(Material.BARRIER))
+      val built =
+        SlotBuilder(ApiInventoryClickEvent::class.java).apply { onClick { clicks++ } }.build(item(Material.BARRIER))
         val m = menu(mapOf(8 to built))
         val (_, view) = open(m)
         m.handleClick(click(view, 8, InventoryAction.PICKUP_ALL))
@@ -729,13 +731,13 @@ class RealChestMenuClickTest {
     @Test fun `shift 入菜单只向 placeable 槽分发`() {
         val places = mutableListOf<Int>()
         val m = menu(mapOf(
-            0 to spec(ItemStack(Material.STONE, 60), placeable = true), // 同类剩 4
-            1 to spec(ItemStack(Material.DIAMOND)),                     // 不可放置
-            2 to spec(ItemStack(Material.AIR), placeable = true),       // 空
+          0 to spec(item(Material.STONE, 60), placeable = true), // 同类剩 4
+          1 to spec(item(Material.DIAMOND)),                     // 不可放置
+          2 to spec(item(Material.AIR), placeable = true),       // 空
         ))
         m.on { on<SlotPlaceEvent> { places += index } }
         val (p, view) = open(m)
-        p.inventory.setItem(0, ItemStack(Material.STONE, 40)) // 底部第一格
+      p.inventory.setItem(0, item(Material.STONE, 40)) // 底部第一格
         val rawBottom = m.bukkitInventory.size + 0 // 底部第一格的 rawSlot
         val e = click(view, rawBottom, InventoryAction.MOVE_TO_OTHER_INVENTORY)
         m.handleClick(e)
@@ -747,24 +749,31 @@ class RealChestMenuClickTest {
     }
 
     @Test fun `拖拽触及不可放置顶部槽则整体取消`() {
-        val m = menu(mapOf(0 to spec(ItemStack(Material.AIR), placeable = true), 1 to spec(ItemStack(Material.DIAMOND))))
+      val m = menu(mapOf(0 to spec(item(Material.AIR), placeable = true), 1 to spec(item(Material.DIAMOND))))
         val (_, view) = open(m)
-        view.cursor = ItemStack(Material.EMERALD, 2)
+      view.cursor = item(Material.EMERALD, 2)
         // 拖到 placeable 槽0 与不可放置槽1
-        val newItems = mapOf(0 to ItemStack(Material.EMERALD, 1), 1 to ItemStack(Material.EMERALD, 1))
-        val e = org.bukkit.event.inventory.InventoryDragEvent(view, ItemStack(Material.AIR), ItemStack(Material.EMERALD, 2), false, newItems)
+      val newItems = mapOf(0 to item(Material.EMERALD, 1), 1 to item(Material.EMERALD, 1))
+      val e = InventoryDragEvent(view, item(Material.AIR), item(Material.EMERALD, 2), false, newItems)
         m.handleDrag(e)
         assertTrue(e.isCancelled)
     }
 
     @Test fun `拖拽仅触及 placeable 顶部槽则放行并逐槽 onPlace`() {
         var place = 0
-        val m = menu(mapOf(0 to spec(ItemStack(Material.AIR), placeable = true), 1 to spec(ItemStack(Material.AIR), placeable = true)))
+      val m =
+        menu(mapOf(0 to spec(item(Material.AIR), placeable = true), 1 to spec(item(Material.AIR), placeable = true)))
         m.on { on<SlotPlaceEvent> { place++ } }
         val (_, view) = open(m)
-        view.cursor = ItemStack(Material.EMERALD, 2)
-        val newItems = mapOf(0 to ItemStack(Material.EMERALD, 1), 1 to ItemStack(Material.EMERALD, 1))
-        val e = org.bukkit.event.inventory.InventoryDragEvent(view, ItemStack(Material.AIR), ItemStack(Material.EMERALD, 2), false, newItems)
+      view.cursor = item(Material.EMERALD, 2)
+      val newItems = mapOf(0 to item(Material.EMERALD, 1), 1 to item(Material.EMERALD, 1))
+      val e = org.bukkit.event.inventory.InventoryDragEvent(
+        view,
+        item(Material.AIR),
+        item(Material.EMERALD, 2),
+        false,
+        newItems
+      )
         m.handleDrag(e)
         assertFalse(e.isCancelled)
         assertEquals(2, place)
@@ -797,18 +806,32 @@ Expected: FAIL —— `handleClick` 未定义。
             is SlotDecision.Deny -> e.isCancelled = true
             is SlotDecision.AllowNative -> {}
             is SlotDecision.FireTake -> {
-                val ev = SlotTakeEvent(this, decision.slot, player, (e.currentItem ?: ItemStack(Material.AIR)).clone(), targetSlot = -1)
+              val ev = SlotTakeEvent(
+                this,
+                decision.slot,
+                player,
+                (e.currentItem ?: item(Material.AIR)).clone(),
+                targetSlot = -1
+              )
                 bus.emit(ev)
                 if (ev.isCancelled) e.isCancelled = true
             }
             is SlotDecision.FirePlace -> {
-                val ev = SlotPlaceEvent(this, decision.slot, player, (e.cursor ?: ItemStack(Material.AIR)).clone(), sourceSlot = -1)
+              val ev =
+                SlotPlaceEvent(this, decision.slot, player, (e.cursor ?: item(Material.AIR)).clone(), sourceSlot = -1)
                 bus.emit(ev)
                 if (ev.isCancelled) e.isCancelled = true
             }
             is SlotDecision.FireSwap -> {
-                val take = SlotTakeEvent(this, decision.slot, player, (e.currentItem ?: ItemStack(Material.AIR)).clone(), targetSlot = -1)
-                val place = SlotPlaceEvent(this, decision.slot, player, (e.cursor ?: ItemStack(Material.AIR)).clone(), sourceSlot = -1)
+              val take = SlotTakeEvent(
+                this,
+                decision.slot,
+                player,
+                (e.currentItem ?: item(Material.AIR)).clone(),
+                targetSlot = -1
+              )
+              val place =
+                SlotPlaceEvent(this, decision.slot, player, (e.cursor ?: item(Material.AIR)).clone(), sourceSlot = -1)
                 bus.emit(take); bus.emit(place)
                 if (take.isCancelled || place.isCancelled) e.isCancelled = true
             }
@@ -972,9 +995,9 @@ class RealChestMenuUpdateTest {
         val scheduler = InlineScheduler()
         val spec = SlotBuilder(InventoryClickEvent::class.java).apply {
             onUpdate(trigger = TaskScheduler.Trigger.Interval(1.seconds)) {
-                item = ItemStack(Material.CLOCK, 5)
+              item = item(Material.CLOCK, 5)
             }
-        }.build(ItemStack(Material.AIR))
+        }.build(item(Material.AIR))
         val m = RealChestMenu(scheduler, Component.text("t"), ChestMenuType.GENERIC_9X3, mapOf(4 to spec), hidePlayerInventory = false)
         // 构造末尾已 startUpdates → InlineScheduler 立即执行了一次 onTick
         assertEquals(Material.CLOCK, m.bukkitInventory.getItem(4)!!.type)
@@ -1003,7 +1026,7 @@ Expected: FAIL —— 未启动更新循环，槽 4 仍为空。
                     trigger = rule.trigger
                     isAsync = false // 真实容器 setItem 必须主线程
                     onTick = {
-                        val current = bukkitInventory.getItem(index) ?: ItemStack(Material.AIR)
+                      val current = bukkitInventory.getItem(index) ?: item(Material.AIR)
                         val event = SlotUpdateEvent(this@RealChestMenu, index, current.clone()).apply(rule.block)
                         if (event.item != current) bukkitInventory.setItem(index, event.item)
                     }

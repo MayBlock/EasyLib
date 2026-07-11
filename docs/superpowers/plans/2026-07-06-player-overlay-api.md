@@ -298,7 +298,7 @@ class OverlaySlotBuilderTest {
         val spec = OverlaySlotBuilder().apply {
             onClick { }
             onInteract { }
-        }.build(ItemStack(Material.STONE))
+        }.build(item(Material.STONE))
         assertEquals(
             listOf<Class<*>>(OverlayClickEvent::class.java, OverlayInteractEvent::class.java),
             spec.handlers.map { it.type },
@@ -309,14 +309,14 @@ class OverlaySlotBuilderTest {
     fun `onUpdate 收集为 updateRule`() {
         val spec = OverlaySlotBuilder().apply {
             onUpdate(trigger = TaskScheduler.Trigger.Once) { }
-        }.build(ItemStack(Material.STONE))
+        }.build(item(Material.STONE))
         assertEquals(1, spec.updateRules.size)
         assertEquals(0, spec.handlers.size)
     }
 
     @Test
     fun `build 透传初始物品`() {
-        val spec = OverlaySlotBuilder().build(ItemStack(Material.DIAMOND, 3))
+      val spec = OverlaySlotBuilder().build(item(Material.DIAMOND, 3))
         assertEquals(Material.DIAMOND, spec.item.type)
         assertEquals(3, spec.item.amount)
     }
@@ -388,7 +388,7 @@ fun PlayerOverlayScope.slot(
     metadata: ItemMeta.() -> Unit = {},
     block: (OverlaySlotScope.() -> Unit)? = null,
 ) {
-    slot(index, ItemStack(type, amount), metadata, block)
+  slot(index, item(type, amount), metadata, block)
 }
 
 fun PlayerOverlayScope.slot(
@@ -398,7 +398,7 @@ fun PlayerOverlayScope.slot(
     metadata: ItemMeta.() -> Unit = {},
     block: (OverlaySlotScope.() -> Unit)? = null,
 ) {
-    slot(range, ItemStack(type, amount), metadata, block)
+  slot(range, item(type, amount), metadata, block)
 }
 ```
 
@@ -527,7 +527,7 @@ class OverlaySlotGridTest {
     @AfterTest fun tearDown() { MockBukkit.unmock() }
 
     private fun spec(block: OverlaySlotBuilder.() -> Unit = {}) =
-        OverlaySlotBuilder().apply(block).build(ItemStack(Material.STONE))
+      OverlaySlotBuilder().apply(block).build(item(Material.STONE))
 
     @Test
     fun `get 返回声明槽的 LiveSlot，未声明返回 null`() {
@@ -553,7 +553,7 @@ class OverlaySlotGridTest {
     fun `LiveSlot item 可变且初值为 spec 物品`() {
         val s = LiveSlot(spec())
         assertEquals(Material.STONE, s.item.type)
-        val diamond = ItemStack(Material.DIAMOND)
+      val diamond = item(Material.DIAMOND)
         s.item = diamond
         assertSame(diamond, s.item)
     }
@@ -683,8 +683,8 @@ class OverlayUpdateLoopTest {
     fun `update 规则异步 tick 并在物品变化时重绘`() {
         val scheduler = AsyncTrackingScheduler()
         val spec = OverlaySlotBuilder().apply {
-            onUpdate(TaskScheduler.Trigger.Interval(1.seconds)) { item = ItemStack(Material.CLOCK, 5) }
-        }.build(ItemStack(Material.AIR))
+          onUpdate(TaskScheduler.Trigger.Interval(1.seconds)) { item = item(Material.CLOCK, 5) }
+        }.build(item(Material.AIR))
         val grid = SlotGrid(mapOf(4 to spec))
         val repaints = mutableListOf<Int>()
         OverlayUpdateLoop(mockk<PlayerOverlay>(), grid, scheduler, { repaints += it }).start()
@@ -816,7 +816,7 @@ class AbstractPlayerOverlayTest {
 
     @Test
     fun `getItem 返回声明槽当前物品，未声明或 AIR 返回 null`() {
-        val o = TestOverlay(mapOf(3 to specOf(ItemStack(Material.STONE, 5)), 4 to specOf(ItemStack(Material.AIR))))
+      val o = TestOverlay(mapOf(3 to specOf(item(Material.STONE, 5)), 4 to specOf(item(Material.AIR))))
         assertEquals(Material.STONE, o.getItem(3)!!.type)
         assertEquals(5, o.getItem(3)!!.amount)
         assertNull(o.getItem(4))
@@ -825,8 +825,8 @@ class AbstractPlayerOverlayTest {
 
     @Test
     fun `setItem 写入声明槽并触发 repaint，null 等价 AIR`() {
-        val o = TestOverlay(mapOf(3 to specOf(ItemStack(Material.AIR))))
-        o.setItem(3, ItemStack(Material.DIAMOND, 2))
+      val o = TestOverlay(mapOf(3 to specOf(item(Material.AIR))))
+      o.setItem(3, item(Material.DIAMOND, 2))
         assertEquals(Material.DIAMOND, o.getItem(3)!!.type)
         o.setItem(3, null)
         assertNull(o.getItem(3))
@@ -835,14 +835,14 @@ class AbstractPlayerOverlayTest {
 
     @Test
     fun `setItem 对未声明槽抛 IllegalArgumentException`() {
-        val o = TestOverlay(mapOf(3 to specOf(ItemStack(Material.AIR))))
-        assertFailsWith<IllegalArgumentException> { o.setItem(4, ItemStack(Material.DIAMOND)) }
+      val o = TestOverlay(mapOf(3 to specOf(item(Material.AIR))))
+      assertFailsWith<IllegalArgumentException> { o.setItem(4, item(Material.DIAMOND)) }
     }
 
     @Test
     fun `onClick 声明经总线按 index 过滤派发`() {
         var clicks = 0
-        val o = TestOverlay(mapOf(3 to specOf(ItemStack(Material.STONE)) { onClick { clicks++ } }))
+      val o = TestOverlay(mapOf(3 to specOf(item(Material.STONE)) { onClick { clicks++ } }))
         val player = mockk<Player>(relaxed = true)
         o.emit(OverlayClickEvent(o, 3, player, ClickType.LEFT))
         o.emit(OverlayClickEvent(o, 4, player, ClickType.LEFT))
@@ -851,7 +851,7 @@ class AbstractPlayerOverlayTest {
 
     @Test
     fun `destroy 后 isDestroyed 为真`() {
-        val o = TestOverlay(mapOf(3 to specOf(ItemStack(Material.STONE))))
+      val o = TestOverlay(mapOf(3 to specOf(item(Material.STONE))))
         assertTrue(!o.isDestroyed)
         o.destroy()
         assertTrue(o.isDestroyed)
@@ -860,8 +860,8 @@ class AbstractPlayerOverlayTest {
     @Test
     fun `isEmptyStack 判定 null、AIR 与非空`() {
         assertTrue((null as ItemStack?).isEmptyStack())
-        assertTrue(ItemStack(Material.AIR).isEmptyStack())
-        assertTrue(!ItemStack(Material.STONE).isEmptyStack())
+      assertTrue(item(Material.AIR).isEmptyStack())
+      assertTrue(!item(Material.STONE).isEmptyStack())
     }
 }
 ```
@@ -957,7 +957,7 @@ internal abstract class AbstractPlayerOverlay(
 
     final override fun setItem(index: Int, item: ItemStack?) {
         val slot = requireNotNull(grid[index]) { "slot $index is not declared on this overlay" }
-        slot.item = item ?: ItemStack(Material.AIR)
+      slot.item = item ?: item(Material.AIR)
         repaint(index)
     }
 
@@ -1450,6 +1450,7 @@ class SpectatorService<A : BukkitArena<out BukkitArenaPlayer, *>>(
 ) : Service {
 
     val playerOverlay = api.overlayFactory.create(playerInventory ?: {})
+}
 ```
 
 并把 `apply()`/`restore()` 内：

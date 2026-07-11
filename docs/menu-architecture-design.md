@@ -288,7 +288,7 @@ val menu = factory.createChestMenu(ChestMenuType.GENERIC_9X3) {
         }
         slot(15, Material.CLOCK) {
             onUpdate(trigger = Trigger.Interval(1.seconds)) {                 // this: SlotUpdateEvent
-                item = ItemStack(Material.CLOCK).apply { itemMeta = itemMeta?.apply { setDisplayName("§e$nowText") } }
+              item = item(Material.CLOCK).apply { itemMeta = itemMeta?.apply { setDisplayName("§e$nowText") } }
             }
         }
         closeButton(26)
@@ -313,13 +313,13 @@ DSL 写法与现状一致；唯一对调用方可见的变化是「多了 `menu.
 val trade = factory.createChestMenu(ChestMenuType.GENERIC_9X3, hidePlayerInventory = false) {
     page(Component.text("交易")) {
         // 可被拿走的奖励：回调负责真实给予
-        slot(11, ItemStack(Material.DIAMOND), movable = true) {
+      slot(11, item(Material.DIAMOND), movable = true) {
             onTake {                                        // this: SlotTakeEvent(item, targetSlot, ...)
                 if (player.inventory.addItem(item).isNotEmpty()) isCancelled = true  // 背包满 → 取消
             }
         }
         // 玩家可放入物品的投入口（初始为空）：回调负责真实扣除
-        slot(15, ItemStack(Material.AIR), placeable = true) {
+      slot(15, item(Material.AIR), placeable = true) {
             onPlace {                                       // this: SlotPlaceEvent(item, sourceSlot, ...)
                 val src = player.inventory.getItem(sourceSlot)
                 if (src?.isSimilar(item) != true || src.amount < item.amount) { isCancelled = true; return@onPlace }

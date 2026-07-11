@@ -1,10 +1,12 @@
 package com.github.mayblock.easylib.impl.bukkit.menu.type.chest.builder
 
 import com.github.mayblock.easylib.api.bukkit.menu.type.chest.ChestMenu
-import com.github.mayblock.easylib.impl.bukkit.menu.slot.SlotSpec
 import com.github.mayblock.easylib.api.bukkit.menu.type.chest.ChestMenuType
 import com.github.mayblock.easylib.api.bukkit.menu.type.chest.dsl.ChestMenuScope
 import com.github.mayblock.easylib.api.bukkit.menu.type.chest.dsl.PageableChestMenuScope
+import com.github.mayblock.easylib.impl.bukkit.menu.slot.SlotSpec
+import com.github.mayblock.easylib.impl.bukkit.util.item
+import com.github.mayblock.easylib.impl.bukkit.util.meta
 import net.kyori.adventure.text.Component
 import org.bukkit.ChatColor
 import org.bukkit.Material
@@ -26,18 +28,14 @@ internal class PageableChestMenuBuilder(
 
     private var nextPageItem: Pair<Int, ItemStack> = Pair(
         size - 4,
-        ItemStack(Material.ARROW).apply {
-            this.itemMeta = itemMeta!!.apply {
-                setDisplayName("${ChatColor.GREEN}Next Page")
-            }
+        item(Material.ARROW).meta {
+            setDisplayName("${ChatColor.GREEN}Next Page")
         }
     )
     private var previousPageItem: Pair<Int, ItemStack> = Pair(
         size - 6,
-        ItemStack(Material.ARROW).apply {
-            this.itemMeta = itemMeta!!.apply {
-                setDisplayName("${ChatColor.GREEN}Previous Page")
-            }
+        item(Material.ARROW).meta {
+            setDisplayName("${ChatColor.GREEN}Previous Page")
         }
     )
 

@@ -3,11 +3,7 @@ package com.github.mayblock.easylib.impl.bukkit.menu.type.chest
 import com.github.mayblock.easylib.api.bukkit.menu.MenuCloseEvent
 import com.github.mayblock.easylib.api.bukkit.menu.MenuEvent
 import com.github.mayblock.easylib.api.bukkit.menu.MenuOpenEvent
-import com.github.mayblock.easylib.api.bukkit.menu.slot.SlotClickEvent
-import com.github.mayblock.easylib.api.bukkit.menu.slot.InventoryClickEvent
-import com.github.mayblock.easylib.api.bukkit.menu.slot.SlotTakeEvent
-import com.github.mayblock.easylib.api.bukkit.menu.slot.SlotPlaceEvent
-import com.github.mayblock.easylib.api.bukkit.menu.slot.SlotUpdateEvent
+import com.github.mayblock.easylib.api.bukkit.menu.slot.*
 import com.github.mayblock.easylib.api.bukkit.menu.type.chest.ChestMenu
 import com.github.mayblock.easylib.api.bukkit.menu.type.chest.ChestMenuType
 import com.github.mayblock.easylib.api.event.EventListener
@@ -15,8 +11,9 @@ import com.github.mayblock.easylib.api.event.EventSource
 import com.github.mayblock.easylib.api.scheduler.TaskScheduler
 import com.github.mayblock.easylib.api.util.Disposable
 import com.github.mayblock.easylib.impl.bukkit.BukkitEasyLib
-import com.github.mayblock.easylib.impl.bukkit.menu.isEmptyStack
 import com.github.mayblock.easylib.impl.bukkit.menu.slot.SlotSpec
+import com.github.mayblock.easylib.impl.bukkit.util.isEmptyStack
+import com.github.mayblock.easylib.impl.bukkit.util.item
 import com.github.mayblock.easylib.impl.event.SimpleEventBus
 import com.github.retrooper.packetevents.event.PacketListener
 import com.github.retrooper.packetevents.event.PacketSendEvent
@@ -131,7 +128,7 @@ internal class RealChestMenu(
 
     override fun setItem(index: Int, item: ItemStack?) {
         require(index in 0 until type.size) { "slot $index out of range [0, ${type.size})" }
-        bukkitInventory.setItem(index, item ?: ItemStack(Material.AIR))
+        bukkitInventory.setItem(index, item ?: item(Material.AIR))
     }
 
     fun publishOpen(player: Player) {
@@ -172,22 +169,46 @@ internal class RealChestMenu(
             is SlotDecision.Deny -> e.isCancelled = true
             is SlotDecision.AllowNative -> {}
             is SlotDecision.FireTake -> {
-                val ev = SlotTakeEvent(this, decision.slot, player, (e.currentItem ?: ItemStack(Material.AIR)).clone(), targetSlot = -1)
+                val ev = SlotTakeEvent(
+                    this,
+                    decision.slot,
+                    player,
+                    (e.currentItem ?: item(Material.AIR)).clone(),
+                    targetSlot = -1
+                )
                 bus.emit(ev)
                 if (ev.isCancelled) e.isCancelled = true
             }
             is SlotDecision.FirePlace -> {
-                val ev = SlotPlaceEvent(this, decision.slot, player, (e.cursor ?: ItemStack(Material.AIR)).clone(), sourceSlot = -1)
+                val ev = SlotPlaceEvent(
+                    this,
+                    decision.slot,
+                    player,
+                    (e.cursor ?: item(Material.AIR)).clone(),
+                    sourceSlot = -1
+                )
                 bus.emit(ev)
                 if (ev.isCancelled) e.isCancelled = true
             }
             is SlotDecision.FireSwap -> {
                 // swap 与 drag 的观察者回调应无副作用，因为 Bukkit 的原子性使某个观察者
                 // 可能在稍后整体取消前已触发。此处短路：take 取消时不再派发 place。
-                val take = SlotTakeEvent(this, decision.slot, player, (e.currentItem ?: ItemStack(Material.AIR)).clone(), targetSlot = -1)
+                val take = SlotTakeEvent(
+                    this,
+                    decision.slot,
+                    player,
+                    (e.currentItem ?: item(Material.AIR)).clone(),
+                    targetSlot = -1
+                )
                 bus.emit(take)
                 if (take.isCancelled) { e.isCancelled = true; return }
-                val place = SlotPlaceEvent(this, decision.slot, player, (e.cursor ?: ItemStack(Material.AIR)).clone(), sourceSlot = -1)
+                val place = SlotPlaceEvent(
+                    this,
+                    decision.slot,
+                    player,
+                    (e.cursor ?: item(Material.AIR)).clone(),
+                    sourceSlot = -1
+                )
                 bus.emit(place)
                 if (place.isCancelled) e.isCancelled = true
             }
@@ -254,7 +275,7 @@ internal class RealChestMenu(
                     trigger = ruleTrigger
                     isAsync = false // 真实容器 setItem 必须主线程
                     onTick = {
-                        val current = bukkitInventory.getItem(index) ?: ItemStack(Material.AIR)
+                        val current = bukkitInventory.getItem(index) ?: item(Material.AIR)
                         val event = SlotUpdateEvent(this@RealChestMenu, index, current.clone())
                         ordered.forEach { rule -> rule.block(event) }
                         if (event.item != current) bukkitInventory.setItem(index, event.item)

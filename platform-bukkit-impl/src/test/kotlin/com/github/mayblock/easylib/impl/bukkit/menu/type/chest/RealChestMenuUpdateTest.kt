@@ -1,13 +1,13 @@
 package com.github.mayblock.easylib.impl.bukkit.menu.type.chest
 
 import com.github.mayblock.easylib.api.bukkit.menu.slot.InventoryClickEvent
+import com.github.mayblock.easylib.api.bukkit.menu.type.chest.ChestMenuType
 import com.github.mayblock.easylib.api.scheduler.TaskScheduler
 import com.github.mayblock.easylib.api.util.Priority
-import com.github.mayblock.easylib.api.bukkit.menu.type.chest.ChestMenuType
 import com.github.mayblock.easylib.impl.bukkit.menu.slot.SlotBuilder
+import com.github.mayblock.easylib.impl.bukkit.util.item
 import net.kyori.adventure.text.Component
 import org.bukkit.Material
-import org.bukkit.inventory.ItemStack
 import org.mockbukkit.mockbukkit.MockBukkit
 import kotlin.test.AfterTest
 import kotlin.test.BeforeTest
@@ -31,9 +31,9 @@ class RealChestMenuUpdateTest {
         val scheduler = AsyncTrackingScheduler()
         val spec = SlotBuilder(InventoryClickEvent::class.java).apply {
             onUpdate(trigger = TaskScheduler.Trigger.Interval(1.seconds)) {
-                item = ItemStack(Material.CLOCK, 5)
+                item = item(Material.CLOCK, 5)
             }
-        }.build(ItemStack(Material.AIR))
+        }.build(item(Material.AIR))
         val m = RealChestMenu(scheduler, Component.text("t"), ChestMenuType.GENERIC_9X3, mapOf(4 to spec), hidePlayerInventory = false)
         // 构造末尾已 startUpdates → AsyncTrackingScheduler 立即执行了一次 onTick
         assertEquals(Material.CLOCK, m.bukkitInventory.getItem(4)!!.type)
@@ -49,9 +49,9 @@ class RealChestMenuUpdateTest {
                 item.amount += 1 // 低优先级后执行：应看到高优先级的结果并在其上累加
             }
             onUpdate(trigger = TaskScheduler.Trigger.Interval(1.seconds), priority = Priority(1)) {
-                item = ItemStack(Material.CLOCK, 1) // 高优先级（小值）先执行
+                item = item(Material.CLOCK, 1) // 高优先级（小值）先执行
             }
-        }.build(ItemStack(Material.PAPER))
+        }.build(item(Material.PAPER))
         val m = RealChestMenu(scheduler, Component.text("t"), ChestMenuType.GENERIC_9X3, mapOf(4 to spec), hidePlayerInventory = false)
         assertEquals(Material.CLOCK, m.bukkitInventory.getItem(4)!!.type)
         assertEquals(2, m.bukkitInventory.getItem(4)!!.amount) // 串行可见前序结果

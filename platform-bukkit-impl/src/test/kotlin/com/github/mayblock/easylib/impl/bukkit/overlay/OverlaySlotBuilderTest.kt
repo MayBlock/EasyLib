@@ -3,8 +3,8 @@ package com.github.mayblock.easylib.impl.bukkit.overlay
 import com.github.mayblock.easylib.api.bukkit.overlay.OverlayClickEvent
 import com.github.mayblock.easylib.api.bukkit.overlay.OverlayInteractEvent
 import com.github.mayblock.easylib.api.scheduler.TaskScheduler
+import com.github.mayblock.easylib.impl.bukkit.util.item
 import org.bukkit.Material
-import org.bukkit.inventory.ItemStack
 import org.mockbukkit.mockbukkit.MockBukkit
 import kotlin.test.AfterTest
 import kotlin.test.BeforeTest
@@ -21,7 +21,7 @@ class OverlaySlotBuilderTest {
         val spec = OverlaySlotBuilder().apply {
             onClick { }
             onInteract { }
-        }.build(ItemStack(Material.STONE))
+        }.build(item(Material.STONE))
         assertEquals(
             listOf<Class<*>>(OverlayClickEvent::class.java, OverlayInteractEvent::class.java),
             spec.handlers.map { it.type },
@@ -32,14 +32,14 @@ class OverlaySlotBuilderTest {
     fun `onUpdate 收集为 updateRule`() {
         val spec = OverlaySlotBuilder().apply {
             onUpdate(trigger = TaskScheduler.Trigger.Once) { }
-        }.build(ItemStack(Material.STONE))
+        }.build(item(Material.STONE))
         assertEquals(1, spec.updateRules.size)
         assertEquals(0, spec.handlers.size)
     }
 
     @Test
     fun `build 透传初始物品`() {
-        val spec = OverlaySlotBuilder().build(ItemStack(Material.DIAMOND, 3))
+        val spec = OverlaySlotBuilder().build(item(Material.DIAMOND, 3))
         assertEquals(Material.DIAMOND, spec.item.type)
         assertEquals(3, spec.item.amount)
     }

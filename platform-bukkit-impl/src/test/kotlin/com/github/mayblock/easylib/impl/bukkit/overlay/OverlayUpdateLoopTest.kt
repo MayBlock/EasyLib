@@ -2,8 +2,8 @@ package com.github.mayblock.easylib.impl.bukkit.overlay
 
 import com.github.mayblock.easylib.api.scheduler.TaskScheduler
 import com.github.mayblock.easylib.api.util.Priority
+import com.github.mayblock.easylib.impl.bukkit.util.item
 import org.bukkit.Material
-import org.bukkit.inventory.ItemStack
 import org.mockbukkit.mockbukkit.MockBukkit
 import kotlin.test.AfterTest
 import kotlin.test.BeforeTest
@@ -27,8 +27,8 @@ class OverlayUpdateLoopTest {
     fun `update 规则异步 tick 并在物品变化时重绘`() {
         val scheduler = AsyncTrackingScheduler()
         val spec = OverlaySlotBuilder().apply {
-            onUpdate(TaskScheduler.Trigger.Interval(1.seconds)) { item = ItemStack(Material.CLOCK, 5) }
-        }.build(ItemStack(Material.AIR))
+            onUpdate(TaskScheduler.Trigger.Interval(1.seconds)) { item = item(Material.CLOCK, 5) }
+        }.build(item(Material.AIR))
         val grid = SlotGrid(mapOf(4 to spec))
         val repaints = mutableListOf<Int>()
         OverlayUpdateLoop(grid, scheduler, { repaints += it }).start()
@@ -41,10 +41,10 @@ class OverlayUpdateLoopTest {
     @Test
     fun `update 规则赋值的外部对象以副本存入，事后改动不波及内部`() {
         val scheduler = AsyncTrackingScheduler()
-        val template = ItemStack(Material.CLOCK, 1) // 规则块持有的外部模板（惯用写法）
+        val template = item(Material.CLOCK, 1) // 规则块持有的外部模板（惯用写法）
         val spec = OverlaySlotBuilder().apply {
             onUpdate(TaskScheduler.Trigger.Interval(1.seconds)) { item = template }
-        }.build(ItemStack(Material.AIR))
+        }.build(item(Material.AIR))
         val grid = SlotGrid(mapOf(4 to spec))
         OverlayUpdateLoop(grid, scheduler) { }.start()
 
@@ -62,9 +62,9 @@ class OverlayUpdateLoopTest {
                 item.amount += 1 // 低优先级后执行：应看到高优先级的结果并在其上累加
             }
             onUpdate(TaskScheduler.Trigger.Interval(1.seconds), priority = Priority(1)) {
-                item = ItemStack(Material.CLOCK, 1) // 高优先级（小值）先执行
+                item = item(Material.CLOCK, 1) // 高优先级（小值）先执行
             }
-        }.build(ItemStack(Material.PAPER, 1))
+        }.build(item(Material.PAPER, 1))
         val grid = SlotGrid(mapOf(4 to spec))
         val repaints = mutableListOf<Int>()
         OverlayUpdateLoop(grid, scheduler) { repaints += it }.start()
@@ -81,10 +81,10 @@ class OverlayUpdateLoopTest {
         lateinit var gridRef: SlotGrid
         val spec = OverlaySlotBuilder().apply {
             onUpdate(TaskScheduler.Trigger.Interval(1.seconds)) {
-                item = ItemStack(Material.CLOCK, 2) // 本 tick 的提案
-                gridRef[4]!!.item = ItemStack(Material.DIAMOND) // tick 内有人直接写入（setItem 的底层路径）
+                item = item(Material.CLOCK, 2) // 本 tick 的提案
+                gridRef[4]!!.item = item(Material.DIAMOND) // tick 内有人直接写入（setItem 的底层路径）
             }
-        }.build(ItemStack(Material.PAPER))
+        }.build(item(Material.PAPER))
         val grid = SlotGrid(mapOf(4 to spec))
         gridRef = grid
         val repaints = mutableListOf<Int>()
