@@ -4,7 +4,7 @@ import com.github.mayblock.easylib.api.bukkit.overlay.slot.event.OverlaySlotActi
 import com.github.mayblock.easylib.api.bukkit.overlay.PlayerOverlay
 import com.github.mayblock.easylib.api.util.Disposable
 import com.github.mayblock.easylib.impl.bukkit.BukkitEasyLib
-import com.github.mayblock.easylib.impl.bukkit.overlay.slot.SlotGrid
+import com.github.mayblock.easylib.impl.bukkit.overlay.slot.SlotMap
 import com.github.mayblock.easylib.impl.bukkit.packet.extension.getBukkitClickType
 import com.github.mayblock.easylib.impl.bukkit.util.sendPackets
 import com.github.mayblock.easylib.packetevents.packet.dsl.PacketScope
@@ -27,7 +27,7 @@ import org.bukkit.entity.Player
  * 唯一生产实现；overlay 协调者（[com.github.mayblock.easylib.impl.bukkit.overlay.PlayerOverlayImpl]）不感知任何包细节。
  */
 internal class PacketOverlayTransport(
-    private val grid: SlotGrid,
+    private val map: SlotMap,
 ) : OverlayTransport {
 
     private companion object {
@@ -39,7 +39,7 @@ internal class PacketOverlayTransport(
     }
 
     override fun paint(player: Player, slot: Int) {
-        player.sendPackets { forPlayer { updateItem(WINDOW_ID, slot, grid.packetItem(slot)) } }
+        player.sendPackets { forPlayer { updateItem(WINDOW_ID, slot, map.packetItem(slot)) } }
     }
 
     override fun restore(player: Player) {
@@ -78,7 +78,7 @@ internal class PacketOverlayTransport(
                         val packet = WrapperPlayClientCreativeInventoryAction(e)
                         // 覆盖层激活期间创造背包操作一律取消并重发权威遮罩，防止虚拟物品落入真实背包。
                         if (packet.slot in 0 until PlayerOverlay.OVERLAY_SIZE) {
-                            player.sendPackets { forPlayer { updateItem(0, packet.slot, grid.packetItem(packet.slot)) } }
+                            player.sendPackets { forPlayer { updateItem(0, packet.slot, map.packetItem(packet.slot)) } }
                             true
                         } else false
                     }
@@ -94,12 +94,12 @@ internal class PacketOverlayTransport(
                     PacketType.Play.Server.WINDOW_ITEMS -> {
                         val packet = WrapperPlayServerWindowItems(e)
                         if (packet.windowId != 0) return
-                        packet.items = (0 until PlayerOverlay.OVERLAY_SIZE).map { grid.packetItem(it) }
+                        packet.items = (0 until PlayerOverlay.OVERLAY_SIZE).map { map.packetItem(it) }
                     }
                     PacketType.Play.Server.SET_SLOT -> {
                         val packet = WrapperPlayServerSetSlot(e)
                         if (packet.windowId != 0) return
-                        packet.item = grid.packetItem(packet.slot)
+                        packet.item = map.packetItem(packet.slot)
                     }
                 }
             }
@@ -131,7 +131,7 @@ internal class PacketOverlayTransport(
             forPlayer {
                 updateCursorItem(null)
                 clickedSlots.forEach { slot ->
-                    updateItem(0, slot, grid.packetItem(slot))
+                    updateItem(0, slot, map.packetItem(slot))
                 }
             }
         }
@@ -144,9 +144,9 @@ internal class PacketOverlayTransport(
         callbacks: OverlayTransport.Callbacks,
     ): Boolean {
         val heldItemSlot = player.inventory.heldItemSlot + 36
-        if (grid[heldItemSlot] == null) return false
+        if (map[heldItemSlot] == null) return false
         callbacks.onInteract(player, heldItemSlot, action)
-        player.sendPackets { forPlayer { updateItem(0, heldItemSlot, grid.packetItem(heldItemSlot)) } }
+        player.sendPackets { forPlayer { updateItem(0, heldItemSlot, map.packetItem(heldItemSlot)) } }
         return true
     }
 
@@ -166,18 +166,18 @@ internal class PacketOverlayTransport(
             // 未声明的槽面板不保护虚拟物品，放行真实交换即可。
             val heldItemSlot = player.inventory.heldItemSlot + 36
             val offhandSlot = 45
-            if (grid[heldItemSlot] == null && grid[offhandSlot] == null) return false
+            if (map[heldItemSlot] == null && map[offhandSlot] == null) return false
             player.sendPackets {
                 forPlayer {
-                    updateItem(0, heldItemSlot, grid.packetItem(heldItemSlot))
-                    updateItem(0, offhandSlot, grid.packetItem(offhandSlot))
+                    updateItem(0, heldItemSlot, map.packetItem(heldItemSlot))
+                    updateItem(0, offhandSlot, map.packetItem(offhandSlot))
                 }
             }
             return true
         }
         if (action != DiggingAction.DROP_ITEM && action != DiggingAction.DROP_ITEM_STACK) return false
-        if (grid[slot] != null) {
-            player.sendPackets { forPlayer { updateItem(0, slot, grid.packetItem(slot)) } }
+        if (map[slot] != null) {
+            player.sendPackets { forPlayer { updateItem(0, slot, map.packetItem(slot)) } }
         }
         return true
     }
@@ -185,13 +185,13 @@ internal class PacketOverlayTransport(
     /** 手持槽被声明时取消动作并重发权威遮罩（防真实物品穿透），不派发事件。 */
     private fun guardHeldSlot(player: Player): Boolean {
         val heldItemSlot = player.inventory.heldItemSlot + 36
-        if (grid[heldItemSlot] == null) return false
-        player.sendPackets { forPlayer { updateItem(0, heldItemSlot, grid.packetItem(heldItemSlot)) } }
+        if (map[heldItemSlot] == null) return false
+        player.sendPackets { forPlayer { updateItem(0, heldItemSlot, map.packetItem(heldItemSlot)) } }
         return true
     }
 
     private fun PacketScope.PlayerPacketScope.syncOverlayItems() {
-        containerItems(0, 0, grid.packetItems(PlayerOverlay.OVERLAY_SIZE))
+        containerItems(0, 0, map.packetItems(PlayerOverlay.OVERLAY_SIZE))
     }
 
     /** 清空/改写光标槽（windowId -1 为光标）。 */

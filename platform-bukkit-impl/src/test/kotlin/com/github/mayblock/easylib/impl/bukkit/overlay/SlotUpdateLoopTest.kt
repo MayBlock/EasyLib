@@ -1,10 +1,10 @@
 package com.github.mayblock.easylib.impl.bukkit.overlay
 
-import com.github.mayblock.easylib.impl.bukkit.overlay.slot.OverlayUpdateLoop
+import com.github.mayblock.easylib.impl.bukkit.overlay.slot.SlotUpdateLoop
 import com.github.mayblock.easylib.api.scheduler.TaskScheduler
 import com.github.mayblock.easylib.api.util.Priority
 import com.github.mayblock.easylib.impl.bukkit.overlay.builder.OverlaySlotBuilder
-import com.github.mayblock.easylib.impl.bukkit.overlay.slot.SlotGrid
+import com.github.mayblock.easylib.impl.bukkit.overlay.slot.SlotMap
 import com.github.mayblock.easylib.impl.bukkit.util.item
 import org.bukkit.Material
 import org.mockbukkit.mockbukkit.MockBukkit
@@ -34,7 +34,7 @@ private class CountingScheduler : TaskScheduler {
     override fun cancelAllTasks() {}
 }
 
-class OverlayUpdateLoopTest {
+class SlotUpdateLoopTest {
 
     @BeforeTest fun setUp() { MockBukkit.mock() }
     @AfterTest fun tearDown() { MockBukkit.unmock() }
@@ -45,11 +45,11 @@ class OverlayUpdateLoopTest {
         val spec = OverlaySlotBuilder().apply {
             onUpdate(TaskScheduler.Trigger.Interval(1.seconds)) { item = item(Material.CLOCK, 5) }
         }.build(item(Material.AIR))
-        val grid = SlotGrid(mapOf(4 to spec))
+        val map = SlotMap(mapOf(4 to spec))
         val repaints = mutableListOf<Int>()
-        OverlayUpdateLoop(grid, scheduler, { repaints += it }).start()
+        SlotUpdateLoop(map, scheduler, { repaints += it }).start()
 
-        assertEquals(Material.CLOCK, grid[4]!!.item.type)
+        assertEquals(Material.CLOCK, map[4]!!.item.type)
         assertEquals(listOf(4), repaints)
         assertEquals(listOf(true), scheduler.asyncFlags) // overlay 保持异步
     }
@@ -61,12 +61,12 @@ class OverlayUpdateLoopTest {
         val spec = OverlaySlotBuilder().apply {
             onUpdate(TaskScheduler.Trigger.Interval(1.seconds)) { item = template }
         }.build(item(Material.AIR))
-        val grid = SlotGrid(mapOf(4 to spec))
-        OverlayUpdateLoop(grid, scheduler) { }.start()
+        val map = SlotMap(mapOf(4 to spec))
+        SlotUpdateLoop(map, scheduler) { }.start()
 
-        assertEquals(Material.CLOCK, grid[4]!!.item.type) // 赋值内容已生效
+        assertEquals(Material.CLOCK, map[4]!!.item.type) // 赋值内容已生效
         template.amount = 99 // tick 之后外部继续改模板
-        assertEquals(1, grid[4]!!.item.amount) // 内部存的是副本，不受影响
+        assertEquals(1, map[4]!!.item.amount) // 内部存的是副本，不受影响
     }
 
     @Test
@@ -81,12 +81,12 @@ class OverlayUpdateLoopTest {
                 item = item(Material.CLOCK, 1) // 高优先级（小值）先执行
             }
         }.build(item(Material.PAPER, 1))
-        val grid = SlotGrid(mapOf(4 to spec))
+        val map = SlotMap(mapOf(4 to spec))
         val repaints = mutableListOf<Int>()
-        OverlayUpdateLoop(grid, scheduler) { repaints += it }.start()
+        SlotUpdateLoop(map, scheduler) { repaints += it }.start()
 
-        assertEquals(Material.CLOCK, grid[4]!!.item.type) // 先 CLOCK…
-        assertEquals(2, grid[4]!!.item.amount) // …后 +1，可见前序结果
+        assertEquals(Material.CLOCK, map[4]!!.item.type) // 先 CLOCK…
+        assertEquals(2, map[4]!!.item.amount) // …后 +1，可见前序结果
         assertEquals(listOf(4), repaints) // 单次提交/重绘
         assertEquals(listOf(true), scheduler.asyncFlags) // 合并为一个任务（仍异步）
     }
@@ -94,20 +94,20 @@ class OverlayUpdateLoopTest {
     @Test
     fun `tick 内对本槽的直接写入优先于提案，不被过期提案回滚`() {
         val scheduler = AsyncTrackingScheduler()
-        lateinit var gridRef: SlotGrid
+        lateinit var mapRef: SlotMap
         val spec = OverlaySlotBuilder().apply {
             onUpdate(TaskScheduler.Trigger.Interval(1.seconds)) {
                 item = item(Material.CLOCK, 2) // 本 tick 的提案
-                gridRef[4]!!.item = item(Material.DIAMOND) // tick 内有人直接写入（setItem 的底层路径）
+                mapRef[4]!!.item = item(Material.DIAMOND) // tick 内有人直接写入（setItem 的底层路径）
             }
         }.build(item(Material.PAPER))
-        val grid = SlotGrid(mapOf(4 to spec))
-        gridRef = grid
+        val map = SlotMap(mapOf(4 to spec))
+        mapRef = map
         val repaints = mutableListOf<Int>()
-        OverlayUpdateLoop(grid, scheduler) { repaints += it }.start()
+        SlotUpdateLoop(map, scheduler) { repaints += it }.start()
 
-        assertEquals(Material.DIAMOND, grid[4]!!.item.type) // 直接写入胜出，过期提案作废
-        assertEquals(emptyList<Int>(), repaints) // 提案未提交 → loop 不触发重绘
+        assertEquals(Material.DIAMOND, map[4]!!.item.type) // 直接写入胜出，过期提案作废
+        assertEquals(emptyList(), repaints) // 提案未提交 → loop 不触发重绘
     }
 
     @Test
@@ -116,8 +116,8 @@ class OverlayUpdateLoopTest {
         val spec = OverlaySlotBuilder().apply {
             onUpdate(TaskScheduler.Trigger.Interval(1.seconds)) { }
         }.build(item(Material.AIR))
-        val grid = SlotGrid(mapOf(4 to spec))
-        val loop = OverlayUpdateLoop(grid, scheduler) { }
+        val map = SlotMap(mapOf(4 to spec))
+        val loop = SlotUpdateLoop(map, scheduler) { }
 
         loop.start()
         assertEquals(1, scheduler.scheduleCount)
@@ -132,8 +132,8 @@ class OverlayUpdateLoopTest {
         val spec = OverlaySlotBuilder().apply {
             onUpdate(TaskScheduler.Trigger.Interval(1.seconds)) { }
         }.build(item(Material.AIR))
-        val grid = SlotGrid(mapOf(4 to spec))
-        val loop = OverlayUpdateLoop(grid, scheduler) { }
+        val map = SlotMap(mapOf(4 to spec))
+        val loop = SlotUpdateLoop(map, scheduler) { }
 
         loop.start()
         assertEquals(1, scheduler.scheduleCount)

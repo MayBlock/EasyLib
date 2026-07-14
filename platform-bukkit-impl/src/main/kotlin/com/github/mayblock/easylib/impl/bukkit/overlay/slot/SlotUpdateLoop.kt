@@ -2,7 +2,6 @@ package com.github.mayblock.easylib.impl.bukkit.overlay.slot
 
 import com.github.mayblock.easylib.api.bukkit.overlay.slot.dsl.OverlayUpdateScope
 import com.github.mayblock.easylib.api.scheduler.TaskScheduler
-import com.github.mayblock.easylib.impl.bukkit.overlay.slot.SlotGrid
 import org.bukkit.inventory.ItemStack
 
 /**
@@ -14,8 +13,8 @@ import org.bukkit.inventory.ItemStack
  * [start]、最后一个观察者离开时 [stop]。[TaskScheduler.Trigger.Once] 类的规则因此会在每次
  * 「从无人到有人」的激活时重新执行一次；这是按需语义的自然结果，而非 bug。
  */
-internal class OverlayUpdateLoop(
-    private val grid: SlotGrid,
+internal class SlotUpdateLoop(
+    private val map: SlotMap,
     private val scheduler: TaskScheduler,
     private val repaint: (index: Int) -> Unit,
 ) {
@@ -30,7 +29,7 @@ internal class OverlayUpdateLoop(
     /** 幂等：已在运行时重复调用直接返回，避免按需启停下重复调度同一批任务。 */
     fun start() {
         if (taskIds.isNotEmpty()) return
-        grid.forEachUpdatable { index, slot ->
+        map.forEachUpdatable { index, slot ->
             slot.updateRules.groupBy { it.trigger }.forEach { (ruleTrigger, rules) ->
                 // 与事件总线同约定：priority 小值先执行。同 trigger 规则共享同一事务上下文
                 // 串行执行（后序规则可见前序修改），块全部结束后统一提交一次。

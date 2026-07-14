@@ -1,6 +1,6 @@
 package com.github.mayblock.easylib.impl.bukkit.overlay
 
-import com.github.mayblock.easylib.impl.bukkit.overlay.slot.OverlayUpdateLoop
+import com.github.mayblock.easylib.impl.bukkit.overlay.slot.SlotUpdateLoop
 import com.github.mayblock.easylib.impl.bukkit.overlay.slot.OverlaySlotSpec
 import com.github.mayblock.easylib.api.bukkit.overlay.slot.event.OverlayEvent
 import com.github.mayblock.easylib.api.bukkit.overlay.slot.event.OverlayHideEvent
@@ -10,8 +10,9 @@ import com.github.mayblock.easylib.api.bukkit.overlay.PlayerOverlay
 import com.github.mayblock.easylib.api.event.EventSource
 import com.github.mayblock.easylib.api.scheduler.TaskScheduler
 import com.github.mayblock.easylib.api.util.Disposable
-import com.github.mayblock.easylib.impl.bukkit.overlay.slot.SlotGrid
+import com.github.mayblock.easylib.impl.bukkit.overlay.slot.SlotMap
 import com.github.mayblock.easylib.impl.bukkit.overlay.transport.OverlayTransport
+import com.github.mayblock.easylib.impl.bukkit.util.ViewerRegistry
 import com.github.mayblock.easylib.impl.bukkit.util.isEmptyStack
 import com.github.mayblock.easylib.impl.bukkit.util.item
 import com.github.mayblock.easylib.impl.util.extension.ifTrue
@@ -23,21 +24,21 @@ import org.bukkit.inventory.ItemStack
 /**
  * 覆盖层协调者（组合切分，替代原「抽象基类 + 包实现子类」的继承切分）：
  * 把观察者状态（[ViewerRegistry]）、客户端通道策略（[com.github.mayblock.easylib.impl.bukkit.overlay.transport.OverlayTransport]）、事件面
- * （[OverlayEventDispatcher]）与更新循环（[OverlayUpdateLoop]）组合起来，自身只负责编排。
+ * （[OverlayEventDispatcher]）与更新循环（[SlotUpdateLoop]）组合起来，自身只负责编排。
  *
  * 「移除 viewer + 还原视觉」这一组合此前在 hide/hideIfViewing/destroy 三处各写一遍，
  * 现收敛为 `removeViewer` + `transport.restore` 单一路径。
  */
 internal class PlayerOverlayImpl(
     specs: Map<Int, OverlaySlotSpec>,
-    private val grid: SlotGrid,
+    private val map: SlotMap,
     scheduler: TaskScheduler,
     private val transport: OverlayTransport,
     private val dispatcher: OverlayEventDispatcher = OverlayEventDispatcher(scheduler),
 ) : PlayerOverlay, EventSource<OverlayEvent> by dispatcher {
 
     private val viewers = ViewerRegistry()
-    private val updateLoop = OverlayUpdateLoop(grid, scheduler, ::repaint)
+    private val updateLoop = SlotUpdateLoop(map, scheduler, ::repaint)
     private var transportSub: Disposable? = null
 
     /** 覆盖层销毁时的清理钩子（由持有者，如 [OverlayManager]，挂接以停止追踪本实例）。 */
@@ -103,10 +104,10 @@ internal class PlayerOverlayImpl(
     // 拷贝语义：读侧 getItem 出参克隆（外部拿不到活引用）；写侧所有权由 LiveSlot 写时克隆
     // 统一强制（覆盖 setItem、构造、更新循环全部写入路径），故此处无需再 clone 入参。
     override fun getItem(index: Int): ItemStack? =
-        grid[index]?.item?.takeUnless { it.isEmptyStack() }?.clone()
+        map[index]?.item?.takeUnless { it.isEmptyStack() }?.clone()
 
     override fun setItem(index: Int, item: ItemStack?) {
-        val slot = requireNotNull(grid[index]) { "slot $index is not declared on this overlay" }
+        val slot = requireNotNull(map[index]) { "slot $index is not declared on this overlay" }
         slot.item = item ?: item(Material.AIR)
         repaint(index)
     }

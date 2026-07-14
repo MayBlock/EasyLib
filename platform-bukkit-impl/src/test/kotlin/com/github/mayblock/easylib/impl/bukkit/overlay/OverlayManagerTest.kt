@@ -3,7 +3,7 @@ package com.github.mayblock.easylib.impl.bukkit.overlay
 import com.github.mayblock.easylib.api.scheduler.TaskScheduler
 import com.github.mayblock.easylib.api.util.Disposable
 import com.github.mayblock.easylib.impl.bukkit.overlay.listener.OverlayQuitListener
-import com.github.mayblock.easylib.impl.bukkit.overlay.slot.SlotGrid
+import com.github.mayblock.easylib.impl.bukkit.overlay.slot.SlotMap
 import com.github.mayblock.easylib.impl.bukkit.overlay.transport.OverlayTransport
 import io.mockk.mockk
 import org.bukkit.entity.Player
@@ -24,8 +24,8 @@ private class NoopTransport : OverlayTransport {
 }
 
 private fun fakeOverlay(scheduler: TaskScheduler): PlayerOverlayImpl {
-    val grid = SlotGrid(emptyMap())
-    return PlayerOverlayImpl(emptyMap(), grid, scheduler, NoopTransport())
+    val map = SlotMap(emptyMap())
+    return PlayerOverlayImpl(emptyMap(), map, scheduler, NoopTransport())
 }
 
 class OverlayManagerTest {

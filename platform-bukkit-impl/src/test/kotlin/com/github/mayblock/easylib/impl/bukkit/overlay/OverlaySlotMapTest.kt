@@ -3,13 +3,13 @@ package com.github.mayblock.easylib.impl.bukkit.overlay
 import com.github.mayblock.easylib.api.scheduler.TaskScheduler
 import com.github.mayblock.easylib.impl.bukkit.overlay.builder.OverlaySlotBuilder
 import com.github.mayblock.easylib.impl.bukkit.overlay.slot.LiveSlot
-import com.github.mayblock.easylib.impl.bukkit.overlay.slot.SlotGrid
+import com.github.mayblock.easylib.impl.bukkit.overlay.slot.SlotMap
 import com.github.mayblock.easylib.impl.bukkit.util.item
 import org.bukkit.Material
 import org.mockbukkit.mockbukkit.MockBukkit
 import kotlin.test.*
 
-class OverlaySlotGridTest {
+class OverlaySlotMapTest {
 
     @BeforeTest fun setUp() { MockBukkit.mock() }
     @AfterTest fun tearDown() { MockBukkit.unmock() }
@@ -19,21 +19,21 @@ class OverlaySlotGridTest {
 
     @Test
     fun `get 返回声明槽的 LiveSlot，未声明返回 null`() {
-        val grid = SlotGrid(mapOf(2 to spec()))
-        assertEquals(Material.STONE, grid[2]!!.item.type)
-        assertNull(grid[5])
+        val map = SlotMap(mapOf(2 to spec()))
+        assertEquals(Material.STONE, map[2]!!.item.type)
+        assertNull(map[5])
     }
 
     @Test
     fun `forEachUpdatable 只遍历带 update rule 的槽`() {
-        val grid = SlotGrid(
+        val map = SlotMap(
             mapOf(
                 1 to spec(),
                 2 to spec { onUpdate(TaskScheduler.Trigger.Once) { } },
             )
         )
         val visited = mutableListOf<Int>()
-        grid.forEachUpdatable { index, _ -> visited += index }
+        map.forEachUpdatable { index, _ -> visited += index }
         assertEquals(listOf(2), visited)
     }
 

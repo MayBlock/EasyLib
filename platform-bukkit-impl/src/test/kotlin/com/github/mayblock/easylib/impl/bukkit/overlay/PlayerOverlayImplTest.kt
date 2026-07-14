@@ -8,7 +8,7 @@ import com.github.mayblock.easylib.api.event.on
 import com.github.mayblock.easylib.api.scheduler.TaskScheduler
 import com.github.mayblock.easylib.api.util.Disposable
 import com.github.mayblock.easylib.impl.bukkit.overlay.builder.OverlaySlotBuilder
-import com.github.mayblock.easylib.impl.bukkit.overlay.slot.SlotGrid
+import com.github.mayblock.easylib.impl.bukkit.overlay.slot.SlotMap
 import com.github.mayblock.easylib.impl.bukkit.overlay.transport.OverlayTransport
 import com.github.mayblock.easylib.impl.bukkit.util.item
 import io.mockk.every
@@ -80,8 +80,8 @@ class PlayerOverlayImplTest {
         scheduler: TaskScheduler = RecordingScheduler(),
         transport: FakeTransport = FakeTransport(),
     ): Triple<PlayerOverlayImpl, FakeTransport, TaskScheduler> {
-        val grid = SlotGrid(specs)
-        val overlay = PlayerOverlayImpl(specs, grid, scheduler, transport)
+        val map = SlotMap(specs)
+        val overlay = PlayerOverlayImpl(specs, map, scheduler, transport)
         return Triple(overlay, transport, scheduler)
     }
 
