@@ -25,7 +25,6 @@ import net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer
 import org.bukkit.Bukkit
 import org.bukkit.Material
 import org.bukkit.entity.Player
-import org.bukkit.event.inventory.ClickType
 import org.bukkit.inventory.Inventory
 import org.bukkit.inventory.InventoryHolder
 import org.bukkit.inventory.ItemStack
@@ -114,8 +113,6 @@ internal class RealChestMenu(
 
     override fun getInventory(): Inventory = bukkitInventory
 
-    fun specOf(slot: Int): SlotSpec? = specs[slot]
-
     override fun open(player: Player) {
         check(!destroyed) { "this menu is destroyed!" }
         player.openInventory(bukkitInventory) // 触发 InventoryOpenEvent → 监听器 publishOpen
@@ -140,10 +137,6 @@ internal class RealChestMenu(
     }
 
     fun publishClose(player: Player) = bus.emit(MenuCloseEvent(this, player))
-
-    /** 仅测试用：直接派发一次 slot 点击事件，验证 index 过滤。 */
-    fun fireClickForTest(player: Player, index: Int) =
-        bus.emit(InventoryClickEvent(this, player, index, ClickType.LEFT))
 
     override fun destroy() {
         if (destroyed) return
