@@ -32,7 +32,9 @@ internal class PacketPlayerOverlay(
     specs: Map<Int, OverlaySlotSpec>,
 ) : AbstractPlayerOverlay(taskScheduler, specs) {
 
-    private val windowId = 0
+    private companion object {
+        const val WINDOW_ID = 0
+    }
 
     init {
         startOverlay()
@@ -61,7 +63,7 @@ internal class PacketPlayerOverlay(
             if (player !in activeViewers) return@forEach
             player.sendPackets {
                 forPlayer {
-                    updateItem(windowId, index, grid.packetItem(index))
+                    updateItem(WINDOW_ID, index, grid.packetItem(index))
                 }
             }
         }
