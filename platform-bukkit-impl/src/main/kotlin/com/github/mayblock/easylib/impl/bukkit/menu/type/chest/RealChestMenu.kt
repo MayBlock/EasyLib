@@ -76,7 +76,7 @@ internal class RealChestMenu(
     /**
      * 注册发包拦截：对 [hideViewers] 中的玩家，将容器窗口（windowId != 0）的
      * WINDOW_ITEMS / SET_SLOT 包中玩家背包区（>= type.size）的物品替换为空气。
-     * 与 PacketPlayerOverlay 相同模式，但 windowId 判定相反。
+     * 与 PacketOverlayTransport 相同模式，但 windowId 判定相反。
      */
     private fun registerHideListener(): Disposable =
         BukkitEasyLib.api.packetManager.registerListener(object : PacketListener {

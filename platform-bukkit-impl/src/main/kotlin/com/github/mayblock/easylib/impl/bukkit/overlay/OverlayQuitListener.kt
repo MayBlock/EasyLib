@@ -17,7 +17,7 @@ import org.bukkit.event.player.PlayerQuitEvent
  * 看到/操作真实背包。
  */
 internal class OverlayQuitListener(
-    private val overlays: () -> Iterable<AbstractPlayerOverlay>,
+    private val overlays: () -> Iterable<PlayerOverlayImpl>,
 ) : Listener {
 
     @EventHandler

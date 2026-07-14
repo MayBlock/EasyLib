@@ -21,23 +21,26 @@ class OverlayManager(
     internal val trackedCount: Int get() = overlays.size
 
     /** 单一共享的断线清理监听器：把 quit 玩家从所有活动覆盖层移除（防 viewers 泄漏）。 */
-    private val quitListener = OverlayQuitListener { overlays.filterIsInstance<AbstractPlayerOverlay>() }.also {
+    private val quitListener = OverlayQuitListener { overlays.filterIsInstance<PlayerOverlayImpl>() }.also {
         Bukkit.getPluginManager().registerEvents(it, plugin)
     }
 
     override fun create(builder: PlayerOverlayScope.() -> Unit): PlayerOverlay =
-        PlayerOverlayBuilder { slots -> PacketPlayerOverlay(taskScheduler, slots) }
+        PlayerOverlayBuilder { slots ->
+            val grid = SlotGrid(slots)
+            PlayerOverlayImpl(slots, grid, taskScheduler, PacketOverlayTransport(grid))
+        }
             .apply(builder)
             .build()
-            .let { it as AbstractPlayerOverlay }
+            .let { it as PlayerOverlayImpl }
             .let(::track)
 
     /**
      * 登记一个覆盖层实例并挂接销毁回调，销毁时自动从 [overlays] 摘除（防泄漏链）。
      * 抽出为独立函数：既是 [create] 的实现，也便于测试直接注入假实现验证摘除逻辑
-     * （真实的 [PacketPlayerOverlay] 依赖 PacketEvents 单例，单测环境下无法构造）。
+     * （真实的 [PlayerOverlayImpl] 依赖 PacketEvents 单例，单测环境下无法构造）。
      */
-    internal fun track(overlay: AbstractPlayerOverlay): PlayerOverlay {
+    internal fun track(overlay: PlayerOverlayImpl): PlayerOverlay {
         overlays.add(overlay)
         overlay.onDestroyed = { overlays.remove(overlay) }
         return overlay
