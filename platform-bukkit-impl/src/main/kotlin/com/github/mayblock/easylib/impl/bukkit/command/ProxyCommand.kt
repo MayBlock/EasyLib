@@ -30,7 +30,10 @@ class ProxyCommand internal constructor(
         commandLabel: String,
         args: Array<out String>
     ): Boolean {
-        val args = (command.aliases()[commandLabel]?.drop(1) ?: emptyList()) + args
+        // commandLabel 在以 `plugin:name` 形式（命名空间前缀）被调用时会带上前缀，
+        // 别名表按裸名登记，需先去掉前缀再查表，否则永远查不到别名对应的 tokens。
+        val label = commandLabel.substringAfter(':')
+        val args = (command.aliases()[label]?.drop(1) ?: emptyList()) + args
         val perm = permission
         if (!perm.isNullOrBlank() && !sender.hasPermission(perm)) {
             sender.sendMessage("You do not have permission to use this command.")
