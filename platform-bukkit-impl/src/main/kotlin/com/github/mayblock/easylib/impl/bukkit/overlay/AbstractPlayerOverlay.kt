@@ -20,13 +20,11 @@ import java.util.concurrent.ConcurrentHashMap
  * 覆盖层共用机制：覆盖层级事件总线（仅暴露订阅侧）、观察者集合、槽网格、更新循环、
  * 包监听生命周期、槽事件派发与销毁模板。具体覆盖层只实现各自差异（show/hide、包映射、重绘）。
  */
-internal abstract class AbstractPlayerOverlay private constructor(
+internal abstract class AbstractPlayerOverlay(
     protected val scheduler: TaskScheduler,
     specs: Map<Int, OverlaySlotSpec>,
-    private val bus: SimpleEventBus<OverlayEvent>,
+    private val bus: SimpleEventBus<OverlayEvent> = SimpleEventBus(),
 ) : PlayerOverlay, EventSource<OverlayEvent> by bus {
-
-    constructor(scheduler: TaskScheduler, specs: Map<Int, OverlaySlotSpec>) : this(scheduler, specs, SimpleEventBus())
 
     protected val grid = SlotGrid(specs)
 
