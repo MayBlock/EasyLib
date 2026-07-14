@@ -1,5 +1,6 @@
 package com.github.mayblock.easylib.impl.bukkit.menu.type.chest.builder
 
+import com.github.mayblock.easylib.packetevents.PacketManager
 import com.github.mayblock.easylib.api.bukkit.menu.type.chest.ChestMenuType
 import com.github.mayblock.easylib.api.bukkit.menu.type.chest.dsl.slot
 import com.github.mayblock.easylib.api.scheduler.TaskScheduler
@@ -31,7 +32,7 @@ class PageableChestMenuBuilderTest {
     @BeforeTest fun setUp() { server = MockBukkit.mock() }
     @AfterTest fun tearDown() { MockBukkit.unmock() }
 
-    private fun manager() = MenuManager(mockk<TaskScheduler>(relaxed = true), MockBukkit.createMockPlugin())
+    private fun manager() = MenuManager(mockk<TaskScheduler>(relaxed = true), mockk<PacketManager<*>>(relaxed = true), MockBukkit.createMockPlugin())
 
     private fun click(view: InventoryView, rawSlot: Int, action: InventoryAction): BukkitInventoryClickEvent =
         BukkitInventoryClickEvent(view, InventoryType.SlotType.CONTAINER, rawSlot, ClickType.LEFT, action)
@@ -44,7 +45,7 @@ class PageableChestMenuBuilderTest {
         } as RealChestMenu
 
         val p = server.addPlayer()
-        val view = p.openInventory(page1.bukkitInventory)!!
+        val view = p.openInventory(page1.inventory)!!
         // 翻到第 2 页：点击默认的下一页按钮（slot = size - 4）触发导航 onClick，
         // 该 onClick 内部调用 page2.open(player)。
         page1.handleClick(click(view, ChestMenuType.GENERIC_9X3.size - 4, InventoryAction.PICKUP_ALL))
@@ -52,7 +53,7 @@ class PageableChestMenuBuilderTest {
         assertNotSame(page1, page2, "翻页后玩家应打开的是第 2 页的真实容器")
 
         // ① 第 2 页的 Open 事件应被 manager 订阅（register 应覆盖所有分页，而不仅仅是第 1 页）
-        page2.publishOpen(p)
+        page2.handleOpen(p)
         assertTrue(p in mgr.getViewers(page2), "第 2 页应被 MenuManager 追踪为活跃观察者")
 
         // ② MenuManager.close() 应销毁所有分页，而不仅仅是第 1 页

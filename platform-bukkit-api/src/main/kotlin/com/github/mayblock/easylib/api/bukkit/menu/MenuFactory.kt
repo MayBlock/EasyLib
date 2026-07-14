@@ -14,6 +14,6 @@ interface MenuFactory {
     fun createChestMenu(
         type: ChestMenuType,
         hidePlayerInventory: Boolean = true,
-        builder: PageableChestMenuScope.() -> Unit,
+        block: PageableChestMenuScope.() -> Unit,
     ): ChestMenu
 }

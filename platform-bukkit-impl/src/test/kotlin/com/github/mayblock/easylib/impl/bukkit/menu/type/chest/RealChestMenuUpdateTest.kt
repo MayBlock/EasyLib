@@ -1,10 +1,13 @@
 package com.github.mayblock.easylib.impl.bukkit.menu.type.chest
 
+import io.mockk.mockk
+import com.github.mayblock.easylib.packetevents.PacketManager
 import com.github.mayblock.easylib.api.bukkit.menu.slot.event.InventoryClickEvent
 import com.github.mayblock.easylib.api.bukkit.menu.type.chest.ChestMenuType
 import com.github.mayblock.easylib.api.scheduler.TaskScheduler
 import com.github.mayblock.easylib.api.util.Priority
-import com.github.mayblock.easylib.impl.bukkit.menu.slot.SlotBuilder
+import com.github.mayblock.easylib.impl.bukkit.menu.slot.SlotSpec
+import com.github.mayblock.easylib.impl.bukkit.menu.slot.builder.SlotBuilder
 import com.github.mayblock.easylib.impl.bukkit.util.item
 import net.kyori.adventure.text.Component
 import org.bukkit.Material
@@ -22,10 +25,35 @@ private class AsyncTrackingScheduler(val asyncFlags: MutableList<Boolean> = muta
     override fun cancelAllTasks() {}
 }
 
+/** 立即同步执行每个被排任务一次，同时记录调度/取消次数，供按需启停断言使用（对照 overlay 侧同名模式）。 */
+private class RecordingScheduler : TaskScheduler {
+    private var nextId = 0
+    val scheduledIds = mutableListOf<Int>()
+    val cancelledIds = mutableListOf<Int>()
+
+    override fun scheduleTask(task: TaskScheduler.Task): Int {
+        val id = nextId++
+        scheduledIds += id
+        task.onTick()
+        return id
+    }
+
+    override fun cancelTask(taskId: Int): Boolean {
+        cancelledIds += taskId
+        return true
+    }
+
+    override fun cancelAllTasks() {}
+}
+
 class RealChestMenuUpdateTest {
 
-    @BeforeTest fun setUp() { MockBukkit.mock() }
+    private lateinit var server: org.mockbukkit.mockbukkit.ServerMock
+    @BeforeTest fun setUp() { server = MockBukkit.mock() }
     @AfterTest fun tearDown() { MockBukkit.unmock() }
+
+    private fun menu(scheduler: TaskScheduler, specs: Map<Int, SlotSpec>) =
+        RealChestMenu(scheduler, mockk<PacketManager<*>>(relaxed = true), Component.text("t"), ChestMenuType.GENERIC_9X3, specs, hidePlayerInventory = false)
 
     @Test fun `更新规则在主线程 tick 并写入真实容器`() {
         val scheduler = AsyncTrackingScheduler()
@@ -34,10 +62,11 @@ class RealChestMenuUpdateTest {
                 item = item(Material.CLOCK, 5)
             }
         }.build(item(Material.AIR))
-        val m = RealChestMenu(scheduler, Component.text("t"), ChestMenuType.GENERIC_9X3, mapOf(4 to spec), hidePlayerInventory = false)
-        // 构造末尾已 startUpdates → AsyncTrackingScheduler 立即执行了一次 onTick
-        assertEquals(Material.CLOCK, m.bukkitInventory.getItem(4)!!.type)
-        assertEquals(5, m.bukkitInventory.getItem(4)!!.amount)
+        val m = menu(scheduler, mapOf(4 to spec))
+        // 按需启停：首个观察者出现（handleOpen）才启动 → AsyncTrackingScheduler 立即执行一次 onTick
+        m.handleOpen(server.addPlayer())
+        assertEquals(Material.CLOCK, m.inventory.getItem(4)!!.type)
+        assertEquals(5, m.inventory.getItem(4)!!.amount)
         assertEquals(listOf(false), scheduler.asyncFlags) // 主线程（非异步）
     }
 
@@ -52,9 +81,61 @@ class RealChestMenuUpdateTest {
                 item = item(Material.CLOCK, 1) // 高优先级（小值）先执行
             }
         }.build(item(Material.PAPER))
-        val m = RealChestMenu(scheduler, Component.text("t"), ChestMenuType.GENERIC_9X3, mapOf(4 to spec), hidePlayerInventory = false)
-        assertEquals(Material.CLOCK, m.bukkitInventory.getItem(4)!!.type)
-        assertEquals(2, m.bukkitInventory.getItem(4)!!.amount) // 串行可见前序结果
+        val m = menu(scheduler, mapOf(4 to spec))
+        m.handleOpen(server.addPlayer())
+        assertEquals(Material.CLOCK, m.inventory.getItem(4)!!.type)
+        assertEquals(2, m.inventory.getItem(4)!!.amount) // 串行可见前序结果
         assertEquals(listOf(false), scheduler.asyncFlags) // 合并为一个任务（仍主线程）
+    }
+
+    @Test fun `更新规则读到的是容器当前物品，而非声明期初始物品`() {
+        val scheduler = AsyncTrackingScheduler()
+        val seen = mutableListOf<Material>()
+        val spec = SlotBuilder(InventoryClickEvent::class.java).apply {
+            onUpdate(trigger = TaskScheduler.Trigger.Interval(1.seconds)) { seen += item.type }
+        }.build(item(Material.PAPER))
+        val m = menu(scheduler, mapOf(4 to spec))
+        m.setItem(4, item(Material.DIAMOND)) // 声明后、tick 前，容器被直接改写
+        m.handleOpen(server.addPlayer())
+        assertEquals(listOf(Material.DIAMOND), seen) // 读容器当前值，不是声明期的 PAPER
+    }
+
+    // ---- 按需启停（本次需求的验收，对照 overlay 侧 PlayerOverlayImplTest 同名测试）----
+
+    @Test fun `update loop 按观察者存在与否启停，幂等且可重启`() {
+        val scheduler = RecordingScheduler()
+        val spec = SlotBuilder(InventoryClickEvent::class.java).apply {
+            onUpdate(trigger = TaskScheduler.Trigger.Once) { }
+        }.build(item(Material.AIR))
+        val m = menu(scheduler, mapOf(0 to spec))
+
+        // ① 构造后（有 update 规则）不调度任何任务
+        assertEquals(0, scheduler.scheduledIds.size)
+
+        // ② 首个观察者 -> 任务被调度
+        val p1 = server.addPlayer()
+        m.handleOpen(p1)
+        assertEquals(1, scheduler.scheduledIds.size)
+
+        // ③ 第二个观察者加入 -> 不重复调度（幂等）
+        val p2 = server.addPlayer()
+        m.handleOpen(p2)
+        assertEquals(1, scheduler.scheduledIds.size)
+
+        // 还有一个观察者在场时 handleClose 不应停止
+        m.handleClose(p1)
+        assertEquals(0, scheduler.cancelledIds.size)
+
+        // ④ 最后一个观察者离开 -> 任务被取消
+        m.handleClose(p2)
+        assertEquals(1, scheduler.cancelledIds.size)
+
+        // ⑤ 再次打开 -> 重新调度
+        m.handleOpen(p1)
+        assertEquals(2, scheduler.scheduledIds.size)
+
+        // ⑥ destroy -> 取消
+        m.destroy()
+        assertEquals(2, scheduler.cancelledIds.size)
     }
 }

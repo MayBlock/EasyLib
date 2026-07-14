@@ -1,5 +1,6 @@
 package com.github.mayblock.easylib.impl.bukkit.menu.type.chest
 
+import com.github.mayblock.easylib.packetevents.PacketManager
 import com.github.mayblock.easylib.api.bukkit.menu.slot.event.SlotPlaceEvent
 import com.github.mayblock.easylib.api.bukkit.menu.slot.event.SlotTakeEvent
 import com.github.mayblock.easylib.api.bukkit.menu.type.chest.ChestMenuType
@@ -7,7 +8,7 @@ import com.github.mayblock.easylib.api.event.on
 import com.github.mayblock.easylib.api.scheduler.TaskScheduler
 import com.github.mayblock.easylib.impl.bukkit.menu.MenuInteractionListener
 import com.github.mayblock.easylib.impl.bukkit.menu.MenuManager
-import com.github.mayblock.easylib.impl.bukkit.menu.slot.SlotBuilder
+import com.github.mayblock.easylib.impl.bukkit.menu.slot.builder.SlotBuilder
 import com.github.mayblock.easylib.impl.bukkit.menu.slot.SlotSpec
 import com.github.mayblock.easylib.impl.bukkit.util.item
 import io.mockk.mockk
@@ -35,11 +36,11 @@ class RealChestMenuClickTest {
         SlotBuilder(ApiInventoryClickEvent::class.java).build(item, movable, placeable)
 
     private fun menu(specs: Map<Int, SlotSpec>): RealChestMenu =
-        RealChestMenu(mockk<TaskScheduler>(relaxed = true), Component.text("t"), ChestMenuType.GENERIC_9X3, specs, hidePlayerInventory = false)
+        RealChestMenu(mockk<TaskScheduler>(relaxed = true), mockk<PacketManager<*>>(relaxed = true), Component.text("t"), ChestMenuType.GENERIC_9X3, specs, hidePlayerInventory = false)
 
     private fun open(m: RealChestMenu): Pair<Player, InventoryView> {
         val p = server.addPlayer()
-        return p to p.openInventory(m.bukkitInventory)!!
+        return p to p.openInventory(m.inventory)!!
     }
 
     private fun click(view: InventoryView, rawSlot: Int, action: InventoryAction, click: ClickType = ClickType.LEFT): BukkitInventoryClickEvent =
@@ -105,14 +106,14 @@ class RealChestMenuClickTest {
         m.on { on<SlotPlaceEvent> { places += index } }
         val (p, view) = open(m)
         p.inventory.setItem(0, item(Material.STONE, 40)) // 底部第一格
-        val rawBottom = m.bukkitInventory.size + 0 // 底部第一格的 rawSlot
+        val rawBottom = m.inventory.size + 0 // 底部第一格的 rawSlot
         val e = click(view, rawBottom, InventoryAction.MOVE_TO_OTHER_INVENTORY)
         m.handleClick(e)
         assertTrue(e.isCancelled) // 原生被取消，改手动分发
         assertEquals(listOf(0, 2), places) // 先填同类槽0（+4），再填空槽2（+36）
-        assertEquals(64, m.bukkitInventory.getItem(0)!!.amount)
-        assertEquals(36, m.bukkitInventory.getItem(2)!!.amount)
-        assertEquals(Material.DIAMOND, m.bukkitInventory.getItem(1)!!.type) // 槽1（不可放置）未被污染
+        assertEquals(64, m.inventory.getItem(0)!!.amount)
+        assertEquals(36, m.inventory.getItem(2)!!.amount)
+        assertEquals(Material.DIAMOND, m.inventory.getItem(1)!!.type) // 槽1（不可放置）未被污染
     }
 
     @Test fun `拖拽触及不可放置顶部槽则整体取消`() {
@@ -174,10 +175,10 @@ class RealChestMenuClickTest {
         m.on { on<SlotPlaceEvent> { if (index == 0) isCancelled = true } }
         val (p, view) = open(m)
         p.inventory.setItem(0, item(Material.STONE, 100))
-        val e = click(view, m.bukkitInventory.size + 0, InventoryAction.MOVE_TO_OTHER_INVENTORY)
+        val e = click(view, m.inventory.size + 0, InventoryAction.MOVE_TO_OTHER_INVENTORY)
         m.handleClick(e)
-        assertNull(m.bukkitInventory.getItem(0))               // slot0 取消 → 未放入
-        assertEquals(36, m.bukkitInventory.getItem(1)!!.amount) // slot1 得 36（100 = 64+36，slot0 被跳过）
+        assertNull(m.inventory.getItem(0))               // slot0 取消 → 未放入
+        assertEquals(36, m.inventory.getItem(1)!!.amount) // slot1 得 36（100 = 64+36，slot0 被跳过）
         assertEquals(64, e.currentItem!!.amount)                // 来源只扣实际放入的 36，剩 64
     }
 
@@ -185,12 +186,12 @@ class RealChestMenuClickTest {
         val m = menu(mapOf(5 to spec(item(Material.DIAMOND)))) // 不可变槽
         // 监听器路由前会校验菜单归属（防止多 MenuManager 实例重复处理），
         // 因此这里显式把 m 挂到一个 manager 名下，再用同一 manager 构造监听器。
-        val mgr = MenuManager(mockk<TaskScheduler>(relaxed = true), MockBukkit.createMockPlugin())
+        val mgr = MenuManager(mockk<TaskScheduler>(relaxed = true), mockk<PacketManager<*>>(relaxed = true), MockBukkit.createMockPlugin())
         m.owner = mgr
         val (_, view) = open(m)
         val listener = MenuInteractionListener(mgr)
         val e = click(view, 5, InventoryAction.PICKUP_ALL)
-        listener.onClick(e)
+        listener.onInvClick(e)
         assertTrue(e.isCancelled) // 经 holder 路由到 handleClick，不可变槽被取消
     }
 }

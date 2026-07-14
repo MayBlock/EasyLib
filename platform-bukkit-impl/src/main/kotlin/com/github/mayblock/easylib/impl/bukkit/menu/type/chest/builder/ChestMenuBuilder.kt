@@ -5,7 +5,7 @@ import com.github.mayblock.easylib.api.bukkit.menu.slot.dsl.SlotScope
 import com.github.mayblock.easylib.api.bukkit.menu.type.chest.ChestMenu
 import com.github.mayblock.easylib.api.bukkit.menu.type.chest.ChestMenuType
 import com.github.mayblock.easylib.api.bukkit.menu.type.chest.dsl.ChestMenuScope
-import com.github.mayblock.easylib.impl.bukkit.menu.slot.SlotBuilder
+import com.github.mayblock.easylib.impl.bukkit.menu.slot.builder.SlotBuilder
 import com.github.mayblock.easylib.impl.bukkit.menu.slot.SlotSpec
 import net.kyori.adventure.text.Component
 import org.bukkit.inventory.ItemStack

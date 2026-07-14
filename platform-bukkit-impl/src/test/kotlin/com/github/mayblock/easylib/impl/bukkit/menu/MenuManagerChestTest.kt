@@ -1,5 +1,6 @@
 package com.github.mayblock.easylib.impl.bukkit.menu
 
+import com.github.mayblock.easylib.packetevents.PacketManager
 import com.github.mayblock.easylib.api.bukkit.menu.MenuCloseEvent
 import com.github.mayblock.easylib.api.bukkit.menu.type.chest.ChestMenuType
 import com.github.mayblock.easylib.api.bukkit.menu.type.chest.dsl.slot
@@ -27,7 +28,7 @@ class MenuManagerChestTest {
     @BeforeTest fun setUp() { server = MockBukkit.mock() }
     @AfterTest fun tearDown() { MockBukkit.unmock() }
 
-    private fun manager() = MenuManager(mockk<TaskScheduler>(relaxed = true), MockBukkit.createMockPlugin())
+    private fun manager() = MenuManager(mockk<TaskScheduler>(relaxed = true), mockk<PacketManager<*>>(relaxed = true), MockBukkit.createMockPlugin())
 
     @Test fun `createChestMenu 产出真实容器菜单`() {
         val mgr = manager()
@@ -35,7 +36,7 @@ class MenuManagerChestTest {
             page(Component.text("t")) { slot(0, Material.DIAMOND) }
         }
         assertTrue(menu is RealChestMenu)
-        assertEquals(Material.DIAMOND, menu.bukkitInventory.getItem(0)!!.type)
+        assertEquals(Material.DIAMOND, menu.inventory.getItem(0)!!.type)
     }
 
     @Test fun `placeable 且 hide=true 构建期报错`() {
@@ -54,11 +55,11 @@ class MenuManagerChestTest {
             page(Component.text("t")) { slot(0, Material.DIAMOND) }
         } as RealChestMenu
         val p = server.addPlayer()
-        val view = p.openInventory(menu.bukkitInventory)!!
+        val view = p.openInventory(menu.inventory)!!
         val listener = MenuInteractionListener(mgr)
-        listener.onOpen(InventoryOpenEvent(view))
+        listener.onInvOpen(InventoryOpenEvent(view))
         assertTrue(mgr.hasActiveMenu(p))
-        listener.onClose(InventoryCloseEvent(view))
+        listener.onInvClose(InventoryCloseEvent(view))
         assertFalse(mgr.hasActiveMenu(p))
     }
 
@@ -67,7 +68,7 @@ class MenuManagerChestTest {
     // 注意：manager() 构造时已把自己的 MenuInteractionListener 注册进 MockBukkit 的
     // PluginManager，因此这里通过 callEvent 触发真实事件派发链，而不是手动调用监听器方法。
     // p.openInventory(...) 在 MockBukkit 中会同步 callEvent(InventoryOpenEvent)，
-    // 即 publishOpen 已由 manager 的监听器真实触发。
+    // 即 handleOpen 已由 manager 的监听器真实触发。
 
     @Test
     fun `正常关窗后再触发 quit 兜底，MenuCloseEvent 只派发一次`() {
@@ -78,9 +79,9 @@ class MenuManagerChestTest {
         var closes = 0
         menu.on { on<MenuCloseEvent> { closes++ } }
         val p = server.addPlayer()
-        val view = p.openInventory(menu.bukkitInventory)!!
+        val view = p.openInventory(menu.inventory)!!
 
-        // 正常关窗：服务端派发 InventoryCloseEvent → onClose → handleClose（第 1 次）
+        // 正常关窗：服务端派发 InventoryCloseEvent → onInvClose → handleClose（第 1 次）
         server.pluginManager.callEvent(InventoryCloseEvent(view))
         // 断线兜底：此时玩家的 openInventory 仍指向菜单视图（上面是手工构造的事件，
         // 并未真正关闭视图），模拟「服务端在 quit 前已先触发过 InventoryCloseEvent」
@@ -99,7 +100,7 @@ class MenuManagerChestTest {
         var closes = 0
         menu.on { on<MenuCloseEvent> { closes++ } }
         val p = server.addPlayer()
-        p.openInventory(menu.bukkitInventory)!!
+        p.openInventory(menu.inventory)!!
 
         server.pluginManager.callEvent(PlayerQuitEvent(p, "quit"))
 

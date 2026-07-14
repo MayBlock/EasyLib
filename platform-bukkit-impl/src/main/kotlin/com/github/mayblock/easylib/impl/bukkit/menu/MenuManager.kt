@@ -12,6 +12,7 @@ import com.github.mayblock.easylib.api.event.on
 import com.github.mayblock.easylib.api.scheduler.TaskScheduler
 import com.github.mayblock.easylib.impl.bukkit.menu.type.chest.RealChestMenu
 import com.github.mayblock.easylib.impl.bukkit.menu.type.chest.builder.PageableChestMenuBuilder
+import com.github.mayblock.easylib.packetevents.PacketManager
 import org.bukkit.Bukkit
 import org.bukkit.entity.Player
 import org.bukkit.event.HandlerList
@@ -20,6 +21,7 @@ import java.io.Closeable
 
 class MenuManager(
     private val taskScheduler: TaskScheduler,
+    private val packetManager: PacketManager<*>,
     plugin: Plugin,
 ) : MenuFactory, MenuRegistry, Closeable {
 
@@ -36,18 +38,27 @@ class MenuManager(
     override fun createChestMenu(
         type: ChestMenuType,
         hidePlayerInventory: Boolean,
-        builder: PageableChestMenuScope.() -> Unit
+        block: PageableChestMenuScope.() -> Unit
     ): ChestMenu =
         PageableChestMenuBuilder(type) { title, slots ->
             // 注册塞进工厂 lambda：分页菜单的每一页都经由本工厂创建，
             // 因此每页都会在这里被登记，而不仅仅是 build() 返回的第 1 页。
-            register(RealChestMenu(taskScheduler, title, type, slots, hidePlayerInventory, onDestroyed = ::forget))
-        }.apply(builder)
+            RealChestMenu(
+                taskScheduler,
+                packetManager,
+                title,
+                type,
+                slots,
+                hidePlayerInventory,
+                onDestroyed = ::forget
+            ).also(::register)
+        }.apply(block)
             .build()
 
     /** 登记菜单，并通过其事件源跟踪活跃观察者（开/关菜单驱动 [activeMenus]）。 */
     private fun <M : Menu> register(menu: M): M {
-        (menu as? RealChestMenu)?.owner = this
+        // 经 BukkitMenu 接口赋 owner：manager 对具体 UI 类型（chest/铁砧/……）零感知。
+        (menu as? BukkitMenu)?.owner = this
         menu.on {
             on<MenuOpenEvent> { activeMenus[player] = menu }
             on<MenuCloseEvent> { if (activeMenus[player] === menu) activeMenus.remove(player) }

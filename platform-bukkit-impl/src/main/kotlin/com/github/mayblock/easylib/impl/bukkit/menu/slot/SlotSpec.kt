@@ -8,7 +8,7 @@ import org.bukkit.inventory.ItemStack
 
 /**
  * 槽的「不可变声明」：用户通过 DSL 声明了什么（初始物品 + 点击处理器 + 更新规则 + 交互能力），
- * 零运行态。由 [SlotBuilder] 产出（chest 侧物品直接写入真实 Bukkit 容器）。
+ * 零运行态。由 [com.github.mayblock.easylib.impl.bukkit.menu.slot.builder.SlotBuilder] 产出（chest 侧物品直接写入真实 Bukkit 容器）。
  *
  * @param movable 槽中物品可被玩家拿起（take 回调仅把关，物品移动由原生/引擎完成）
  * @param placeable 玩家可把自己背包的物品放入本槽（place 回调仅把关，物品移动由原生/引擎完成）

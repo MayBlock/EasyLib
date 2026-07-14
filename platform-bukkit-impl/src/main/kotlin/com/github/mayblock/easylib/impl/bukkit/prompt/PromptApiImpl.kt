@@ -1,23 +1,30 @@
 package com.github.mayblock.easylib.impl.bukkit.prompt
 
 import com.github.mayblock.easylib.api.bukkit.prompt.PromptApi
+import com.github.mayblock.easylib.api.scheduler.TaskScheduler
 import com.github.mayblock.easylib.api.util.Disposable
 import com.github.mayblock.easylib.api.util.Vector
-import com.github.mayblock.easylib.impl.bukkit.BukkitEasyLib.Companion.api
 import com.github.mayblock.easylib.impl.bukkit.util.sendPackets
+import com.github.mayblock.easylib.packetevents.PacketManager
 import com.github.mayblock.easylib.packetevents.packet.updateSign
 import com.github.mayblock.easylib.packetevents.util.toVector3i
 import com.github.retrooper.packetevents.event.PacketListener
 import com.github.retrooper.packetevents.event.PacketReceiveEvent
+import com.github.retrooper.packetevents.protocol.nbt.NBT
 import com.github.retrooper.packetevents.protocol.packettype.PacketType
 import com.github.retrooper.packetevents.protocol.world.states.WrappedBlockState
 import com.github.retrooper.packetevents.protocol.world.states.type.StateTypes
 import com.github.retrooper.packetevents.util.Vector3i
 import com.github.retrooper.packetevents.wrapper.play.client.WrapperPlayClientUpdateSign
+import io.github.retrooper.packetevents.util.SpigotConversionUtil
 import kotlinx.coroutines.suspendCancellableCoroutine
 import org.bukkit.Bukkit
 import org.bukkit.Location
 import org.bukkit.entity.Player
+import org.bukkit.event.EventHandler
+import org.bukkit.event.HandlerList
+import org.bukkit.event.Listener
+import org.bukkit.event.player.PlayerQuitEvent
 import org.slf4j.LoggerFactory
 import java.util.UUID
 import java.util.concurrent.ConcurrentHashMap
@@ -32,7 +39,9 @@ import kotlin.coroutines.resume
  * 调用方无需（也不应该）自行切线程。PacketEvents 的收包发生在网络线程而非主线程，
  * 直接在其中调用 `Player#sendBlockChange` 等 Bukkit API 是不安全的。
  */
-object PromptApiImpl : PromptApi {
+class PromptApiImpl(
+    packetManager: PacketManager<*>
+) : PromptApi, Listener {
 
     private val logger = LoggerFactory.getLogger(PromptApiImpl::class.java)
 
@@ -43,7 +52,38 @@ object PromptApiImpl : PromptApi {
      */
     private val promptList = ConcurrentHashMap<UUID, Pair<Vector3i, (String?) -> Unit>>()
 
-    private val packetListenerDisposable: Disposable
+    private var offListener: Disposable = packetManager.registerListener(object : PacketListener {
+        override fun onPacketReceive(e: PacketReceiveEvent) {
+            if (e.packetType != PacketType.Play.Client.UPDATE_SIGN) {
+                return
+            }
+            val uuid = e.user.uuid
+            // 非本 API 发起的 pending：说明玩家在编辑一块真实告示牌，直接放行，不拦截也不清空它。
+            val pending = promptList[uuid] ?: return
+            val packet = WrapperPlayClientUpdateSign(e)
+            if (packet.blockPosition != pending.first) {
+                // 玩家手上确实有个 pending prompt，但这个包编辑的是别的坐标（真实告示牌），与本次 prompt 无关。
+                return
+            }
+            // 先移除再处理：防止同一 pending 被握手期间的重复包/竞态触发两次 resume。
+            promptList.remove(uuid)
+            val result = packet.textLines[0].ifBlank { null }
+            val (position, callback) = pending
+            val player = Bukkit.getPlayer(uuid)
+            // 不再无脑发 AIR：把客户端此前看到的假告示牌还原为服务端此刻的真实方块状态。
+            if (player != null && player.isOnline) {
+                val block = player.world.getBlockAt(position.x, position.y, position.z)
+                player.sendPackets {
+                    forBlock(position) {
+                        blockChange(SpigotConversionUtil.fromBukkitBlockData(block.blockData))
+                    }
+                }
+            } else {
+                logger.debug("Player {} went offline before prompt block restore could run", uuid)
+            }
+            callback(result)
+        }
+    })
 
     override fun openPrompt(
         player: Player,
@@ -91,55 +131,16 @@ object PromptApiImpl : PromptApi {
      * 注销 packet listener，避免 plugin 卸载/重载后残留监听器持续持有引用。
      */
     internal fun shutdown() {
-        packetListenerDisposable.dispose()
+        offListener.dispose()
+        HandlerList.unregisterAll(this)
     }
 
     /**
-     * 由 [PromptQuitListener]（挂在 `PlayerQuitEvent`）调用：断线玩家的 pending prompt 以 `null` 结算并移除，
-     * 防止玩家中途下线导致 [promptList] 条目永久残留（原实现完全没有处理断线，属于泄漏）。
+     * 断线玩家的 pending prompt 以 `null` 结算并移除，
+     * 防止玩家中途下线导致 [promptList] 条目永久残留
      */
-    internal fun onPlayerQuit(uuid: UUID) {
-        promptList.remove(uuid)?.second?.invoke(null)
-    }
-
-    init {
-        packetListenerDisposable = api.packetManager.registerListener(object : PacketListener {
-            override fun onPacketReceive(e: PacketReceiveEvent) {
-                if (e.packetType != PacketType.Play.Client.UPDATE_SIGN) {
-                    return
-                }
-                val uuid = e.user.uuid
-                // 非本 API 发起的 pending：说明玩家在编辑一块真实告示牌，直接放行，不拦截也不清空它。
-                val pending = promptList[uuid] ?: return
-                val packet = WrapperPlayClientUpdateSign(e)
-                if (packet.blockPosition != pending.first) {
-                    // 玩家手上确实有个 pending prompt，但这个包编辑的是别的坐标（真实告示牌），与本次 prompt 无关。
-                    return
-                }
-                // 先移除再处理：防止同一 pending 被握手期间的重复包/竞态触发两次 resume。
-                promptList.remove(uuid)
-                val result = packet.textLines[0].ifBlank { null }
-                val (position, callback) = pending
-                val player = Bukkit.getPlayer(uuid)
-
-                api.taskScheduler.scheduleTask {
-                    onTick = {
-                        // 不再无脑发 AIR：把客户端此前看到的假告示牌还原为服务端此刻的真实方块状态。
-                        if (player != null && player.isOnline) {
-                            val location = Location(
-                                player.world,
-                                position.x.toDouble(),
-                                position.y.toDouble(),
-                                position.z.toDouble()
-                            )
-                            player.sendBlockChange(location, location.block.blockData)
-                        } else {
-                            logger.debug("Player {} went offline before prompt block restore could run", uuid)
-                        }
-                        callback(result)
-                    }
-                }
-            }
-        })
+    @EventHandler
+    fun onQuit(e: PlayerQuitEvent) {
+        promptList.remove(e.player.uniqueId)?.second?.invoke(null)
     }
 }

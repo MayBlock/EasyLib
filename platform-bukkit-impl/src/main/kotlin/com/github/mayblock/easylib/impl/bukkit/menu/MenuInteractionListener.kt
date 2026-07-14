@@ -1,18 +1,20 @@
 package com.github.mayblock.easylib.impl.bukkit.menu
 
-import com.github.mayblock.easylib.impl.bukkit.menu.type.chest.RealChestMenu
 import org.bukkit.entity.Player
 import org.bukkit.event.EventHandler
 import org.bukkit.event.EventPriority
 import org.bukkit.event.Listener
 import org.bukkit.event.inventory.InventoryClickEvent
 import org.bukkit.event.inventory.InventoryCloseEvent
+import org.bukkit.event.inventory.InventoryDragEvent
 import org.bukkit.event.inventory.InventoryOpenEvent
 import org.bukkit.event.player.PlayerQuitEvent
+import org.bukkit.inventory.InventoryHolder
 
 /**
- * 全局单一监听器：按 `inventory.holder` 把 Bukkit 库存事件路由回对应 [RealChestMenu]。
- * 由 [owner] 这个 [MenuManager] 在 plugin 上注册/注销（Task A6）。
+ * 全局单一监听器：按接口路由（[BukkitMenu]）把 Bukkit 库存事件转发回对应菜单实例，
+ * 对具体 UI 类型（chest/铁砧/……）零感知——新增 UI 类型只需实现 [BukkitMenu]，无需改动本监听器。
+ * 由 [owner] 这个 [MenuManager] 在 plugin 上注册/注销。
  *
  * 每个 [MenuManager] 实例各自持有并注册一个本监听器；当同一 server 上存在多个
  * MenuManager 时，各自的监听器都会收到全局的 Bukkit 事件，因此路由前必须校验
@@ -20,44 +22,34 @@ import org.bukkit.event.player.PlayerQuitEvent
  */
 internal class MenuInteractionListener(private val owner: MenuManager) : Listener {
 
-    @EventHandler(priority = EventPriority.HIGH, ignoreCancelled = true)
-    fun onClick(e: InventoryClickEvent) {
-        val menu = e.inventory.holder as? RealChestMenu ?: return
-        if (menu.owner !== owner) return
-        menu.handleClick(e)
-    }
-
-    @EventHandler
-    fun onOpen(e: InventoryOpenEvent) {
-        val menu = e.inventory.holder as? RealChestMenu ?: return
-        if (menu.owner !== owner) return
-        (e.player as? Player)?.let { menu.publishOpen(it) }
-    }
+    /** holder → 菜单：仅路由实现了 [BukkitMenu] 且归属本 manager 的实例。 */
+    private fun route(holder: InventoryHolder?): BukkitMenu? =
+        (holder as? BukkitMenu)?.takeIf { it.owner === owner }
 
     @EventHandler(priority = EventPriority.HIGH, ignoreCancelled = true)
-    fun onDrag(e: org.bukkit.event.inventory.InventoryDragEvent) {
-        val menu = e.inventory.holder as? RealChestMenu ?: return
-        if (menu.owner !== owner) return
-        menu.handleDrag(e)
-    }
+    fun onInvClick(e: InventoryClickEvent) { route(e.inventory.holder)?.handleClick(e) }
 
     @EventHandler
-    fun onClose(e: InventoryCloseEvent) {
-        val menu = e.inventory.holder as? RealChestMenu ?: return
-        if (menu.owner !== owner) return
-        (e.player as? Player)?.let { menu.handleClose(it) }
+    fun onInvOpen(e: InventoryOpenEvent) {
+        val player = e.player as? Player ?: return
+        route(e.inventory.holder)?.handleOpen(player)
+    }
+
+    @EventHandler(priority = EventPriority.HIGH, ignoreCancelled = true)
+    fun onInvDrag(e: InventoryDragEvent) { route(e.inventory.holder)?.handleDrag(e) }
+
+    @EventHandler
+    fun onInvClose(e: InventoryCloseEvent) {
+        val player = e.player as? Player ?: return
+        route(e.inventory.holder)?.handleClose(player)
     }
 
     /**
      * 断线兜底：部分服务端实现在玩家 quit 时不一定先触发 InventoryCloseEvent，
-     * 导致菜单永远收不到关闭通知（hideViewers/openViewers 悬空、MenuCloseEvent 不派发）。
+     * 导致菜单永远收不到关闭通知（viewers 悬空、MenuCloseEvent 不派发）。
      * 若服务端已先触发过 InventoryCloseEvent，这里的 handleClose 双调无害：
-     * hideViewers -= player 幂等，openViewers 幂等保护避免 MenuCloseEvent 被重复派发。
+     * viewers.remove 幂等保护避免 MenuCloseEvent 被重复派发。
      */
     @EventHandler
-    fun onQuit(e: PlayerQuitEvent) {
-        val menu = e.player.openInventory.topInventory.holder as? RealChestMenu ?: return
-        if (menu.owner !== owner) return
-        menu.handleClose(e.player)
-    }
+    fun onQuit(e: PlayerQuitEvent) { route(e.player.openInventory.topInventory.holder)?.handleClose(e.player) }
 }
