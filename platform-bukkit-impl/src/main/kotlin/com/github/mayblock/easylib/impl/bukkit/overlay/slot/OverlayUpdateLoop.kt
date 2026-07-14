@@ -1,4 +1,4 @@
-package com.github.mayblock.easylib.impl.bukkit.overlay
+package com.github.mayblock.easylib.impl.bukkit.overlay.slot
 
 import com.github.mayblock.easylib.api.bukkit.overlay.slot.dsl.OverlayUpdateScope
 import com.github.mayblock.easylib.api.scheduler.TaskScheduler

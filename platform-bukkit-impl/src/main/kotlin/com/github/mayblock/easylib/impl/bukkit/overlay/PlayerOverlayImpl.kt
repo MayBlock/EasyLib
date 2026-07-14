@@ -1,5 +1,7 @@
 package com.github.mayblock.easylib.impl.bukkit.overlay
 
+import com.github.mayblock.easylib.impl.bukkit.overlay.slot.OverlayUpdateLoop
+import com.github.mayblock.easylib.impl.bukkit.overlay.slot.OverlaySlotSpec
 import com.github.mayblock.easylib.api.bukkit.overlay.slot.event.OverlayEvent
 import com.github.mayblock.easylib.api.bukkit.overlay.slot.event.OverlayHideEvent
 import com.github.mayblock.easylib.api.bukkit.overlay.slot.event.OverlayShowEvent

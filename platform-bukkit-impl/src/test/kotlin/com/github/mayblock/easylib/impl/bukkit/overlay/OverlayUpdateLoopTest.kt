@@ -1,5 +1,6 @@
 package com.github.mayblock.easylib.impl.bukkit.overlay
 
+import com.github.mayblock.easylib.impl.bukkit.overlay.slot.OverlayUpdateLoop
 import com.github.mayblock.easylib.api.scheduler.TaskScheduler
 import com.github.mayblock.easylib.api.util.Priority
 import com.github.mayblock.easylib.impl.bukkit.overlay.builder.OverlaySlotBuilder
