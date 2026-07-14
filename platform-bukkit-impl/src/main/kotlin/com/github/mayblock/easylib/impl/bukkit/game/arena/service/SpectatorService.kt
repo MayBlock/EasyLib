@@ -25,7 +25,12 @@ class SpectatorService<A : BukkitArena<out BukkitArenaPlayer, *>>(
 
     override fun onRegister() {}
 
-    override fun onUnregister() {}
+    // 服务注销时若不清理，spectators 里持有的玩家引用与 playerOverlay 的包监听/更新循环都会泄漏
+    // （泄漏链：Service 卸载 -> Spectator 未 restore -> overlay 未 destroy -> viewers/packetListener 常驻）。
+    override fun onUnregister() {
+        spectators.toList().forEach(::removeSpectator)
+        playerOverlay.destroy()
+    }
 
     fun getPlayersWithoutSpectator(): List<BukkitArenaPlayer> =
         arena.players - spectators.map { it.arenaPlayer }.toSet()

@@ -126,6 +126,39 @@ class AbstractPlayerOverlayTest {
     }
 
     @Test
+    fun `destroy 末尾触发 onDestroyed 回调，且只触发一次（幂等销毁）`() {
+        val o = TestOverlay(mapOf(3 to specOf(item(Material.STONE))))
+        var calls = 0
+        o.onDestroyed = { calls++ }
+        o.destroy()
+        assertEquals(1, calls)
+        o.destroy() // 已销毁：destroy 提前返回，不重复触发
+        assertEquals(1, calls)
+    }
+
+    @Test
+    fun `hideIfViewing 对观察中的玩家移除观察者并派发 OverlayHideEvent`() {
+        val o = TestOverlay(mapOf(3 to specOf(item(Material.STONE))))
+        val p = mockk<Player>(relaxed = true)
+        o.show(p)
+        var hides = 0
+        o.on { on<OverlayHideEvent> { hides++ } }
+        o.hideIfViewing(p)
+        assertEquals(0, o.activeViewers.size)
+        assertEquals(1, hides)
+    }
+
+    @Test
+    fun `hideIfViewing 对非观察者是无操作`() {
+        val o = TestOverlay(mapOf(3 to specOf(item(Material.STONE))))
+        val bystander = mockk<Player>(relaxed = true)
+        var hides = 0
+        o.on { on<OverlayHideEvent> { hides++ } }
+        o.hideIfViewing(bystander)
+        assertEquals(0, hides)
+    }
+
+    @Test
     fun `isEmptyStack 判定 null、AIR 与非空`() {
         assertTrue((null as ItemStack?).isEmptyStack())
         assertTrue(item(Material.AIR).isEmptyStack())

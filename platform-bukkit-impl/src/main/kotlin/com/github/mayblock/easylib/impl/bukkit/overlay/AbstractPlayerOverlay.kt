@@ -14,13 +14,14 @@ import com.github.mayblock.easylib.impl.event.SimpleEventBus
 import org.bukkit.Material
 import org.bukkit.entity.Player
 import org.bukkit.inventory.ItemStack
+import java.util.concurrent.ConcurrentHashMap
 
 /**
  * 覆盖层共用机制：覆盖层级事件总线（仅暴露订阅侧）、观察者集合、槽网格、更新循环、
  * 包监听生命周期、槽事件派发与销毁模板。具体覆盖层只实现各自差异（show/hide、包映射、重绘）。
  */
 internal abstract class AbstractPlayerOverlay private constructor(
-    scheduler: TaskScheduler,
+    protected val scheduler: TaskScheduler,
     specs: Map<Int, OverlaySlotSpec>,
     private val bus: SimpleEventBus<OverlayEvent>,
 ) : PlayerOverlay, EventSource<OverlayEvent> by bus {
@@ -28,11 +29,16 @@ internal abstract class AbstractPlayerOverlay private constructor(
     constructor(scheduler: TaskScheduler, specs: Map<Int, OverlaySlotSpec>) : this(scheduler, specs, SimpleEventBus())
 
     protected val grid = SlotGrid(specs)
-    private val viewers = mutableSetOf<Player>()
+
+    // netty（包收发）与主线程都会读写观察者集合，用并发集合防数据竞争（详见 repaint 里的补充过滤）。
+    private val viewers: MutableSet<Player> = ConcurrentHashMap.newKeySet()
     val activeViewers: Set<Player> get() = viewers
 
     private val updateLoop = OverlayUpdateLoop(grid, scheduler, ::repaint)
     private var packetListener: Disposable? = null
+
+    /** 覆盖层销毁时的清理钩子（由持有者，如 [OverlayManager]，挂接以停止追踪本实例）。 */
+    internal var onDestroyed: (() -> Unit)? = null
 
     final override var isDestroyed: Boolean = false
         private set
@@ -87,6 +93,14 @@ internal abstract class AbstractPlayerOverlay private constructor(
         removeViewer(player)
     }
 
+    /**
+     * 玩家打开任意其他容器界面时的兜底清理（由 [OverlayQuitListener] 监听 `InventoryOpenEvent` 调用）：
+     * 若玩家仍在观察，移除观察者并调用 [onHide] 还原视觉，防止容器界面绕过覆盖层看到真实背包。
+     */
+    internal fun hideIfViewing(player: Player) {
+        if (player in activeViewers) removeViewer(player).also { if (it) onHide(player) }
+    }
+
     /** 把某槽当前物品重绘给所有在线观察者（类型相关）。 */
     protected abstract fun repaint(index: Int)
 
@@ -110,5 +124,6 @@ internal abstract class AbstractPlayerOverlay private constructor(
         bus.unsubscribeAll()
         viewers.clear()
         isDestroyed = true
+        onDestroyed?.invoke()
     }
 }
