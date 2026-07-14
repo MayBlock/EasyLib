@@ -1,5 +1,6 @@
-package com.github.mayblock.easylib.api.bukkit.overlay
+package com.github.mayblock.easylib.api.bukkit.overlay.slot.event
 
+import com.github.mayblock.easylib.api.bukkit.overlay.PlayerOverlay
 import org.bukkit.entity.Player
 import org.bukkit.event.inventory.ClickType
 
@@ -10,7 +11,7 @@ interface OverlaySlotEvent : OverlayEvent {
 
 /**
  * 玩家对某覆盖槽位的一次主动操作（密封层级）：在
- * [com.github.mayblock.easylib.api.bukkit.overlay.dsl.OverlaySlotScope.onAction]
+ * [com.github.mayblock.easylib.api.bukkit.overlay.slot.dsl.OverlaySlotScope.onAction]
  * 的块内用 `when (this)` 穷尽区分来源——
  * [Click]：玩家背包窗口内的点击；[Interact]：手持该槽物品在世界中的左/右键交互。
  */

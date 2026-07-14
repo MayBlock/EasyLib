@@ -1,9 +1,9 @@
 package com.github.mayblock.easylib.impl.bukkit.menu.slot
 
 import com.github.mayblock.easylib.api.bukkit.menu.Menu
-import com.github.mayblock.easylib.api.bukkit.menu.slot.InventoryClickEvent
-import com.github.mayblock.easylib.api.bukkit.menu.slot.SlotPlaceEvent
-import com.github.mayblock.easylib.api.bukkit.menu.slot.SlotTakeEvent
+import com.github.mayblock.easylib.api.bukkit.menu.slot.event.InventoryClickEvent
+import com.github.mayblock.easylib.api.bukkit.menu.slot.event.SlotPlaceEvent
+import com.github.mayblock.easylib.api.bukkit.menu.slot.event.SlotTakeEvent
 import com.github.mayblock.easylib.impl.bukkit.util.item
 import io.mockk.mockk
 import org.bukkit.Material

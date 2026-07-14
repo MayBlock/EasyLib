@@ -1,9 +1,9 @@
 package com.github.mayblock.easylib.impl.bukkit.overlay
 
-import com.github.mayblock.easylib.api.bukkit.overlay.OverlayEvent
-import com.github.mayblock.easylib.api.bukkit.overlay.OverlayShowEvent
-import com.github.mayblock.easylib.api.bukkit.overlay.OverlaySlotActionEvent
-import com.github.mayblock.easylib.api.bukkit.overlay.OverlaySlotEvent
+import com.github.mayblock.easylib.api.bukkit.overlay.slot.event.OverlayEvent
+import com.github.mayblock.easylib.api.bukkit.overlay.slot.event.OverlayShowEvent
+import com.github.mayblock.easylib.api.bukkit.overlay.slot.event.OverlaySlotActionEvent
+import com.github.mayblock.easylib.api.bukkit.overlay.slot.event.OverlaySlotEvent
 import com.github.mayblock.easylib.api.bukkit.overlay.PlayerOverlay
 import com.github.mayblock.easylib.api.event.EventListener
 import com.github.mayblock.easylib.api.util.Priority

@@ -1,4 +1,4 @@
-package com.github.mayblock.easylib.api.bukkit.menu.slot
+package com.github.mayblock.easylib.api.bukkit.menu.slot.event
 
 import com.github.mayblock.easylib.api.bukkit.menu.Menu
 import com.github.mayblock.easylib.api.bukkit.menu.MenuEvent

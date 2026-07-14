@@ -1,9 +1,9 @@
 package com.github.mayblock.easylib.impl.bukkit.menu.slot
 
-import com.github.mayblock.easylib.api.bukkit.menu.slot.SlotClickEvent
-import com.github.mayblock.easylib.api.bukkit.menu.slot.SlotPlaceEvent
-import com.github.mayblock.easylib.api.bukkit.menu.slot.SlotTakeEvent
-import com.github.mayblock.easylib.api.bukkit.menu.slot.SlotUpdateEvent
+import com.github.mayblock.easylib.api.bukkit.menu.slot.event.SlotClickEvent
+import com.github.mayblock.easylib.api.bukkit.menu.slot.event.SlotPlaceEvent
+import com.github.mayblock.easylib.api.bukkit.menu.slot.event.SlotTakeEvent
+import com.github.mayblock.easylib.api.bukkit.menu.slot.event.SlotUpdateEvent
 import com.github.mayblock.easylib.api.bukkit.menu.slot.dsl.SlotScope
 import com.github.mayblock.easylib.api.event.Event
 import com.github.mayblock.easylib.api.scheduler.TaskScheduler

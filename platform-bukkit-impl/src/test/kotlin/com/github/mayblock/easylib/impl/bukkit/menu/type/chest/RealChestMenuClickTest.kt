@@ -1,7 +1,7 @@
 package com.github.mayblock.easylib.impl.bukkit.menu.type.chest
 
-import com.github.mayblock.easylib.api.bukkit.menu.slot.SlotPlaceEvent
-import com.github.mayblock.easylib.api.bukkit.menu.slot.SlotTakeEvent
+import com.github.mayblock.easylib.api.bukkit.menu.slot.event.SlotPlaceEvent
+import com.github.mayblock.easylib.api.bukkit.menu.slot.event.SlotTakeEvent
 import com.github.mayblock.easylib.api.bukkit.menu.type.chest.ChestMenuType
 import com.github.mayblock.easylib.api.event.on
 import com.github.mayblock.easylib.api.scheduler.TaskScheduler
@@ -22,7 +22,7 @@ import org.bukkit.inventory.InventoryView
 import org.bukkit.inventory.ItemStack
 import org.mockbukkit.mockbukkit.MockBukkit
 import kotlin.test.*
-import com.github.mayblock.easylib.api.bukkit.menu.slot.InventoryClickEvent as ApiInventoryClickEvent
+import com.github.mayblock.easylib.api.bukkit.menu.slot.event.InventoryClickEvent as ApiInventoryClickEvent
 import org.bukkit.event.inventory.InventoryClickEvent as BukkitInventoryClickEvent
 
 class RealChestMenuClickTest {

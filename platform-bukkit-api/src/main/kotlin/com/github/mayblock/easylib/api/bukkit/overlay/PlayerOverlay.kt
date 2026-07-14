@@ -1,5 +1,6 @@
 package com.github.mayblock.easylib.api.bukkit.overlay
 
+import com.github.mayblock.easylib.api.bukkit.overlay.slot.event.OverlayEvent
 import com.github.mayblock.easylib.api.event.EventSource
 import com.github.mayblock.easylib.api.util.Destroyable
 import org.bukkit.entity.Player
@@ -9,7 +10,7 @@ import org.bukkit.inventory.ItemStack
  * 玩家背包覆盖层：用数据包在玩家自己的背包窗口上叠加虚拟显示并捕获交互，**非真实容器**。
  * 只做「展示 + 交互」，不与真实背包做物品转移（故无 movable/placeable）。
  *
- * 对外只暴露订阅侧事件源（[EventSource]），可监听 [OverlayEvent]（show/hide、slot 点击/交互）。
+ * 对外只暴露订阅侧事件源（[EventSource]），可监听 [com.github.mayblock.easylib.api.bukkit.overlay.slot.event.OverlayEvent]（show/hide、slot 点击/交互）。
  * 实例只应经 [PlayerOverlayFactory] 创建。
  *
  * 打开任意容器界面（箱子、工作台等，玩家自己背包视图除外）会自动隐藏覆盖层，防止绕过覆盖层

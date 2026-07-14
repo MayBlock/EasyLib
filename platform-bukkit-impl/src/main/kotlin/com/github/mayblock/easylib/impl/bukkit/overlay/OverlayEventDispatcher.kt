@@ -1,6 +1,6 @@
 package com.github.mayblock.easylib.impl.bukkit.overlay
 
-import com.github.mayblock.easylib.api.bukkit.overlay.OverlayEvent
+import com.github.mayblock.easylib.api.bukkit.overlay.slot.event.OverlayEvent
 import com.github.mayblock.easylib.api.event.EventBus
 import com.github.mayblock.easylib.api.event.EventListener
 import com.github.mayblock.easylib.api.event.EventSource
@@ -38,7 +38,7 @@ internal class OverlayEventDispatcher(
     /**
      * 把覆盖层事件派发调度到主线程执行（`publish` 最终会跑到玩家侧的处理器代码，
      * 后者按约定运行在主线程；本方法自身在 netty 包处理线程调用，故需转发）。
-     * resync 发包不受影响，仍在 netty 线程原地执行（归 [OverlayTransport] 管）。
+     * resync 发包不受影响，仍在 netty 线程原地执行（归 [com.github.mayblock.easylib.impl.bukkit.overlay.transport.OverlayTransport] 管）。
      */
     fun publishOnMainThread(event: OverlayEvent) {
         scheduler.scheduleTask { onTick = { publish(event) } }

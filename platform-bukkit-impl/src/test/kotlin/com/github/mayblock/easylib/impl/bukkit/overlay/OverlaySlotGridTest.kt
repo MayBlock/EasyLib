@@ -1,6 +1,9 @@
 package com.github.mayblock.easylib.impl.bukkit.overlay
 
 import com.github.mayblock.easylib.api.scheduler.TaskScheduler
+import com.github.mayblock.easylib.impl.bukkit.overlay.builder.OverlaySlotBuilder
+import com.github.mayblock.easylib.impl.bukkit.overlay.slot.LiveSlot
+import com.github.mayblock.easylib.impl.bukkit.overlay.slot.SlotGrid
 import com.github.mayblock.easylib.impl.bukkit.util.item
 import org.bukkit.Material
 import org.mockbukkit.mockbukkit.MockBukkit

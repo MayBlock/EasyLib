@@ -1,13 +1,15 @@
 package com.github.mayblock.easylib.impl.bukkit.overlay
 
-import com.github.mayblock.easylib.api.bukkit.overlay.OverlayEvent
-import com.github.mayblock.easylib.api.bukkit.overlay.OverlayHideEvent
-import com.github.mayblock.easylib.api.bukkit.overlay.OverlayShowEvent
-import com.github.mayblock.easylib.api.bukkit.overlay.OverlaySlotActionEvent
+import com.github.mayblock.easylib.api.bukkit.overlay.slot.event.OverlayEvent
+import com.github.mayblock.easylib.api.bukkit.overlay.slot.event.OverlayHideEvent
+import com.github.mayblock.easylib.api.bukkit.overlay.slot.event.OverlayShowEvent
+import com.github.mayblock.easylib.api.bukkit.overlay.slot.event.OverlaySlotActionEvent
 import com.github.mayblock.easylib.api.bukkit.overlay.PlayerOverlay
 import com.github.mayblock.easylib.api.event.EventSource
 import com.github.mayblock.easylib.api.scheduler.TaskScheduler
 import com.github.mayblock.easylib.api.util.Disposable
+import com.github.mayblock.easylib.impl.bukkit.overlay.slot.SlotGrid
+import com.github.mayblock.easylib.impl.bukkit.overlay.transport.OverlayTransport
 import com.github.mayblock.easylib.impl.bukkit.util.isEmptyStack
 import com.github.mayblock.easylib.impl.bukkit.util.item
 import com.github.mayblock.easylib.impl.util.extension.ifTrue
@@ -18,7 +20,7 @@ import org.bukkit.inventory.ItemStack
 
 /**
  * 覆盖层协调者（组合切分，替代原「抽象基类 + 包实现子类」的继承切分）：
- * 把观察者状态（[ViewerRegistry]）、客户端通道策略（[OverlayTransport]）、事件面
+ * 把观察者状态（[ViewerRegistry]）、客户端通道策略（[com.github.mayblock.easylib.impl.bukkit.overlay.transport.OverlayTransport]）、事件面
  * （[OverlayEventDispatcher]）与更新循环（[OverlayUpdateLoop]）组合起来，自身只负责编排。
  *
  * 「移除 viewer + 还原视觉」这一组合此前在 hide/hideIfViewing/destroy 三处各写一遍，
@@ -61,7 +63,7 @@ internal class PlayerOverlayImpl(
     }
 
     /**
-     * 玩家断线时的清理（由 [OverlayQuitListener] 调用）：移除观察者并派发 [OverlayHideEvent]。
+     * 玩家断线时的清理（由 [com.github.mayblock.easylib.impl.bukkit.overlay.listener.OverlayQuitListener] 调用）：移除观察者并派发 [OverlayHideEvent]。
      * 不调用 `transport.restore`——客户端已断开，无需也无法还原其视觉。
      */
     internal fun onPlayerQuit(player: Player) {
@@ -69,7 +71,7 @@ internal class PlayerOverlayImpl(
     }
 
     /**
-     * 玩家打开任意其他容器界面时的兜底清理（由 [OverlayQuitListener] 监听 `InventoryOpenEvent` 调用）：
+     * 玩家打开任意其他容器界面时的兜底清理（由 [com.github.mayblock.easylib.impl.bukkit.overlay.listener.OverlayQuitListener] 监听 `InventoryOpenEvent` 调用）：
      * 若玩家仍在观察，移除观察者并还原视觉，防止容器界面绕过覆盖层看到真实背包。
      */
     internal fun hideIfViewing(player: Player) {

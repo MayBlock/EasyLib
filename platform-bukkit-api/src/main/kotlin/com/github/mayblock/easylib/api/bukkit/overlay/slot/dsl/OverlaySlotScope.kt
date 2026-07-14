@@ -1,6 +1,7 @@
-package com.github.mayblock.easylib.api.bukkit.overlay.dsl
+package com.github.mayblock.easylib.api.bukkit.overlay.slot.dsl
 
-import com.github.mayblock.easylib.api.bukkit.overlay.OverlaySlotActionEvent
+import com.github.mayblock.easylib.api.bukkit.overlay.slot.event.OverlaySlotActionEvent
+import com.github.mayblock.easylib.api.bukkit.overlay.dsl.PlayerOverlayDsl
 import com.github.mayblock.easylib.api.scheduler.TaskScheduler
 import com.github.mayblock.easylib.api.util.Priority
 import org.bukkit.inventory.ItemStack
@@ -19,13 +20,28 @@ interface OverlaySlotScope {
      *
      * 操作发生在数据包处理线程，回调经调度器转发到**主线程**执行。
      */
-    fun onAction(priority: Priority = Priority.DEFAULT, block: OverlaySlotActionEvent.() -> Unit)
+    fun <T: OverlaySlotActionEvent> onAction(type: Class<out T>, priority: Priority = Priority.DEFAULT, block: T.() -> Unit)
 
     /**
      * 定时更新规则。同一槽位上 [trigger] 相等的规则合并为一个调度任务，按 [priority]
      * 升序（小值先）串行执行——后序规则可见前序修改；块全部结束后统一提交并重绘一次。
      */
     fun onUpdate(trigger: TaskScheduler.Trigger, priority: Priority = Priority.DEFAULT, block: OverlayUpdateScope.() -> Unit)
+}
+
+fun OverlaySlotScope.onAction(
+    priority: Priority = Priority.DEFAULT,
+    block: OverlaySlotActionEvent.() -> Unit
+) {
+    onAction(OverlaySlotActionEvent::class.java, priority, block)
+}
+
+@JvmName("onActionWithType")
+inline fun <reified T: OverlaySlotActionEvent> OverlaySlotScope.onAction(
+    priority: Priority = Priority.DEFAULT,
+    noinline block: T.() -> Unit
+) {
+    onAction(T::class.java, priority, block)
 }
 
 /**

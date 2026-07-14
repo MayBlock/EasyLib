@@ -2,6 +2,9 @@ package com.github.mayblock.easylib.impl.bukkit.overlay
 
 import com.github.mayblock.easylib.api.scheduler.TaskScheduler
 import com.github.mayblock.easylib.api.util.Disposable
+import com.github.mayblock.easylib.impl.bukkit.overlay.listener.OverlayQuitListener
+import com.github.mayblock.easylib.impl.bukkit.overlay.slot.SlotGrid
+import com.github.mayblock.easylib.impl.bukkit.overlay.transport.OverlayTransport
 import io.mockk.mockk
 import org.bukkit.entity.Player
 import org.bukkit.event.player.PlayerQuitEvent
@@ -12,7 +15,7 @@ import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 
-/** 不触碰 PacketEvents 的最小 [OverlayTransport] 假实现，专供 [OverlayManager] 的跟踪/摘除逻辑测试。 */
+/** 不触碰 PacketEvents 的最小 [com.github.mayblock.easylib.impl.bukkit.overlay.transport.OverlayTransport] 假实现，专供 [OverlayManager] 的跟踪/摘除逻辑测试。 */
 private class NoopTransport : OverlayTransport {
     override fun paintAll(player: Player) {}
     override fun paint(player: Player, slot: Int) {}

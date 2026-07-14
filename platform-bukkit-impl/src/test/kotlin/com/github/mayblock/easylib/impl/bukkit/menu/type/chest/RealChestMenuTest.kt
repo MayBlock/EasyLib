@@ -3,7 +3,7 @@ package com.github.mayblock.easylib.impl.bukkit.menu.type.chest
 import com.github.mayblock.easylib.api.bukkit.menu.MenuCloseEvent
 import com.github.mayblock.easylib.api.bukkit.menu.MenuEvent
 import com.github.mayblock.easylib.api.bukkit.menu.MenuOpenEvent
-import com.github.mayblock.easylib.api.bukkit.menu.slot.InventoryClickEvent
+import com.github.mayblock.easylib.api.bukkit.menu.slot.event.InventoryClickEvent
 import com.github.mayblock.easylib.api.bukkit.menu.type.chest.ChestMenuType
 import com.github.mayblock.easylib.api.event.on
 import com.github.mayblock.easylib.api.scheduler.TaskScheduler

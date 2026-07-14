@@ -1,6 +1,6 @@
-package com.github.mayblock.easylib.impl.bukkit.overlay
+package com.github.mayblock.easylib.impl.bukkit.overlay.transport
 
-import com.github.mayblock.easylib.api.bukkit.overlay.OverlaySlotActionEvent
+import com.github.mayblock.easylib.api.bukkit.overlay.slot.event.OverlaySlotActionEvent
 import com.github.mayblock.easylib.api.util.Disposable
 import org.bukkit.entity.Player
 import org.bukkit.event.inventory.ClickType

@@ -1,10 +1,14 @@
 package com.github.mayblock.easylib.impl.bukkit.overlay
 
-import com.github.mayblock.easylib.api.bukkit.overlay.OverlaySlotActionEvent
-import com.github.mayblock.easylib.api.bukkit.overlay.OverlayHideEvent
+import com.github.mayblock.easylib.api.bukkit.overlay.slot.dsl.onAction
+import com.github.mayblock.easylib.api.bukkit.overlay.slot.event.OverlaySlotActionEvent
+import com.github.mayblock.easylib.api.bukkit.overlay.slot.event.OverlayHideEvent
 import com.github.mayblock.easylib.api.event.on
 import com.github.mayblock.easylib.api.scheduler.TaskScheduler
 import com.github.mayblock.easylib.api.util.Disposable
+import com.github.mayblock.easylib.impl.bukkit.overlay.builder.OverlaySlotBuilder
+import com.github.mayblock.easylib.impl.bukkit.overlay.slot.SlotGrid
+import com.github.mayblock.easylib.impl.bukkit.overlay.transport.OverlayTransport
 import com.github.mayblock.easylib.impl.bukkit.util.item
 import io.mockk.every
 import io.mockk.mockk
@@ -16,7 +20,7 @@ import org.mockbukkit.mockbukkit.MockBukkit
 import kotlin.test.*
 
 /**
- * 记录调用、暴露 attach 时收到的 [OverlayTransport.Callbacks] 的假通道，
+ * 记录调用、暴露 attach 时收到的 [com.github.mayblock.easylib.impl.bukkit.overlay.transport.OverlayTransport.Callbacks] 的假通道，
  * 替代旧继承切分测试里的假子类。
  */
 private class FakeTransport : OverlayTransport {
@@ -241,9 +245,9 @@ class PlayerOverlayImplTest {
         val kinds = mutableListOf<String>()
         val (_, transport, _) = build(mapOf(3 to specOf(item(Material.STONE)) {
             onAction {
-                when (this) {
-                    is OverlaySlotActionEvent.Click -> kinds += "click:$clickType"
-                    is OverlaySlotActionEvent.Interact -> kinds += "interact:$action"
+                kinds += when (this) {
+                    is OverlaySlotActionEvent.Click -> "click:$clickType"
+                    is OverlaySlotActionEvent.Interact -> "interact:$action"
                 }
             }
         }))

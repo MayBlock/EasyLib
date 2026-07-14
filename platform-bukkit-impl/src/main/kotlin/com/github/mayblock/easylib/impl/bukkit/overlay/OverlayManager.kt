@@ -4,6 +4,10 @@ import com.github.mayblock.easylib.api.bukkit.overlay.PlayerOverlay
 import com.github.mayblock.easylib.api.bukkit.overlay.PlayerOverlayFactory
 import com.github.mayblock.easylib.api.bukkit.overlay.dsl.PlayerOverlayScope
 import com.github.mayblock.easylib.api.scheduler.TaskScheduler
+import com.github.mayblock.easylib.impl.bukkit.overlay.builder.PlayerOverlayBuilder
+import com.github.mayblock.easylib.impl.bukkit.overlay.listener.OverlayQuitListener
+import com.github.mayblock.easylib.impl.bukkit.overlay.slot.SlotGrid
+import com.github.mayblock.easylib.impl.bukkit.overlay.transport.PacketOverlayTransport
 import org.bukkit.Bukkit
 import org.bukkit.event.HandlerList
 import org.bukkit.plugin.Plugin

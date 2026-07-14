@@ -1,7 +1,8 @@
 package com.github.mayblock.easylib.impl.bukkit.overlay
 
-import com.github.mayblock.easylib.api.bukkit.overlay.dsl.OverlayUpdateScope
+import com.github.mayblock.easylib.api.bukkit.overlay.slot.dsl.OverlayUpdateScope
 import com.github.mayblock.easylib.api.scheduler.TaskScheduler
+import com.github.mayblock.easylib.impl.bukkit.overlay.slot.SlotGrid
 import org.bukkit.inventory.ItemStack
 
 /**

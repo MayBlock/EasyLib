@@ -1,15 +1,17 @@
-package com.github.mayblock.easylib.impl.bukkit.overlay
+package com.github.mayblock.easylib.impl.bukkit.overlay.transport
 
-import com.github.mayblock.easylib.api.bukkit.overlay.OverlaySlotActionEvent.Interact
+import com.github.mayblock.easylib.api.bukkit.overlay.slot.event.OverlaySlotActionEvent.Interact
 import com.github.mayblock.easylib.api.bukkit.overlay.PlayerOverlay
 import com.github.mayblock.easylib.api.util.Disposable
 import com.github.mayblock.easylib.impl.bukkit.BukkitEasyLib
+import com.github.mayblock.easylib.impl.bukkit.overlay.slot.SlotGrid
 import com.github.mayblock.easylib.impl.bukkit.packet.extension.getBukkitClickType
 import com.github.mayblock.easylib.impl.bukkit.util.sendPackets
 import com.github.mayblock.easylib.packetevents.packet.dsl.PacketScope
 import com.github.retrooper.packetevents.event.PacketListener
 import com.github.retrooper.packetevents.event.PacketReceiveEvent
 import com.github.retrooper.packetevents.event.PacketSendEvent
+import com.github.retrooper.packetevents.protocol.item.ItemStack
 import com.github.retrooper.packetevents.protocol.packettype.PacketType
 import com.github.retrooper.packetevents.protocol.player.DiggingAction
 import com.github.retrooper.packetevents.wrapper.play.client.WrapperPlayClientClickWindow
@@ -21,8 +23,8 @@ import org.bukkit.entity.Player
 
 /**
  * 基于数据包的 [OverlayTransport] 实现（覆盖玩家自身窗口 windowId=0）：
- * 出站改写 WINDOW_ITEMS/SET_SLOT 用虚拟物品遮罩真实背包；入站拦截点击/挥动/使用/丢弃并回调 [OverlayTransport.Callbacks]。
- * 唯一生产实现；overlay 协调者（[PlayerOverlayImpl]）不感知任何包细节。
+ * 出站改写 WINDOW_ITEMS/SET_SLOT 用虚拟物品遮罩真实背包；入站拦截点击/挥动/使用/丢弃并回调 [Callbacks]。
+ * 唯一生产实现；overlay 协调者（[com.github.mayblock.easylib.impl.bukkit.overlay.PlayerOverlayImpl]）不感知任何包细节。
  */
 internal class PacketOverlayTransport(
     private val grid: SlotGrid,
@@ -190,5 +192,15 @@ internal class PacketOverlayTransport(
 
     private fun PacketScope.PlayerPacketScope.syncOverlayItems() {
         containerItems(0, 0, grid.packetItems(PlayerOverlay.OVERLAY_SIZE))
+    }
+
+    /** 清空/改写光标槽（windowId -1 为光标）。 */
+    private fun PacketScope.PlayerPacketScope.updateCursorItem(item: ItemStack?) {
+        containerSetSlot(-1, 0, -1, item)
+    }
+
+    /** 改写指定窗口某槽物品。 */
+    private fun PacketScope.PlayerPacketScope.updateItem(windowId: Int, slot: Int, item: ItemStack) {
+        containerSetSlot(windowId, 0, slot, item)
     }
 }

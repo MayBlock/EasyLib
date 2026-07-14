@@ -1,8 +1,10 @@
 package com.github.mayblock.easylib.impl.bukkit.overlay
 
-import com.github.mayblock.easylib.api.bukkit.overlay.OverlaySlotActionEvent
+import com.github.mayblock.easylib.api.bukkit.overlay.slot.event.OverlaySlotActionEvent
 import com.github.mayblock.easylib.api.bukkit.overlay.PlayerOverlay
 import com.github.mayblock.easylib.api.bukkit.overlay.dsl.slot
+import com.github.mayblock.easylib.api.bukkit.overlay.slot.dsl.onAction
+import com.github.mayblock.easylib.impl.bukkit.overlay.builder.PlayerOverlayBuilder
 import com.github.mayblock.easylib.impl.bukkit.util.item
 import io.mockk.mockk
 import org.bukkit.Material
