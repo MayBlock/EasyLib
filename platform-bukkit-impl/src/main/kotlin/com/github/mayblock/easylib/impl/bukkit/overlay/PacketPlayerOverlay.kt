@@ -18,7 +18,6 @@ import com.github.retrooper.packetevents.protocol.packettype.PacketType
 import com.github.retrooper.packetevents.protocol.player.DiggingAction
 import com.github.retrooper.packetevents.wrapper.play.client.WrapperPlayClientClickWindow
 import com.github.retrooper.packetevents.wrapper.play.client.WrapperPlayClientCreativeInventoryAction
-import com.github.retrooper.packetevents.wrapper.play.client.WrapperPlayClientInteractEntity
 import com.github.retrooper.packetevents.wrapper.play.client.WrapperPlayClientPlayerDigging
 import com.github.retrooper.packetevents.wrapper.play.server.WrapperPlayServerSetSlot
 import com.github.retrooper.packetevents.wrapper.play.server.WrapperPlayServerWindowItems
@@ -84,16 +83,14 @@ internal class PacketPlayerOverlay(
                         handleInteract(player, OverlayInteractEvent.Action.RIGHT_CLICK)
                     PacketType.Play.Client.PLAYER_BLOCK_PLACEMENT ->
                         handleInteract(player, OverlayInteractEvent.Action.RIGHT_CLICK)
-                    PacketType.Play.Client.INTERACT_ENTITY -> {
-                        // 现代协议里攻击实体走 INTERACT_ENTITY(ATTACK) 而非 ANIMATION，
-                        // 按 action 字段精确映射：ATTACK=左键攻击，INTERACT/INTERACT_AT=右键交互。
-                        val action = when (WrapperPlayClientInteractEntity(e).action) {
-                            WrapperPlayClientInteractEntity.InteractAction.ATTACK ->
-                                OverlayInteractEvent.Action.LEFT_CLICK
-                            else -> OverlayInteractEvent.Action.RIGHT_CLICK
-                        }
-                        handleInteract(player, action)
-                    }
+                    PacketType.Play.Client.INTERACT_ENTITY ->
+                        // 26.1.2+（协议 775+）中攻击实体走独立的 ATTACK 包，本包只承载
+                        // 右键交互（INTERACT/INTERACT_AT），故一律映射为右键。
+                        handleInteract(player, OverlayInteractEvent.Action.RIGHT_CLICK)
+                    PacketType.Play.Client.ATTACK ->
+                        // 26.1.2+ 左键攻击实体的独立包：仅防护（取消 + 重发权威遮罩），不派发事件——
+                        // LEFT_CLICK 事件统一由伴随每次左键的 ANIMATION 派发，避免一次点击触发两次。
+                        guardHeldSlot(player)
                     PacketType.Play.Client.PLAYER_DIGGING -> {
                         val heldItemSlot = player.inventory.heldItemSlot + 36
                         handleDropItem(player, heldItemSlot, WrapperPlayClientPlayerDigging(e).action)
@@ -141,14 +138,16 @@ internal class PacketPlayerOverlay(
             return handleDropItem(player, packet.slot, diggingAction)
         }
         val clickType = packet.getBukkitClickType()
-        val involvedSlots = packet.hashedSlots.keys
-        // packet.slot 是本次点击的真实槽位（involvedSlots 是本次点击连带影响到的所有槽的并集，
-        // 例如 shift-click 会牵连目标槽），事件的槽位语义应以真实点击槽为准。
-        publishOnMainThread(OverlayClickEvent(this, packet.slot, player, clickType))
+        // 事件按「真实点击槽 ∪ 连带槽」并集逐槽派发：packet.slot 保证空手点空槽
+        //（hashedSlots 为空）也能触发；involvedSlots 覆盖 shift / 数字键 swap 牵连到的目标槽。
+        val clickedSlots = packet.hashedSlots.keys + packet.slot
+        clickedSlots.forEach { slot ->
+            publishOnMainThread(OverlayClickEvent(this, slot, player, clickType))
+        }
         player.sendPackets {
             forPlayer {
                 updateCursorItem(null)
-                (involvedSlots + packet.slot).forEach { slot ->
+                clickedSlots.forEach { slot ->
                     updateItem(0, slot, grid.packetItem(slot))
                 }
             }
@@ -165,6 +164,11 @@ internal class PacketPlayerOverlay(
     }
 
     private fun handleDropItem(player: Player, slot: Int, action: DiggingAction): Boolean {
+        if (action == DiggingAction.START_DIGGING || action == DiggingAction.FINISHED_DIGGING) {
+            // 左键方块挖掘：手持槽被声明时取消，防止用被遮罩的真实工具挖掘；
+            // 事件仍由伴随的 ANIMATION 派发，此处不重复触发。
+            return guardHeldSlot(player)
+        }
         if (action == DiggingAction.SWAP_ITEM_WITH_OFFHAND) {
             // F 键交换主手/副手：只有当这两个窗口槽任一被覆盖层声明时才需要接管——
             // 未声明的槽面板不保护虚拟物品，放行真实交换即可。
@@ -183,6 +187,14 @@ internal class PacketPlayerOverlay(
         if (grid[slot] != null) {
             player.sendPackets { forPlayer { updateItem(0, slot, grid.packetItem(slot)) } }
         }
+        return true
+    }
+
+    /** 手持槽被声明时取消动作并重发权威遮罩（防真实物品穿透），不派发事件。 */
+    private fun guardHeldSlot(player: Player): Boolean {
+        val heldItemSlot = player.inventory.heldItemSlot + 36
+        if (grid[heldItemSlot] == null) return false
+        player.sendPackets { forPlayer { updateItem(0, heldItemSlot, grid.packetItem(heldItemSlot)) } }
         return true
     }
 

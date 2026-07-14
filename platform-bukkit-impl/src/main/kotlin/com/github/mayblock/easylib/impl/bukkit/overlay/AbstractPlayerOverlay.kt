@@ -4,6 +4,7 @@ import com.github.mayblock.easylib.api.bukkit.overlay.OverlayEvent
 import com.github.mayblock.easylib.api.bukkit.overlay.OverlayHideEvent
 import com.github.mayblock.easylib.api.bukkit.overlay.OverlayShowEvent
 import com.github.mayblock.easylib.api.bukkit.overlay.PlayerOverlay
+import com.github.mayblock.easylib.api.event.EventBus
 import com.github.mayblock.easylib.api.event.EventListener
 import com.github.mayblock.easylib.api.event.EventSource
 import com.github.mayblock.easylib.api.scheduler.TaskScheduler
@@ -23,7 +24,7 @@ import java.util.concurrent.ConcurrentHashMap
 internal abstract class AbstractPlayerOverlay(
     protected val scheduler: TaskScheduler,
     specs: Map<Int, OverlaySlotSpec>,
-    private val bus: SimpleEventBus<OverlayEvent> = SimpleEventBus(),
+    private val bus: EventBus<OverlayEvent> = SimpleEventBus(),
 ) : PlayerOverlay, EventSource<OverlayEvent> by bus {
 
     protected val grid = SlotGrid(specs)
