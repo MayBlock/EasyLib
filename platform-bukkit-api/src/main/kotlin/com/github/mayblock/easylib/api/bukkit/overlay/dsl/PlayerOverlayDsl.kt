@@ -1,5 +1,6 @@
 package com.github.mayblock.easylib.api.bukkit.overlay.dsl
 
+import com.github.mayblock.easylib.api.bukkit.overlay.slot.dsl.OverlaySlotScope
 import org.bukkit.Material
 import org.bukkit.inventory.ItemStack
 import org.bukkit.inventory.meta.ItemMeta

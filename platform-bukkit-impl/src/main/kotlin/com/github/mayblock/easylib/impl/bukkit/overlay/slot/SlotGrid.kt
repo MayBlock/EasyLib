@@ -1,8 +1,9 @@
-package com.github.mayblock.easylib.impl.bukkit.overlay
+package com.github.mayblock.easylib.impl.bukkit.overlay.slot
 
+import com.github.mayblock.easylib.impl.bukkit.overlay.OverlaySlotSpec
 import com.github.retrooper.packetevents.protocol.item.ItemStack
 
-/** 覆盖层槽集合：从不可变 [OverlaySlotSpec] 映射出运行态 [LiveSlot]。 */
+/** 覆盖层槽集合：从不可变 [com.github.mayblock.easylib.impl.bukkit.overlay.OverlaySlotSpec] 映射出运行态 [LiveSlot]。 */
 internal class SlotGrid(specs: Map<Int, OverlaySlotSpec>) {
 
     private val slots: Map<Int, LiveSlot> = specs.mapValues { LiveSlot(it.value) }

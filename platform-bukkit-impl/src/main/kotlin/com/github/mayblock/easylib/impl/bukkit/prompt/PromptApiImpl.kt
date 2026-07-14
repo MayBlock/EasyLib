@@ -119,7 +119,7 @@ object PromptApiImpl : PromptApi {
                 // 先移除再处理：防止同一 pending 被握手期间的重复包/竞态触发两次 resume。
                 promptList.remove(uuid)
                 val result = packet.textLines[0].ifBlank { null }
-                val position = pending.first
+                val (position, callback) = pending
                 val player = Bukkit.getPlayer(uuid)
 
                 api.taskScheduler.scheduleTask {
@@ -134,9 +134,9 @@ object PromptApiImpl : PromptApi {
                             )
                             player.sendBlockChange(location, location.block.blockData)
                         } else {
-                            logger.debug("Player $uuid went offline before prompt block restore could run")
+                            logger.debug("Player {} went offline before prompt block restore could run", uuid)
                         }
-                        pending.second.invoke(result)
+                        callback(result)
                     }
                 }
             }

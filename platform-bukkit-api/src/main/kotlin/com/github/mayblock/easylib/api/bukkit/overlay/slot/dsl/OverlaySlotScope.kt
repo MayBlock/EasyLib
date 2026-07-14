@@ -1,29 +1,47 @@
-package com.github.mayblock.easylib.api.bukkit.overlay.dsl
+package com.github.mayblock.easylib.api.bukkit.overlay.slot.dsl
 
-import com.github.mayblock.easylib.api.bukkit.overlay.OverlayClickEvent
-import com.github.mayblock.easylib.api.bukkit.overlay.OverlayInteractEvent
+import com.github.mayblock.easylib.api.bukkit.overlay.slot.event.OverlaySlotActionEvent
+import com.github.mayblock.easylib.api.bukkit.overlay.dsl.PlayerOverlayDsl
 import com.github.mayblock.easylib.api.scheduler.TaskScheduler
 import com.github.mayblock.easylib.api.util.Priority
 import org.bukkit.inventory.ItemStack
 
 /**
  * 覆盖层单槽 DSL：仅展示 + 交互，**无 movable/placeable、无 take/place**。
- * 背包窗口内点击 → [onClick]（[OverlayClickEvent]）；手持挥动/使用 → [onInteract]（[OverlayInteractEvent]）；
+ * 玩家操作（窗口内点击 / 手持左右键交互）→ [onAction]（[OverlaySlotActionEvent] 密封层级）；
  * 定时刷新 → [onUpdate]（[OverlayUpdateScope]，仍异步）。
  */
 @PlayerOverlayDsl
 interface OverlaySlotScope {
-    /** 点击发生在数据包处理线程，回调经调度器转发到**主线程**执行。 */
-    fun onClick(priority: Priority = Priority.DEFAULT, block: OverlayClickEvent.() -> Unit)
-
-    /** 交互发生在数据包处理线程，回调经调度器转发到**主线程**执行。 */
-    fun onInteract(priority: Priority = Priority.DEFAULT, block: OverlayInteractEvent.() -> Unit)
+    /**
+     * 玩家操作的统一入口。块内用 `when (this)` 区分来源（密封类，可穷尽）：
+     * [OverlaySlotActionEvent.Click] = 背包窗口内点击（带 Bukkit ClickType）；
+     * [OverlaySlotActionEvent.Interact] = 手持该槽物品的左/右键交互。
+     *
+     * 操作发生在数据包处理线程，回调经调度器转发到**主线程**执行。
+     */
+    fun <T: OverlaySlotActionEvent> onAction(type: Class<out T>, priority: Priority = Priority.DEFAULT, block: T.() -> Unit)
 
     /**
      * 定时更新规则。同一槽位上 [trigger] 相等的规则合并为一个调度任务，按 [priority]
      * 升序（小值先）串行执行——后序规则可见前序修改；块全部结束后统一提交并重绘一次。
      */
     fun onUpdate(trigger: TaskScheduler.Trigger, priority: Priority = Priority.DEFAULT, block: OverlayUpdateScope.() -> Unit)
+}
+
+fun OverlaySlotScope.onAction(
+    priority: Priority = Priority.DEFAULT,
+    block: OverlaySlotActionEvent.() -> Unit
+) {
+    onAction(OverlaySlotActionEvent::class.java, priority, block)
+}
+
+@JvmName("onActionWithType")
+inline fun <reified T: OverlaySlotActionEvent> OverlaySlotScope.onAction(
+    priority: Priority = Priority.DEFAULT,
+    noinline block: T.() -> Unit
+) {
+    onAction(T::class.java, priority, block)
 }
 
 /**

@@ -1,8 +1,9 @@
-package com.github.mayblock.easylib.impl.bukkit.overlay
+package com.github.mayblock.easylib.impl.bukkit.overlay.builder
 
 import com.github.mayblock.easylib.api.bukkit.overlay.PlayerOverlay
-import com.github.mayblock.easylib.api.bukkit.overlay.dsl.OverlaySlotScope
+import com.github.mayblock.easylib.api.bukkit.overlay.slot.dsl.OverlaySlotScope
 import com.github.mayblock.easylib.api.bukkit.overlay.dsl.PlayerOverlayScope
+import com.github.mayblock.easylib.impl.bukkit.overlay.OverlaySlotSpec
 import org.bukkit.inventory.ItemStack
 import org.bukkit.inventory.meta.ItemMeta
 

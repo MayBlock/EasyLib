@@ -2,6 +2,8 @@ package com.github.mayblock.easylib.impl.bukkit.overlay
 
 import com.github.mayblock.easylib.api.scheduler.TaskScheduler
 import com.github.mayblock.easylib.api.util.Priority
+import com.github.mayblock.easylib.impl.bukkit.overlay.builder.OverlaySlotBuilder
+import com.github.mayblock.easylib.impl.bukkit.overlay.slot.SlotGrid
 import com.github.mayblock.easylib.impl.bukkit.util.item
 import org.bukkit.Material
 import org.mockbukkit.mockbukkit.MockBukkit
@@ -15,6 +17,19 @@ import kotlin.time.Duration.Companion.seconds
 private class AsyncTrackingScheduler(val asyncFlags: MutableList<Boolean> = mutableListOf()) : TaskScheduler {
     override fun scheduleTask(task: TaskScheduler.Task): Int { asyncFlags += task.isAsync; task.onTick(); return 0 }
     override fun cancelTask(taskId: Int): Boolean = true
+    override fun cancelAllTasks() {}
+}
+
+/** 记录调度/取消次数（不自动执行 onTick），供幂等性断言使用。 */
+private class CountingScheduler : TaskScheduler {
+    private var nextId = 0
+    var scheduleCount = 0
+        private set
+    var cancelCount = 0
+        private set
+
+    override fun scheduleTask(task: TaskScheduler.Task): Int { scheduleCount++; return nextId++ }
+    override fun cancelTask(taskId: Int): Boolean { cancelCount++; return true }
     override fun cancelAllTasks() {}
 }
 
@@ -92,5 +107,38 @@ class OverlayUpdateLoopTest {
 
         assertEquals(Material.DIAMOND, grid[4]!!.item.type) // 直接写入胜出，过期提案作废
         assertEquals(emptyList<Int>(), repaints) // 提案未提交 → loop 不触发重绘
+    }
+
+    @Test
+    fun `start 幂等，重复调用不重复调度任务`() {
+        val scheduler = CountingScheduler()
+        val spec = OverlaySlotBuilder().apply {
+            onUpdate(TaskScheduler.Trigger.Interval(1.seconds)) { }
+        }.build(item(Material.AIR))
+        val grid = SlotGrid(mapOf(4 to spec))
+        val loop = OverlayUpdateLoop(grid, scheduler) { }
+
+        loop.start()
+        assertEquals(1, scheduler.scheduleCount)
+        loop.start() // 重复调用：已在运行，直接返回
+        loop.start()
+        assertEquals(1, scheduler.scheduleCount)
+    }
+
+    @Test
+    fun `stop 后可重新 start，重新调度任务`() {
+        val scheduler = CountingScheduler()
+        val spec = OverlaySlotBuilder().apply {
+            onUpdate(TaskScheduler.Trigger.Interval(1.seconds)) { }
+        }.build(item(Material.AIR))
+        val grid = SlotGrid(mapOf(4 to spec))
+        val loop = OverlayUpdateLoop(grid, scheduler) { }
+
+        loop.start()
+        assertEquals(1, scheduler.scheduleCount)
+        loop.stop()
+        assertEquals(1, scheduler.cancelCount)
+        loop.start() // 停止后重启：重新调度
+        assertEquals(2, scheduler.scheduleCount)
     }
 }
