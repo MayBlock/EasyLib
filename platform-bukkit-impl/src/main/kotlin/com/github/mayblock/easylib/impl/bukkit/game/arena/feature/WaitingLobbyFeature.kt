@@ -53,6 +53,7 @@ class WaitingLobbyFeature<T>(
     override val onComplete: () -> Unit = {
         onlinePlayers.forEach { player ->
             player.gameMode = player.previousGameMode ?: GameMode.SURVIVAL
+            player.resetCountdownHud()
         }
         onComplete()
     }
@@ -67,8 +68,17 @@ class WaitingLobbyFeature<T>(
     private fun handleStateChange(oldState: State, newState: State) {
         val countdownAborted = oldState == State.READY && newState == State.WAITING
         if (countdownAborted) {
-            onlinePlayers.forEach { it.sendMessage("当前人数不足，需要等待更多玩家！") }
+            onlinePlayers.forEach {
+                it.sendMessage("当前人数不足，需要等待更多玩家！")
+                it.resetCountdownHud()
+            }
         }
+    }
+
+    // 倒计时用 level/exp 借位显示进度条；完成或中止时必须复位，否则玩家的经验条/等级 HUD 会残留倒计时数字。
+    private fun Player.resetCountdownHud() {
+        level = 0
+        exp = 0f
     }
 
     private fun Player.updateReadyHud(remaining: Duration) {
@@ -104,6 +114,7 @@ class WaitingLobbyFeature<T>(
                 }
             }
             on<ArenaJoinedEvent> {
+                if (!isActive()) return@on
                 (player as BukkitArenaPlayer).bukkitPlayer?.gameMode = GameMode.ADVENTURE
             }
             on<ArenaLeaveEvent> {

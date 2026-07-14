@@ -39,31 +39,31 @@ class GuardFeature<T>(
         context.on(name) {
             on<BridgeEvent.PlayerTargetedByEntityEvent> {
                 if (!isActive()) return@on
-                isCancelled = noTargetedByEntity
+                if (noTargetedByEntity) isCancelled = true
             }
             on<BridgeEvent.BlockDamageEvent> {
                 if (!isActive()) return@on
-                isCancelled = noBreakBlock
+                if (noBreakBlock) isCancelled = true
             }
             on<BridgeEvent.EntityDamageEvent> {
                 if (!isActive()) return@on
-                isCancelled = noDamage
+                if (noDamage) isCancelled = true
             }
             on<BridgeEvent.PlayerInteractEvent> {
                 if (!isActive()) return@on
-                isCancelled = noInteract
+                if (noInteract) isCancelled = true
             }
             on<BridgeEvent.FoodLevelChangeEvent> {
                 if (!isActive()) return@on
-                isCancelled = noStarving
+                if (noStarving) isCancelled = true
             }
             on<BridgeEvent.PlayerPickupItemEvent> {
                 if (!isActive()) return@on
-                isCancelled = noPickupItem
+                if (noPickupItem) isCancelled = true
             }
             on<BridgeEvent.PlayerDropItemEvent> {
                 if (!isActive()) return@on
-                isCancelled = noDropItem
+                if (noDropItem) isCancelled = true
             }
         }
         Bukkit.getPluginManager().registerEvents(this, plugin)
@@ -74,16 +74,26 @@ class GuardFeature<T>(
         HandlerList.unregisterAll(this)
     }
 
+    // 两者都只按「事件发生位置是否落在防护范围内」判断，不逐一过滤 blockList/受影响实体列表——
+    // 保持与 WorldGuard 范围判断口径一致、实现简单；如需精确到单个方块可在后续任务扩展。
     @EventHandler
     private fun onEntityExplode(e: EntityExplodeEvent) {
         if (!isActive()) return
-        e.isCancelled = worldGuard?.scope(e.entity.location) == true
+        val guard = worldGuard ?: return
+        if (guard.explode) return // explode(true) 表示该 arena 显式放行爆炸，不做防护
+        if (guard.scope(e.entity.location)) {
+            e.isCancelled = true
+        }
     }
 
     @EventHandler
     private fun onBlockExplode(e: BlockExplodeEvent) {
         if (!isActive()) return
-        e.isCancelled = e.blockList().any { worldGuard?.scope(it.location) == true }
+        val guard = worldGuard ?: return
+        if (guard.explode) return
+        if (guard.scope(e.block.location)) {
+            e.isCancelled = true
+        }
     }
 }
 

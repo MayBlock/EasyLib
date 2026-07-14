@@ -59,6 +59,10 @@ class SpectatorService<A : BukkitArena<out BukkitArenaPlayer, *>>(
         var watching: Player? = null
             private set
 
+        private var previousGameMode: GameMode? = null
+        private var previousAllowFlight = false
+        private var previousFlying = false
+
         internal fun watch(target: Player): Boolean {
             if (!target.isOnline) return false
             val player = arenaPlayer.bukkitPlayer ?: return false
@@ -84,6 +88,9 @@ class SpectatorService<A : BukkitArena<out BukkitArenaPlayer, *>>(
 
         fun apply() {
             val player = arenaPlayer.bukkitPlayer ?: return
+            previousGameMode = player.gameMode
+            previousAllowFlight = player.allowFlight
+            previousFlying = player.isFlying
             player.apply {
                 gameMode = GameMode.SPECTATOR
                 sendPackets {
@@ -97,11 +104,21 @@ class SpectatorService<A : BukkitArena<out BukkitArenaPlayer, *>>(
             playerOverlay.show(player)
         }
 
+        /**
+         * 还原观战前的状态（gamemode/allowFlight/isFlying）并停止跟拍、隐藏 overlay。
+         *
+         * 已知限制：若玩家在观战期间离线，[arenaPlayer.bukkitPlayer] 为 null，
+         * 本方法无法对其执行任何还原操作——SPECTATOR 模式会持久化到玩家重新登录，
+         * 且不会自动补偿性还原（未做 join 时的补偿机制，超出本次修复范围）。
+         */
         fun restore() {
-            val player = arenaPlayer.bukkitPlayer ?: return
             if (watching != null) {
                 stopWatching()
             }
+            val player = arenaPlayer.bukkitPlayer ?: return
+            previousGameMode?.let { player.gameMode = it } // 真实 gamemode 变更会重发权威包，纠正假 ADVENTURE
+            player.allowFlight = previousAllowFlight
+            player.isFlying = previousFlying
             playerOverlay.hide(player)
         }
     }

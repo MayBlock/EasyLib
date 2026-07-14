@@ -92,5 +92,25 @@ sealed class PlayerJoinLeaveFeature<T : BukkitArena<out BukkitArenaPlayer, out B
                 arenaPlayer?.let { onQuit(it) }
             }
         }
+
+        // 登录时若玩家已经在目标世界（例如服务器重启后原地重登），PlayerChangedWorldEvent 不会触发，
+        // 必须单独监听 PlayerJoinEvent/PlayerQuitEvent 才能覆盖这两种边界情况。
+        @EventHandler
+        private fun onJoin(e: PlayerJoinEvent) {
+            val player = e.player
+            if (player.world.key != world.key) return
+            arena.getPlayer(player.uniqueId)?.let {
+                onRejoin(it)
+            } ?: run {
+                onJoin(player)
+            }
+        }
+
+        @EventHandler
+        private fun onQuit(e: PlayerQuitEvent) {
+            val player = e.player
+            if (player.world.key != world.key) return
+            arena.getPlayer(player.uniqueId)?.let { onQuit(it) }
+        }
     }
 }

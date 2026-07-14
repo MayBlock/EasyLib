@@ -38,27 +38,28 @@ class BukkitEventBridge<A, P : BukkitArenaPlayer, E : BukkitArenaEntity> private
     }
 
     fun destroy() {
-        if (isDestroyed) {
-            throw IllegalStateException("already destroyed")
-        }
+        if (isDestroyed) return
         isDestroyed = true
         HandlerList.unregisterAll(bukkitListener)
     }
 
     private inner class BukkitListener : Listener {
 
-        @EventHandler
+        @EventHandler(priority = EventPriority.LOWEST)
         fun onTarget(e: EntityTargetEvent) {
             val target = (e.target as? Player)?.let {
                 arena.getPlayer(it.uniqueId)
             } ?: return
-            e.isCancelled = BridgeEvent.PlayerTargetedByEntityEvent(
+            val bridgeEvent = BridgeEvent.PlayerTargetedByEntityEvent(
                 target,
                 e.entity,
-                e.reason
-            ).also(arena::emit).apply {
-                e.target = target.bukkitPlayer
-            }.isCancelled
+                e.reason,
+                isCancelled = e.isCancelled
+            ).also(arena::emit)
+            if (bridgeEvent.target !== target) {
+                bridgeEvent.target.bukkitPlayer?.let { e.target = it }
+            }
+            e.isCancelled = bridgeEvent.isCancelled
         }
 
         @EventHandler(priority = EventPriority.LOWEST)
@@ -67,7 +68,8 @@ class BukkitEventBridge<A, P : BukkitArenaPlayer, E : BukkitArenaEntity> private
             e.isCancelled = BridgeEvent.FoodLevelChangeEvent(
                 player,
                 e.foodLevel,
-                e.item
+                e.item,
+                isCancelled = e.isCancelled
             ).also(arena::emit).apply {
                 e.foodLevel = foodLevel
             }.isCancelled
@@ -82,14 +84,14 @@ class BukkitEventBridge<A, P : BukkitArenaPlayer, E : BukkitArenaEntity> private
         @EventHandler(priority = EventPriority.LOWEST)
         fun onDropItem(e: PlayerDropItemEvent) {
             val player = arena.getPlayer(e.player.uniqueId) ?: return
-            e.isCancelled = BridgeEvent.PlayerDropItemEvent(player, e.itemDrop)
+            e.isCancelled = BridgeEvent.PlayerDropItemEvent(player, e.itemDrop, isCancelled = e.isCancelled)
                 .also(arena::emit).isCancelled
         }
 
         @EventHandler(priority = EventPriority.LOWEST)
         fun onPickupItem(e: EntityPickupItemEvent) {
             val player = arena.getPlayer(e.entity.uniqueId) ?: return
-            e.isCancelled = BridgeEvent.PlayerPickupItemEvent(player, e.item, e.remaining)
+            e.isCancelled = BridgeEvent.PlayerPickupItemEvent(player, e.item, e.remaining, isCancelled = e.isCancelled)
                 .also(arena::emit).isCancelled
         }
 
@@ -133,14 +135,15 @@ class BukkitEventBridge<A, P : BukkitArenaPlayer, E : BukkitArenaEntity> private
                 e::useItemInHand,
                 e.hand,
                 e.clickedPosition,
-                e.material
+                e.material,
+                isCancelled = e.isCancelled
             ).also(arena::emit).isCancelled
         }
 
         @EventHandler(priority = EventPriority.LOWEST)
         fun onBlockDamage(e: BlockDamageEvent) {
             val player = arena.getPlayer(e.player.uniqueId) ?: return
-            e.isCancelled = BridgeEvent.BlockDamageEvent(player, e.block, e.instaBreak)
+            e.isCancelled = BridgeEvent.BlockDamageEvent(player, e.block, e.instaBreak, isCancelled = e.isCancelled)
                 .also(arena::emit)
                 .also {
                     e.instaBreak = it.instaBreak
@@ -150,20 +153,20 @@ class BukkitEventBridge<A, P : BukkitArenaPlayer, E : BukkitArenaEntity> private
         @EventHandler(priority = EventPriority.LOWEST)
         fun onMove(e: PlayerMoveEvent) {
             val player = arena.getPlayer(e.player.uniqueId) ?: return
-            e.isCancelled = BridgeEvent.PlayerMoveEvent(player, e.from, e.to)
+            e.isCancelled = BridgeEvent.PlayerMoveEvent(player, e.from, e.to, isCancelled = e.isCancelled)
                 .also(arena::emit)
                 .also { ae ->
                     e.from = ae.from
                     if (e.to != ae.to) {
-                        e.to?.let(e::setTo)
+                        ae.to?.let(e::setTo)
                     }
                 }.isCancelled
         }
 
-        @EventHandler
+        @EventHandler(priority = EventPriority.LOWEST)
         fun onToggleSneak(e: PlayerToggleSneakEvent) {
             val player = arena.getPlayer(e.player.uniqueId) ?: return
-            e.isCancelled = BridgeEvent.PlayerToggleSneakEvent(player, e.isSneaking)
+            e.isCancelled = BridgeEvent.PlayerToggleSneakEvent(player, e.isSneaking, isCancelled = e.isCancelled)
                 .also(arena::emit)
                 .isCancelled
         }
@@ -179,7 +182,9 @@ class BukkitEventBridge<A, P : BukkitArenaPlayer, E : BukkitArenaEntity> private
         }
 
         private fun onGenericDamage(entity: BukkitArenaPlayer, e: EntityDamageEvent) {
-            e.isCancelled = BridgeEvent.EntityDamageEvent(entity, e.damage, e.finalDamage, e.damageSource, e.cause)
+            e.isCancelled = BridgeEvent.EntityDamageEvent(
+                entity, e.damage, e.finalDamage, e.damageSource, e.cause, isCancelled = e.isCancelled
+            )
                 .also(arena::emit)
                 .also {
                     e.damage = it.damage
@@ -193,7 +198,8 @@ class BukkitEventBridge<A, P : BukkitArenaPlayer, E : BukkitArenaEntity> private
                 e.damage,
                 e.finalDamage,
                 e.damageSource,
-                e.cause
+                e.cause,
+                isCancelled = e.isCancelled
             ).also(arena::emit).also {
                 e.damage = it.damage
             }.isCancelled
@@ -207,7 +213,8 @@ class BukkitEventBridge<A, P : BukkitArenaPlayer, E : BukkitArenaEntity> private
                 e.damage,
                 e.finalDamage,
                 e.damageSource,
-                e.cause
+                e.cause,
+                isCancelled = e.isCancelled
             ).also(arena::emit).also {
                 e.damage = it.damage
             }.isCancelled
@@ -216,32 +223,39 @@ class BukkitEventBridge<A, P : BukkitArenaPlayer, E : BukkitArenaEntity> private
         @EventHandler(priority = EventPriority.LOWEST)
         fun onEntitySpawn(e: EntitySpawnEvent) {
             if (e.entity is Player) return
-            val entity = arena.createArenaEntity(e.entity)
-            if (!e.isCancelled) {
-                arena.spawnEntity(entity)
+            if (!arena.isArenaEnabled) return
+            val entity = arena.createArenaEntity(e.entity) ?: return // BREAKING: 返回可空，null 表示本 arena 不关心该实体
+            when (e) {
+                is SpawnerSpawnEvent -> onSpawnerSpawn(entity, e)
+                is CreatureSpawnEvent -> onCreatureSpawn(entity, e)
+                else -> onGenericEntitySpawn(entity, e)
             }
+            if (!e.isCancelled) arena.spawnEntity(entity)
         }
 
-        fun onGenericEntitySpawn(entity: BukkitArenaEntity, e: EntitySpawnEvent) {
+        private fun onGenericEntitySpawn(entity: BukkitArenaEntity, e: EntitySpawnEvent) {
             e.isCancelled = BridgeEvent.EntitySpawnEvent(
                 entity,
-                e.location
+                e.location,
+                isCancelled = e.isCancelled
             ).also(arena::emit).isCancelled
         }
 
-        fun onCreatureSpawn(entity: BukkitArenaEntity, e: CreatureSpawnEvent) {
+        private fun onCreatureSpawn(entity: BukkitArenaEntity, e: CreatureSpawnEvent) {
             e.isCancelled = BridgeEvent.CreatureSpawnEvent(
                 entity,
                 e.location,
-                e.spawnReason
+                e.spawnReason,
+                isCancelled = e.isCancelled
             ).also(arena::emit).isCancelled
         }
 
-        fun onSpawnerSpawn(entity: BukkitArenaEntity, e: SpawnerSpawnEvent) {
+        private fun onSpawnerSpawn(entity: BukkitArenaEntity, e: SpawnerSpawnEvent) {
             e.isCancelled = BridgeEvent.SpawnerSpawnEvent(
                 entity,
                 e.location,
-                e.spawner
+                e.spawner,
+                isCancelled = e.isCancelled
             ).also(arena::emit).isCancelled
         }
     }
