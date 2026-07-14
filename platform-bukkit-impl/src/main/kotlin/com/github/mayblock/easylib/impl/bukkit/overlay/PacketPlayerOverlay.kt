@@ -18,6 +18,7 @@ import com.github.retrooper.packetevents.protocol.packettype.PacketType
 import com.github.retrooper.packetevents.protocol.player.DiggingAction
 import com.github.retrooper.packetevents.wrapper.play.client.WrapperPlayClientClickWindow
 import com.github.retrooper.packetevents.wrapper.play.client.WrapperPlayClientCreativeInventoryAction
+import com.github.retrooper.packetevents.wrapper.play.client.WrapperPlayClientInteractEntity
 import com.github.retrooper.packetevents.wrapper.play.client.WrapperPlayClientPlayerDigging
 import com.github.retrooper.packetevents.wrapper.play.server.WrapperPlayServerSetSlot
 import com.github.retrooper.packetevents.wrapper.play.server.WrapperPlayServerWindowItems
@@ -83,8 +84,16 @@ internal class PacketPlayerOverlay(
                         handleInteract(player, OverlayInteractEvent.Action.RIGHT_CLICK)
                     PacketType.Play.Client.PLAYER_BLOCK_PLACEMENT ->
                         handleInteract(player, OverlayInteractEvent.Action.RIGHT_CLICK)
-                    PacketType.Play.Client.INTERACT_ENTITY ->
-                        handleInteract(player, OverlayInteractEvent.Action.LEFT_CLICK)
+                    PacketType.Play.Client.INTERACT_ENTITY -> {
+                        // 现代协议里攻击实体走 INTERACT_ENTITY(ATTACK) 而非 ANIMATION，
+                        // 按 action 字段精确映射：ATTACK=左键攻击，INTERACT/INTERACT_AT=右键交互。
+                        val action = when (WrapperPlayClientInteractEntity(e).action) {
+                            WrapperPlayClientInteractEntity.InteractAction.ATTACK ->
+                                OverlayInteractEvent.Action.LEFT_CLICK
+                            else -> OverlayInteractEvent.Action.RIGHT_CLICK
+                        }
+                        handleInteract(player, action)
+                    }
                     PacketType.Play.Client.PLAYER_DIGGING -> {
                         val heldItemSlot = player.inventory.heldItemSlot + 36
                         handleDropItem(player, heldItemSlot, WrapperPlayClientPlayerDigging(e).action)
