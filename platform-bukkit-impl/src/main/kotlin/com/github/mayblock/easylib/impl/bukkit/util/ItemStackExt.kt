@@ -20,7 +20,9 @@ fun ItemStack.meta(block: ItemMeta.() -> Unit) = this.meta<ItemMeta>(block)
 @JvmName("metaWithType")
 inline fun <reified T : ItemMeta> ItemStack.meta(block: T.() -> Unit): ItemStack {
     require(!this.type.isAir) { "Cannot set metadata on air item" }
-    (this.itemMeta as? T)?.also(block)
+    val meta = (this.itemMeta as? T)
         ?: throw IllegalArgumentException("this item's ItemMeta is not ${T::class.simpleName}")
+    block(meta)
+    this.itemMeta = meta
     return this
 }

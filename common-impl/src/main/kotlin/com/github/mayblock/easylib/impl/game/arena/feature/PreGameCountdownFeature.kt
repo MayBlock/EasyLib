@@ -65,7 +65,7 @@ private class CountdownTask(
     private val initialCountdown = startCountdown
     private val timer = AtomicLong(initialCountdown)
 
-    override val trigger: TaskScheduler.Trigger = TaskScheduler.Trigger.Interval(1.milliseconds)
+    override val trigger: TaskScheduler.Trigger = TaskScheduler.Trigger.Interval(50.milliseconds)
     override val isAsync: Boolean = false
     override val onTick = onTick@{
         if (!isActive()) return@onTick
