@@ -16,7 +16,7 @@ internal class OverlaySlotSpec(
     val updateRules: List<OverlayUpdateRule>,
 )
 
-/** 点击/交互处理器，按事件类型（[OverlayClickEvent]/[OverlayInteractEvent]）标注，注册时按 `type.isInstance` 过滤。 */
+/** 玩家操作处理器，按事件类型（[com.github.mayblock.easylib.api.bukkit.overlay.OverlaySlotActionEvent]）标注，注册时按 `type.isInstance` 过滤。 */
 internal class OverlayHandler(
     val priority: Priority,
     val type: Class<out OverlaySlotEvent>,

@@ -1,10 +1,9 @@
 package com.github.mayblock.easylib.impl.bukkit.overlay
 
-import com.github.mayblock.easylib.api.bukkit.overlay.OverlayClickEvent
 import com.github.mayblock.easylib.api.bukkit.overlay.OverlayEvent
 import com.github.mayblock.easylib.api.bukkit.overlay.OverlayHideEvent
-import com.github.mayblock.easylib.api.bukkit.overlay.OverlayInteractEvent
 import com.github.mayblock.easylib.api.bukkit.overlay.OverlayShowEvent
+import com.github.mayblock.easylib.api.bukkit.overlay.OverlaySlotActionEvent
 import com.github.mayblock.easylib.api.bukkit.overlay.PlayerOverlay
 import com.github.mayblock.easylib.api.event.EventSource
 import com.github.mayblock.easylib.api.scheduler.TaskScheduler
@@ -126,11 +125,15 @@ internal class PlayerOverlayImpl(
         override fun isViewer(player: Player): Boolean = player in viewers
 
         override fun onClick(player: Player, slot: Int, clickType: ClickType) {
-            dispatcher.publishOnMainThread(OverlayClickEvent(this@PlayerOverlayImpl, slot, player, clickType))
+            dispatcher.publishOnMainThread(
+                OverlaySlotActionEvent.Click(this@PlayerOverlayImpl, slot, player, clickType)
+            )
         }
 
-        override fun onInteract(player: Player, slot: Int, action: OverlayInteractEvent.Action) {
-            dispatcher.publishOnMainThread(OverlayInteractEvent(this@PlayerOverlayImpl, slot, player, action))
+        override fun onInteract(player: Player, slot: Int, action: OverlaySlotActionEvent.Interact.Action) {
+            dispatcher.publishOnMainThread(
+                OverlaySlotActionEvent.Interact(this@PlayerOverlayImpl, slot, player, action)
+            )
         }
     }
 }

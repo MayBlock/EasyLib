@@ -1,6 +1,6 @@
 package com.github.mayblock.easylib.impl.bukkit.overlay
 
-import com.github.mayblock.easylib.api.bukkit.overlay.OverlayInteractEvent
+import com.github.mayblock.easylib.api.bukkit.overlay.OverlaySlotActionEvent
 import com.github.mayblock.easylib.api.util.Disposable
 import org.bukkit.entity.Player
 import org.bukkit.event.inventory.ClickType
@@ -27,6 +27,6 @@ internal interface OverlayTransport {
     interface Callbacks {
         fun isViewer(player: Player): Boolean
         fun onClick(player: Player, slot: Int, clickType: ClickType)
-        fun onInteract(player: Player, slot: Int, action: OverlayInteractEvent.Action)
+        fun onInteract(player: Player, slot: Int, action: OverlaySlotActionEvent.Interact.Action)
     }
 }

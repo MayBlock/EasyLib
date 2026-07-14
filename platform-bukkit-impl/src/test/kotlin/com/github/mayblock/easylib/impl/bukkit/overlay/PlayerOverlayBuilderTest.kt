@@ -1,6 +1,6 @@
 package com.github.mayblock.easylib.impl.bukkit.overlay
 
-import com.github.mayblock.easylib.api.bukkit.overlay.OverlayClickEvent
+import com.github.mayblock.easylib.api.bukkit.overlay.OverlaySlotActionEvent
 import com.github.mayblock.easylib.api.bukkit.overlay.PlayerOverlay
 import com.github.mayblock.easylib.api.bukkit.overlay.dsl.slot
 import com.github.mayblock.easylib.impl.bukkit.util.item
@@ -22,12 +22,12 @@ class PlayerOverlayBuilderTest {
     @Test
     fun `slot 声明透传为 OverlaySlotSpec，含 handler`() {
         build {
-            slot(0, Material.DIAMOND) { onClick { } }
+            slot(0, Material.DIAMOND) { onAction { } }
             slot(5, Material.STONE)
         }
         assertEquals(setOf(0, 5), captured.keys)
         assertEquals(Material.DIAMOND, captured[0]!!.item.type)
-        assertEquals(listOf<Class<*>>(OverlayClickEvent::class.java), captured[0]!!.handlers.map { it.type })
+        assertEquals(listOf<Class<*>>(OverlaySlotActionEvent::class.java), captured[0]!!.handlers.map { it.type })
         assertTrue(captured[5]!!.handlers.isEmpty())
     }
 

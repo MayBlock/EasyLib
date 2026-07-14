@@ -1,8 +1,8 @@
 package com.github.mayblock.easylib.impl.bukkit.overlay
 
-import com.github.mayblock.easylib.api.bukkit.overlay.OverlayClickEvent
 import com.github.mayblock.easylib.api.bukkit.overlay.OverlayEvent
-import com.github.mayblock.easylib.api.bukkit.overlay.OverlayInteractEvent
+import com.github.mayblock.easylib.api.bukkit.overlay.OverlayShowEvent
+import com.github.mayblock.easylib.api.bukkit.overlay.OverlaySlotActionEvent
 import com.github.mayblock.easylib.api.bukkit.overlay.OverlaySlotEvent
 import com.github.mayblock.easylib.api.bukkit.overlay.PlayerOverlay
 import com.github.mayblock.easylib.api.event.EventListener
@@ -20,26 +20,42 @@ class OverlayEventTest {
     private val player = mockk<Player>()
 
     @Test
-    fun `click 与 interact 事件暴露 index 与各自字段`() {
-        val click = OverlayClickEvent(overlay, 3, player, ClickType.LEFT)
-        val interact = OverlayInteractEvent(overlay, 4, player, OverlayInteractEvent.Action.RIGHT_CLICK)
+    fun `Click 与 Interact 子类暴露 index 与各自字段`() {
+        val click = OverlaySlotActionEvent.Click(overlay, 3, player, ClickType.LEFT)
+        val interact = OverlaySlotActionEvent.Interact(overlay, 4, player, OverlaySlotActionEvent.Interact.Action.RIGHT_CLICK)
         assertEquals(3, click.index)
-        assertEquals(ClickType.LEFT, click.type)
+        assertEquals(ClickType.LEFT, click.clickType)
         assertEquals(4, interact.index)
-        assertEquals(OverlayInteractEvent.Action.RIGHT_CLICK, interact.action)
+        assertEquals(OverlaySlotActionEvent.Interact.Action.RIGHT_CLICK, interact.action)
     }
 
     @Test
-    fun `SimpleEventBus 按事件类型过滤派发 OverlaySlotEvent`() {
+    fun `密封父类 when 可区分来源`() {
+        val events: List<OverlaySlotActionEvent> = listOf(
+            OverlaySlotActionEvent.Click(overlay, 3, player, ClickType.LEFT),
+            OverlaySlotActionEvent.Interact(overlay, 4, player, OverlaySlotActionEvent.Interact.Action.LEFT_CLICK),
+        )
+        val kinds = events.map {
+            when (it) {
+                is OverlaySlotActionEvent.Click -> "click:${it.index}"
+                is OverlaySlotActionEvent.Interact -> "interact:${it.index}"
+            }
+        }
+        assertEquals(listOf("click:3", "interact:4"), kinds)
+    }
+
+    @Test
+    fun `SimpleEventBus 按密封父类型统一派发两种来源`() {
         val bus = SimpleEventBus<OverlayEvent>()
-        val clicks = mutableListOf<Int>()
+        val seen = mutableListOf<Int>()
         bus.subscribe(
             EventListener<OverlaySlotEvent>(
-                OverlayClickEvent::class.java, null, { clicks += index }, Priority.DEFAULT,
+                OverlaySlotActionEvent::class.java, null, { seen += index }, Priority.DEFAULT,
             )
         )
-        bus.emit(OverlayClickEvent(overlay, 3, player, ClickType.LEFT))
-        bus.emit(OverlayInteractEvent(overlay, 4, player, OverlayInteractEvent.Action.LEFT_CLICK))
-        assertEquals(listOf(3), clicks) // interact 不匹配 click 监听
+        bus.emit(OverlaySlotActionEvent.Click(overlay, 3, player, ClickType.LEFT))
+        bus.emit(OverlaySlotActionEvent.Interact(overlay, 4, player, OverlaySlotActionEvent.Interact.Action.LEFT_CLICK))
+        bus.emit(OverlayShowEvent(overlay, player)) // 非槽位操作事件不匹配
+        assertEquals(listOf(3, 4), seen)
     }
 }

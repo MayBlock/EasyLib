@@ -1,6 +1,6 @@
 package com.github.mayblock.easylib.impl.bukkit.overlay
 
-import com.github.mayblock.easylib.api.bukkit.overlay.OverlayInteractEvent
+import com.github.mayblock.easylib.api.bukkit.overlay.OverlaySlotActionEvent.Interact
 import com.github.mayblock.easylib.api.bukkit.overlay.PlayerOverlay
 import com.github.mayblock.easylib.api.util.Disposable
 import com.github.mayblock.easylib.impl.bukkit.BukkitEasyLib
@@ -55,15 +55,15 @@ internal class PacketOverlayTransport(
                     PacketType.Play.Client.CLICK_WINDOW ->
                         handleClickWindow(player, WrapperPlayClientClickWindow(e), callbacks)
                     PacketType.Play.Client.ANIMATION ->
-                        handleInteract(player, OverlayInteractEvent.Action.LEFT_CLICK, callbacks)
+                        handleInteract(player, Interact.Action.LEFT_CLICK, callbacks)
                     PacketType.Play.Client.USE_ITEM ->
-                        handleInteract(player, OverlayInteractEvent.Action.RIGHT_CLICK, callbacks)
+                        handleInteract(player, Interact.Action.RIGHT_CLICK, callbacks)
                     PacketType.Play.Client.PLAYER_BLOCK_PLACEMENT ->
-                        handleInteract(player, OverlayInteractEvent.Action.RIGHT_CLICK, callbacks)
+                        handleInteract(player, Interact.Action.RIGHT_CLICK, callbacks)
                     PacketType.Play.Client.INTERACT_ENTITY ->
                         // 26.1.2+（协议 775+）中攻击实体走独立的 ATTACK 包，本包只承载
                         // 右键交互（INTERACT/INTERACT_AT），故一律映射为右键。
-                        handleInteract(player, OverlayInteractEvent.Action.RIGHT_CLICK, callbacks)
+                        handleInteract(player, Interact.Action.RIGHT_CLICK, callbacks)
                     PacketType.Play.Client.ATTACK ->
                         // 26.1.2+ 左键攻击实体的独立包：仅防护（取消 + 重发权威遮罩），不派发事件——
                         // LEFT_CLICK 事件统一由伴随每次左键的 ANIMATION 派发，避免一次点击触发两次。
@@ -138,7 +138,7 @@ internal class PacketOverlayTransport(
 
     private fun handleInteract(
         player: Player,
-        action: OverlayInteractEvent.Action,
+        action: Interact.Action,
         callbacks: OverlayTransport.Callbacks,
     ): Boolean {
         val heldItemSlot = player.inventory.heldItemSlot + 36

@@ -1,6 +1,6 @@
 package com.github.mayblock.easylib.impl.bukkit.overlay
 
-import com.github.mayblock.easylib.api.bukkit.overlay.OverlayClickEvent
+import com.github.mayblock.easylib.api.bukkit.overlay.OverlaySlotActionEvent
 import com.github.mayblock.easylib.api.bukkit.overlay.OverlayHideEvent
 import com.github.mayblock.easylib.api.event.on
 import com.github.mayblock.easylib.api.scheduler.TaskScheduler
@@ -227,24 +227,41 @@ class PlayerOverlayImplTest {
     // ---- 事件面：声明的 handler 按 index 过滤 + 点击回调经主线程派发 ----
 
     @Test
-    fun `声明的 onClick 处理器经总线按 index 过滤派发`() {
-        var clicks = 0
-        val (_, transport, _) = build(mapOf(3 to specOf(item(Material.STONE)) { onClick { clicks++ } }))
+    fun `声明的 onAction 处理器经总线按 index 过滤派发`() {
+        var actions = 0
+        val (_, transport, _) = build(mapOf(3 to specOf(item(Material.STONE)) { onAction { actions++ } }))
         val player = mockPlayer()
         transport.callbacks!!.onClick(player, 3, ClickType.LEFT)
         transport.callbacks!!.onClick(player, 4, ClickType.LEFT)
-        assertEquals(1, clicks)
+        assertEquals(1, actions)
     }
 
     @Test
-    fun `callbacks onClick 经调度器转发到主线程后派发 OverlayClickEvent`() {
+    fun `onAction 块内可用 when 区分 Click 与 Interact 来源`() {
+        val kinds = mutableListOf<String>()
+        val (_, transport, _) = build(mapOf(3 to specOf(item(Material.STONE)) {
+            onAction {
+                when (this) {
+                    is OverlaySlotActionEvent.Click -> kinds += "click:$clickType"
+                    is OverlaySlotActionEvent.Interact -> kinds += "interact:$action"
+                }
+            }
+        }))
+        val player = mockPlayer()
+        transport.callbacks!!.onClick(player, 3, ClickType.LEFT)
+        transport.callbacks!!.onInteract(player, 3, OverlaySlotActionEvent.Interact.Action.RIGHT_CLICK)
+        assertEquals(listOf("click:LEFT", "interact:RIGHT_CLICK"), kinds)
+    }
+
+    @Test
+    fun `callbacks onClick 经调度器转发到主线程后派发 Click 事件`() {
         val (o, transport, _) = build(mapOf(3 to specOf(item(Material.STONE))))
         val player = mockPlayer()
-        var received: OverlayClickEvent? = null
-        o.on { on<OverlayClickEvent> { received = this } }
+        var received: OverlaySlotActionEvent.Click? = null
+        o.on { on<OverlaySlotActionEvent.Click> { received = this } }
         transport.callbacks!!.onClick(player, 3, ClickType.RIGHT)
         assertEquals(3, received?.index)
-        assertEquals(ClickType.RIGHT, received?.type)
+        assertEquals(ClickType.RIGHT, received?.clickType)
     }
 
     // ---- 按需启停（本次需求的验收）----

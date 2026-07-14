@@ -1,7 +1,6 @@
 package com.github.mayblock.easylib.impl.bukkit.overlay
 
-import com.github.mayblock.easylib.api.bukkit.overlay.OverlayClickEvent
-import com.github.mayblock.easylib.api.bukkit.overlay.OverlayInteractEvent
+import com.github.mayblock.easylib.api.bukkit.overlay.OverlaySlotActionEvent
 import com.github.mayblock.easylib.api.scheduler.TaskScheduler
 import com.github.mayblock.easylib.impl.bukkit.util.item
 import org.bukkit.Material
@@ -17,13 +16,12 @@ class OverlaySlotBuilderTest {
     @AfterTest fun tearDown() { MockBukkit.unmock() }
 
     @Test
-    fun `onClick 与 onInteract 以对应事件类型收集为 handler`() {
+    fun `onAction 以密封父类型收集为 handler`() {
         val spec = OverlaySlotBuilder().apply {
-            onClick { }
-            onInteract { }
+            onAction { }
         }.build(item(Material.STONE))
         assertEquals(
-            listOf<Class<*>>(OverlayClickEvent::class.java, OverlayInteractEvent::class.java),
+            listOf<Class<*>>(OverlaySlotActionEvent::class.java),
             spec.handlers.map { it.type },
         )
     }
