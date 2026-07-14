@@ -18,7 +18,7 @@ import org.bukkit.event.inventory.ClickType
 import org.bukkit.inventory.ItemStack
 
 /**
- * 覆盖层协调者（组合切分，替代原继承切分的 AbstractPlayerOverlay/PacketPlayerOverlay）：
+ * 覆盖层协调者（组合切分，替代原「抽象基类 + 包实现子类」的继承切分）：
  * 把观察者状态（[ViewerRegistry]）、客户端通道策略（[OverlayTransport]）、事件面
  * （[OverlayEventDispatcher]）与更新循环（[OverlayUpdateLoop]）组合起来，自身只负责编排。
  *

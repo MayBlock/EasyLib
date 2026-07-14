@@ -17,7 +17,7 @@ import kotlin.test.*
 
 /**
  * 记录调用、暴露 attach 时收到的 [OverlayTransport.Callbacks] 的假通道，
- * 替代旧继承切分测试里的假子类（[AbstractPlayerOverlay] 已删除）。
+ * 替代旧继承切分测试里的假子类。
  */
 private class FakeTransport : OverlayTransport {
     val paintAllCalls = mutableListOf<Player>()

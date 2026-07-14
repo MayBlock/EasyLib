@@ -16,7 +16,7 @@ internal class OverlayEventDispatcher(
     private val bus: EventBus<OverlayEvent> = SimpleEventBus(),
 ) : EventSource<OverlayEvent> by bus {
 
-    /** 把每个槽声明的点击/交互处理器，作为「按 index 过滤」的监听挂到覆盖层总线上（现 AbstractPlayerOverlay.init 的逻辑）。 */
+    /** 把每个槽声明的点击/交互处理器，作为「按 index 过滤」的监听挂到覆盖层总线上。 */
     fun wireSlotHandlers(specs: Map<Int, OverlaySlotSpec>) {
         specs.forEach { (index, spec) ->
             spec.handlers.forEach { handler ->
