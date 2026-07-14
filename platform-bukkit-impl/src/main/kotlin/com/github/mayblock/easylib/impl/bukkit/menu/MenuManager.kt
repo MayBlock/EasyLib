@@ -25,7 +25,7 @@ class MenuManager(
 
     private val menus = mutableListOf<Menu>()
     private val activeMenus = mutableMapOf<Player, Menu>()
-    private val listener = MenuInteractionListener().also {
+    private val listener = MenuInteractionListener(this).also {
         Bukkit.getPluginManager().registerEvents(it, plugin)
     }
 
@@ -39,13 +39,15 @@ class MenuManager(
         builder: PageableChestMenuScope.() -> Unit
     ): ChestMenu =
         PageableChestMenuBuilder(type) { title, slots ->
-            RealChestMenu(taskScheduler, title, type, slots, hidePlayerInventory)
+            // 注册塞进工厂 lambda：分页菜单的每一页都经由本工厂创建，
+            // 因此每页都会在这里被登记，而不仅仅是 build() 返回的第 1 页。
+            register(RealChestMenu(taskScheduler, title, type, slots, hidePlayerInventory, onDestroyed = ::forget))
         }.apply(builder)
             .build()
-            .let(::register)
 
     /** 登记菜单，并通过其事件源跟踪活跃观察者（开/关菜单驱动 [activeMenus]）。 */
     private fun <M : Menu> register(menu: M): M {
+        (menu as? RealChestMenu)?.owner = this
         menu.on {
             on<MenuOpenEvent> { activeMenus[player] = menu }
             on<MenuCloseEvent> { if (activeMenus[player] === menu) activeMenus.remove(player) }
@@ -53,8 +55,16 @@ class MenuManager(
         return menu.also(menus::add)
     }
 
+    /** 菜单 destroy() 时的回调：撤销登记，避免 [menus]/[activeMenus] 只增不减地累积已销毁的菜单。 */
+    private fun forget(menu: Menu) {
+        menus.remove(menu)
+        activeMenus.entries.removeIf { it.value === menu }
+    }
+
     override fun close() {
-        menus.forEach { it.destroy() }
+        // destroy() 会经 onDestroyed 回调触发 forget()，进而修改 menus 本身；
+        // 必须遍历快照，否则会在 forEach 过程中并发结构性修改 menus 导致 CME。
+        menus.toList().forEach { it.destroy() }
         HandlerList.unregisterAll(listener)
         menus.clear()
         activeMenus.clear()

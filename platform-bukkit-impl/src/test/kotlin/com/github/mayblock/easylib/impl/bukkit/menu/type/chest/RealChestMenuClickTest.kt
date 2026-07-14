@@ -6,6 +6,7 @@ import com.github.mayblock.easylib.api.bukkit.menu.type.chest.ChestMenuType
 import com.github.mayblock.easylib.api.event.on
 import com.github.mayblock.easylib.api.scheduler.TaskScheduler
 import com.github.mayblock.easylib.impl.bukkit.menu.MenuInteractionListener
+import com.github.mayblock.easylib.impl.bukkit.menu.MenuManager
 import com.github.mayblock.easylib.impl.bukkit.menu.slot.SlotBuilder
 import com.github.mayblock.easylib.impl.bukkit.menu.slot.SlotSpec
 import com.github.mayblock.easylib.impl.bukkit.util.item
@@ -182,8 +183,12 @@ class RealChestMenuClickTest {
 
     @Test fun `MenuInteractionListener 按 holder 路由点击到菜单`() {
         val m = menu(mapOf(5 to spec(item(Material.DIAMOND)))) // 不可变槽
+        // 监听器路由前会校验菜单归属（防止多 MenuManager 实例重复处理），
+        // 因此这里显式把 m 挂到一个 manager 名下，再用同一 manager 构造监听器。
+        val mgr = MenuManager(mockk<TaskScheduler>(relaxed = true), MockBukkit.createMockPlugin())
+        m.owner = mgr
         val (_, view) = open(m)
-        val listener = MenuInteractionListener()
+        val listener = MenuInteractionListener(mgr)
         val e = click(view, 5, InventoryAction.PICKUP_ALL)
         listener.onClick(e)
         assertTrue(e.isCancelled) // 经 holder 路由到 handleClick，不可变槽被取消

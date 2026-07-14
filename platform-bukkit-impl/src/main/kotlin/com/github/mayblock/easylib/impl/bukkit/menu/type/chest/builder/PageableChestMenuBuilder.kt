@@ -44,7 +44,8 @@ internal class PageableChestMenuBuilder(
         slot: Int,
         metadata: ItemMeta.() -> Unit
     ) {
-        nextPageItem = Pair(slot, item.also {
+        // 先 clone 再改 meta：避免直接篡改调用方传入的 item 实例。
+        nextPageItem = Pair(slot, item.clone().also {
             it.itemMeta = it.itemMeta?.apply(metadata)
         })
     }
@@ -54,7 +55,8 @@ internal class PageableChestMenuBuilder(
         slot: Int,
         metadata: ItemMeta.() -> Unit
     ) {
-        previousPageItem = Pair(slot, item.also {
+        // 先 clone 再改 meta：避免直接篡改调用方传入的 item 实例。
+        previousPageItem = Pair(slot, item.clone().also {
             it.itemMeta = it.itemMeta?.apply(metadata)
         })
     }
@@ -67,6 +69,7 @@ internal class PageableChestMenuBuilder(
                 page.title = page.title.append(Component.text(" (${i + 1}/${pages.size})"))
                 if (i + 1 < pages.size) {
                     val (index, item) = nextPageItem
+                    require(!page.hasSlot(index)) { "slot $index is reserved for page navigation" }
                     page.slot(index, item) {
                         onClick {
                             builtMenus[i + 1].open(player)
@@ -75,6 +78,7 @@ internal class PageableChestMenuBuilder(
                 }
                 if (i - 1 >= 0) {
                     val (index, item) = previousPageItem
+                    require(!page.hasSlot(index)) { "slot $index is reserved for page navigation" }
                     page.slot(index, item) {
                         onClick {
                             builtMenus[i - 1].open(player)

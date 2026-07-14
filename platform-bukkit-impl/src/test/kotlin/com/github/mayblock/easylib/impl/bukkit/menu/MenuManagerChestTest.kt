@@ -52,7 +52,7 @@ class MenuManagerChestTest {
         } as RealChestMenu
         val p = server.addPlayer()
         val view = p.openInventory(menu.bukkitInventory)!!
-        val listener = MenuInteractionListener()
+        val listener = MenuInteractionListener(mgr)
         listener.onOpen(InventoryOpenEvent(view))
         assertTrue(mgr.hasActiveMenu(p))
         listener.onClose(InventoryCloseEvent(view))

@@ -77,4 +77,39 @@ class ChestSlotGateTest {
             assertIs<SlotDecision.AllowNative>(bottom(it, hide = false), "$it")
         }
     }
+
+    // 顶部 + hide=true 矩阵（BUG 回归：hide=true 时 shift-take 不应把物品移入被屏蔽的玩家背包）
+    @Test fun `顶部 hide=true 时 MOVE_TO_OTHER_INVENTORY 无论 movable 均取消`() {
+        listOf(true, false).forEach { movable ->
+            assertIs<SlotDecision.Deny>(
+                ChestSlotGate.decide(
+                    isTop = true, rawSlot = 5, action = MOVE_TO_OTHER_INVENTORY,
+                    movable = movable, placeable = false, hidePlayerInventory = true,
+                ),
+                "movable=$movable",
+            )
+        }
+    }
+
+    @Test fun `顶部 hide=true 时其他 PICKUP DROP 操作仍按 movable 放行`() {
+        listOf(PICKUP_ALL, PICKUP_SOME, PICKUP_HALF, PICKUP_ONE, DROP_ALL_SLOT, DROP_ONE_SLOT).forEach {
+            assertIs<SlotDecision.FireTake>(
+                ChestSlotGate.decide(isTop = true, rawSlot = 5, action = it, movable = true, placeable = false, hidePlayerInventory = true),
+                "$it",
+            )
+            assertIs<SlotDecision.Deny>(
+                ChestSlotGate.decide(isTop = true, rawSlot = 5, action = it, movable = false, placeable = false, hidePlayerInventory = true),
+                "$it",
+            )
+        }
+    }
+
+    @Test fun `顶部 hide=false 时 MOVE_TO_OTHER_INVENTORY 按 movable 放行为 FireTake（行为不变）`() {
+        assertIs<SlotDecision.FireTake>(
+            ChestSlotGate.decide(isTop = true, rawSlot = 5, action = MOVE_TO_OTHER_INVENTORY, movable = true, placeable = false, hidePlayerInventory = false)
+        )
+        assertIs<SlotDecision.Deny>(
+            ChestSlotGate.decide(isTop = true, rawSlot = 5, action = MOVE_TO_OTHER_INVENTORY, movable = false, placeable = false, hidePlayerInventory = false)
+        )
+    }
 }

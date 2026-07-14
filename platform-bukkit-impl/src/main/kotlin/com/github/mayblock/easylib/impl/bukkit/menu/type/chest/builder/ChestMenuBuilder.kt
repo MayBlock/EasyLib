@@ -20,6 +20,9 @@ internal class ChestMenuBuilder(
     private val size = type.size
     private val slots = mutableMapOf<Int, SlotSpec>()
 
+    /** 该 index 是否已被用户通过 [slot] 声明；供 [PageableChestMenuBuilder] 检测与导航槽的冲突。 */
+    internal fun hasSlot(index: Int): Boolean = slots.containsKey(index)
+
     override fun slot(
         index: Int,
         item: ItemStack,
@@ -28,7 +31,7 @@ internal class ChestMenuBuilder(
         metadata: ItemMeta.() -> Unit,
         block: (SlotScope<InventoryClickEvent>.() -> Unit)?,
     ) {
-        require(index in 0 until size) { "slot must be in range [0, $size]" }
+        require(index in 0 until size) { "slot must be in range [0, $size)" }
         slots[index] = buildSlot(item, movable, placeable, metadata, block)
     }
 
@@ -40,7 +43,7 @@ internal class ChestMenuBuilder(
         metadata: ItemMeta.() -> Unit,
         block: (SlotScope<InventoryClickEvent>.() -> Unit)?,
     ) {
-        require(range.first >= 0 && range.last < size) { "slot must be in range [0, $size]" }
+        require(range.first >= 0 && range.last < size) { "slot must be in range [0, $size)" }
         val slot = buildSlot(item, movable, placeable, metadata, block)
         range.forEach { slots[it] = slot }
     }
@@ -52,9 +55,10 @@ internal class ChestMenuBuilder(
         metadata: ItemMeta.() -> Unit,
         block: (SlotScope<InventoryClickEvent>.() -> Unit)?,
     ): SlotSpec {
+        // 先 clone 再改 meta：避免直接篡改调用方传入的 item 实例。
         return SlotBuilder(InventoryClickEvent::class.java)
             .apply { block?.invoke(this) }
-            .build(item.also { item.itemMeta = item.itemMeta?.also(metadata) }, movable, placeable)
+            .build(item.clone().also { it.itemMeta = it.itemMeta?.also(metadata) }, movable, placeable)
     }
 
     fun build(): ChestMenu = factory(title, slots)
