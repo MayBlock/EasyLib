@@ -45,7 +45,8 @@ class BukkitEasyLib(
         taskScheduler.cancelAllTasks()
         menuFactory.close()
         overlayFactory.close()
-        commandRegistry.unregisterAll()
+        // 不在此处调用 commandRegistry.unregisterAll()：当前实现委托 commandMap.clearCommands()，
+        // 会清空包括其他插件在内的全服命令，不适合作为本实例的关闭清理。
         HandlerList.unregisterAll(itemExtensionApi)
         HandlerList.unregisterAll(promptQuitListener)
         PromptApiImpl.shutdown()
