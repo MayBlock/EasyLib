@@ -11,12 +11,21 @@ import org.bukkit.inventory.ItemStack
  *
  * 对外只暴露订阅侧事件源（[EventSource]），可监听 [OverlayEvent]（show/hide、slot 点击/交互）。
  * 实例只应经 [PlayerOverlayFactory] 创建。
+ *
+ * 打开任意容器界面（箱子、工作台等，玩家自己背包视图除外）会自动隐藏覆盖层，防止绕过覆盖层
+ * 直接看到/操作真实背包。
  */
 interface PlayerOverlay : Destroyable, EventSource<OverlayEvent> {
-    /** 对该玩家开启覆盖层（发送初始虚拟物品并登记观察者）。 */
+    /**
+     * 对该玩家开启覆盖层（发送初始虚拟物品并登记观察者）。
+     * @throws IllegalStateException 覆盖层已销毁（[destroy] 之后）
+     */
     fun show(player: Player)
 
-    /** 对该玩家关闭覆盖层并还原真实背包渲染；此前未开启返回 false。 */
+    /**
+     * 对该玩家关闭覆盖层并还原真实背包渲染；此前未开启返回 false。
+     * @throws IllegalStateException 覆盖层已销毁（[destroy] 之后）
+     */
     fun hide(player: Player): Boolean
 
     /** 某声明槽位当前虚拟物品的**拷贝**；未声明或为空（AIR/数量≤0）返回 null。改动返回值不影响覆盖层。 */

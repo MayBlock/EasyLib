@@ -142,13 +142,13 @@ object BridgeEvent {
         entity: BukkitArenaEntity,
         location: Location,
         val spawnReason: org.bukkit.event.entity.CreatureSpawnEvent.SpawnReason,
-        override var isCancelled: Boolean = false
-    ) : EntitySpawnEvent(entity, location)
+        isCancelled: Boolean = false
+    ) : EntitySpawnEvent(entity, location, isCancelled)
 
     open class SpawnerSpawnEvent(
         entity: BukkitArenaEntity,
         location: Location,
         val spawner: CreatureSpawner,
-        override var isCancelled: Boolean = false
-    ) : EntitySpawnEvent(entity, location)
+        isCancelled: Boolean = false
+    ) : EntitySpawnEvent(entity, location, isCancelled)
 }

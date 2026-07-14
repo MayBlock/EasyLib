@@ -15,7 +15,8 @@ interface Menu : Destroyable, EventSource<MenuEvent> {
     fun open(player: Player)
 
     /**
-     * 某槽位的当前物品（直接读真实容器）；槽位为空（AIR/数量≤0）返回 null。
+     * 某槽位的当前物品：读真实容器并返回一份拷贝（修改返回值不会影响菜单内容，如需写入请调用 [setItem]）；
+     * 槽位为空（AIR/数量≤0）返回 null。
      * @throws IllegalArgumentException 槽位索引越界（超出菜单容量）
      */
     fun getItem(index: Int): ItemStack?

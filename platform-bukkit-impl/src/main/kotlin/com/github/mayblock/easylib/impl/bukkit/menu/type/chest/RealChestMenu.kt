@@ -11,6 +11,7 @@ import com.github.mayblock.easylib.api.event.EventSource
 import com.github.mayblock.easylib.api.scheduler.TaskScheduler
 import com.github.mayblock.easylib.api.util.Disposable
 import com.github.mayblock.easylib.impl.bukkit.BukkitEasyLib
+import com.github.mayblock.easylib.impl.bukkit.menu.MenuManager
 import com.github.mayblock.easylib.impl.bukkit.menu.slot.SlotSpec
 import com.github.mayblock.easylib.impl.bukkit.util.isEmptyStack
 import com.github.mayblock.easylib.impl.bukkit.util.item
@@ -25,7 +26,6 @@ import net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer
 import org.bukkit.Bukkit
 import org.bukkit.Material
 import org.bukkit.entity.Player
-import org.bukkit.event.inventory.ClickType
 import org.bukkit.inventory.Inventory
 import org.bukkit.inventory.InventoryHolder
 import org.bukkit.inventory.ItemStack
@@ -42,8 +42,13 @@ internal class RealChestMenu(
     override val type: ChestMenuType,
     private val specs: Map<Int, SlotSpec>,
     private val hidePlayerInventory: Boolean = true,
+    /** destroy() 末尾回调，供 [com.github.mayblock.easylib.impl.bukkit.menu.MenuManager] 撤销登记（避免 menus 只增不减）。 */
+    private val onDestroyed: (RealChestMenu) -> Unit = {},
     private val bus: SimpleEventBus<MenuEvent> = SimpleEventBus(),
 ) : ChestMenu, InventoryHolder, EventSource<MenuEvent> by bus {
+
+    /** 登记本菜单的 manager；由 register() 赋值，供 MenuInteractionListener 校验事件归属，防止多 manager 实例重复处理。 */
+    internal var owner: MenuManager? = null
 
     val bukkitInventory: Inventory =
         Bukkit.createInventory(this, type.size, LegacyComponentSerializer.legacySection().serialize(title))
@@ -55,6 +60,9 @@ internal class RealChestMenu(
 
     /** 当前正在观看本菜单且需屏蔽背包的玩家集合（线程安全）。 */
     private val hideViewers = ConcurrentHashMap.newKeySet<Player>()
+
+    /** 当前处于「已 publishOpen 尚未 publishClose」状态的玩家集合，用于 [handleClose] 幂等去重（线程安全）。 */
+    private val openViewers = ConcurrentHashMap.newKeySet<Player>()
 
     /**
      * hide=true 时注册的发包拦截订阅；destroy 时释放。
@@ -114,8 +122,6 @@ internal class RealChestMenu(
 
     override fun getInventory(): Inventory = bukkitInventory
 
-    fun specOf(slot: Int): SlotSpec? = specs[slot]
-
     override fun open(player: Player) {
         check(!destroyed) { "this menu is destroyed!" }
         player.openInventory(bukkitInventory) // 触发 InventoryOpenEvent → 监听器 publishOpen
@@ -123,7 +129,8 @@ internal class RealChestMenu(
 
     override fun getItem(index: Int): ItemStack? {
         require(index in 0 until type.size) { "slot $index out of range [0, ${type.size})" }
-        return bukkitInventory.getItem(index)?.takeUnless { it.isEmptyStack() }
+        // 返回拷贝：调用方修改返回的 ItemStack 不应波及真实容器，写入请走 setItem。
+        return bukkitInventory.getItem(index)?.takeUnless { it.isEmptyStack() }?.clone()
     }
 
     override fun setItem(index: Int, item: ItemStack?) {
@@ -132,6 +139,7 @@ internal class RealChestMenu(
     }
 
     fun publishOpen(player: Player) {
+        openViewers += player
         if (hidePlayerInventory) {
             hidePacketSub // 首次打开时触发懒初始化，注册发包拦截器
             hideViewers += player
@@ -141,17 +149,18 @@ internal class RealChestMenu(
 
     fun publishClose(player: Player) = bus.emit(MenuCloseEvent(this, player))
 
-    /** 仅测试用：直接派发一次 slot 点击事件，验证 index 过滤。 */
-    fun fireClickForTest(player: Player, index: Int) =
-        bus.emit(InventoryClickEvent(this, player, index, ClickType.LEFT))
-
     override fun destroy() {
         if (destroyed) return
-        bukkitInventory.viewers.forEach { it.closeInventory() }
+        // CraftBukkit 的 Inventory.getViewers() 返回的是底层容器持有的 live 列表：
+        // closeInventory() 会同步地把玩家从该列表移除，若直接 forEach 遍历原列表，
+        // 会在遍历过程中发生结构性修改，抛出 ConcurrentModificationException。
+        // 因此先复制一份快照再关闭。
+        bukkitInventory.viewers.toList().forEach { it.closeInventory() }
         stopUpdates()
         if (hidePacketSubDelegate.isInitialized()) hidePacketSub?.dispose()
         bus.unsubscribeAll()
         destroyed = true
+        onDestroyed(this)
     }
 
     /** 由 [MenuInteractionListener] 在主线程调用：按放行门决策处理一次点击。 */
@@ -229,10 +238,19 @@ internal class RealChestMenu(
             val ev = SlotPlaceEvent(this, p.slot, player, placing.clone(), sourceSlot = e.slot)
             bus.emit(ev)
             if (ev.isCancelled) continue
+            // 写入前复核容量：onPlace 订阅者可能在本轮循环中通过 setItem 等方式改动了容器状态，
+            // ShiftIntoMenuPlanner 的规划快照可能已经过期，不能盲目信任 p.amount。
             val existing = bukkitInventory.getItem(p.slot)
-            if (existing == null || existing.isEmptyStack()) bukkitInventory.setItem(p.slot, placing)
-            else existing.amount += p.amount
-            placedTotal += p.amount
+            if (existing == null || existing.isEmptyStack()) {
+                bukkitInventory.setItem(p.slot, placing)
+                placedTotal += p.amount
+            } else {
+                val room = existing.maxStackSize - existing.amount
+                val add = minOf(room, p.amount)
+                if (add <= 0) continue
+                existing.amount += add
+                placedTotal += add
+            }
         }
         if (placedTotal > 0) {
             val remaining = source.amount - placedTotal
@@ -258,10 +276,16 @@ internal class RealChestMenu(
         }
     }
 
-    /** 关窗/断线：publishClose + 若隐藏则从 hideViewers 移除并恢复真实背包显示。 */
+    /**
+     * 关窗/断线：publishClose + 若隐藏则从 hideViewers 移除并恢复真实背包显示。
+     * 断线场景下 [MenuInteractionListener][com.github.mayblock.easylib.impl.bukkit.menu.MenuInteractionListener]
+     * 的 `onQuit` 兜底与服务端可能已先触发的 `InventoryCloseEvent` 存在双调风险；
+     * 用 [openViewers] 做幂等保护，只有真正「移除成功」（即此前确实处于打开状态）才 publishClose，
+     * 避免同一次打开被重复派发 [MenuCloseEvent]。
+     */
     fun handleClose(player: Player) {
         hideViewers -= player
-        publishClose(player)
+        if (openViewers.remove(player)) publishClose(player)
         if (hidePlayerInventory) player.updateInventory()
     }
 

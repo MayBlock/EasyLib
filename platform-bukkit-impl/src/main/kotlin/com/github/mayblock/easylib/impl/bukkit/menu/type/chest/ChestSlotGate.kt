@@ -46,14 +46,21 @@ internal object ChestSlotGate {
             else -> {}
         }
         if (rawSlot < 0) return SlotDecision.AllowNative // 窗口外
-        return if (isTop) decideTop(rawSlot, action, movable, placeable) else decideBottom(action, hidePlayerInventory)
+        return if (isTop) decideTop(rawSlot, action, movable, placeable, hidePlayerInventory) else decideBottom(action, hidePlayerInventory)
     }
 
-    private fun decideTop(slot: Int, action: InventoryAction, movable: Boolean, placeable: Boolean): SlotDecision =
+    private fun decideTop(slot: Int, action: InventoryAction, movable: Boolean, placeable: Boolean, hide: Boolean): SlotDecision =
         when (action) {
-            InventoryAction.PICKUP_ALL, InventoryAction.PICKUP_SOME, InventoryAction.PICKUP_HALF,
-            InventoryAction.PICKUP_ONE, InventoryAction.DROP_ALL_SLOT, InventoryAction.DROP_ONE_SLOT,
+            // hide=true 时玩家背包被数据包屏蔽为不可见：若仍放行 MOVE_TO_OTHER_INVENTORY，
+            // 物品会被 shift 进玩家看不到的背包区（数据丢失/困惑的假象）。因此 hide=true 时
+            // 无条件取消该 shift-take；其余取出方式（PICKUP/DROP 系列）不涉及跨容器移动，
+            // 仍按 movable 放行。
             InventoryAction.MOVE_TO_OTHER_INVENTORY ->
+                if (hide) SlotDecision.Deny
+                else if (movable) SlotDecision.FireTake(slot) else SlotDecision.Deny
+
+            InventoryAction.PICKUP_ALL, InventoryAction.PICKUP_SOME, InventoryAction.PICKUP_HALF,
+            InventoryAction.PICKUP_ONE, InventoryAction.DROP_ALL_SLOT, InventoryAction.DROP_ONE_SLOT ->
                 if (movable) SlotDecision.FireTake(slot) else SlotDecision.Deny
 
             InventoryAction.PLACE_ALL, InventoryAction.PLACE_SOME, InventoryAction.PLACE_ONE ->

@@ -18,7 +18,7 @@ abstract class AbstractBukkitArenaPlayer(
     final override val name: String = bukkitPlayer.name
     override var displayName: String = bukkitPlayer.displayName
     override val location: Location get() = bukkitPlayer?.location ?: Bukkit.getOfflinePlayer(uuid).location!!
-    override val isOnline: Boolean get() = bukkitPlayer != null && bukkitPlayer!!.isOnline
+    override val isOnline: Boolean get() = bukkitPlayer?.isOnline == true
     override val bukkitPlayer: Player? get() = Bukkit.getPlayer(uuid)
 }
 

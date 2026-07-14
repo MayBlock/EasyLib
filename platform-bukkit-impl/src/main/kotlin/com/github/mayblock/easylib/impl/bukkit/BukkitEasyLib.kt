@@ -11,9 +11,12 @@ import com.github.mayblock.easylib.impl.bukkit.menu.MenuManager
 import com.github.mayblock.easylib.impl.bukkit.overlay.OverlayManager
 import com.github.mayblock.easylib.impl.bukkit.packet.BukkitPacketManager
 import com.github.mayblock.easylib.impl.bukkit.prompt.PromptApiImpl
+import com.github.mayblock.easylib.impl.bukkit.prompt.PromptQuitListener
 import com.github.mayblock.easylib.impl.bukkit.scheduler.BukkitTaskScheduler
 import com.github.mayblock.easylib.packetevents.PacketManager
+import org.bukkit.Bukkit
 import org.bukkit.entity.Player
+import org.bukkit.event.HandlerList
 import org.bukkit.plugin.Plugin
 
 class BukkitEasyLib(
@@ -22,11 +25,6 @@ class BukkitEasyLib(
 
     companion object {
         internal val api: BukkitEasyLib get() = EasyLibApi.api.bukkitApi() as BukkitEasyLib
-    }
-
-    init {
-        // 让全局单例在实例化时即可用，避免接入方忘记手动赋值导致 lateinit 抛 UninitializedPropertyAccessException
-        EasyLibApi.api = this
     }
 
     override val taskScheduler: TaskScheduler = BukkitTaskScheduler(plugin)
@@ -38,9 +36,29 @@ class BukkitEasyLib(
     override val commandRegistry = BukkitCommandRegistry(plugin)
     val packetManager: PacketManager<Player> = BukkitPacketManager
 
+    /** Prompt 断线清理监听器（见 [PromptQuitListener]）；随本实例注册，`close()` 时注销。 */
+    private val promptQuitListener = PromptQuitListener().also {
+        Bukkit.getPluginManager().registerEvents(it, plugin)
+    }
+
     override fun close() {
         taskScheduler.cancelAllTasks()
         menuFactory.close()
         overlayFactory.close()
+        // 不在此处调用 commandRegistry.unregisterAll()：当前实现委托 commandMap.clearCommands()，
+        // 会清空包括其他插件在内的全服命令，不适合作为本实例的关闭清理。
+        HandlerList.unregisterAll(itemExtensionApi)
+        HandlerList.unregisterAll(promptQuitListener)
+        PromptApiImpl.shutdown()
+    }
+
+    // 全局单例的发布必须放在类体最末尾——即所有属性都已完成初始化之后：
+    // `promptApi` 是 `by lazy { PromptApiImpl }`，一旦有人在构造期间提前触碰它（或直接引用 PromptApiImpl 触发其
+    // object 的 <clinit>），PromptApiImpl 的 init 块会立刻读 `EasyLibApi.api.bukkitApi()`；
+    // 若那时 `EasyLibApi.api` 已经指向本实例、但本实例自身的属性（taskScheduler/commandRegistry/...）还没初始化完，
+    // 读到的就是半初始化对象（字段仍是 Kotlin 默认值），会导致 NPE 或读到过期状态。
+    // 把发布动作挪到最后，能保证外部第一次拿到 `EasyLibApi.api` 时，本实例已经完全构造完毕。
+    init {
+        EasyLibApi.api = this
     }
 }

@@ -1,13 +1,24 @@
 package com.github.mayblock.easylib.impl.bukkit.overlay
 
 import com.github.mayblock.easylib.api.scheduler.TaskScheduler
+import com.github.mayblock.easylib.api.util.Disposable
 import io.mockk.mockk
+import org.bukkit.entity.Player
 import org.bukkit.event.player.PlayerQuitEvent
 import org.mockbukkit.mockbukkit.MockBukkit
 import kotlin.test.AfterTest
 import kotlin.test.BeforeTest
 import kotlin.test.Test
+import kotlin.test.assertEquals
 import kotlin.test.assertTrue
+
+/** 不触碰 PacketEvents 的最小 [AbstractPlayerOverlay] 假实现，专供 [OverlayManager] 的跟踪/摘除逻辑测试。 */
+private class FakeOverlay(scheduler: TaskScheduler) : AbstractPlayerOverlay(scheduler, emptyMap()) {
+    override fun repaint(index: Int) {}
+    override fun registerPacketListener(): Disposable = Disposable {}
+    override fun show(player: Player) {}
+    override fun hide(player: Player): Boolean = false
+}
 
 class OverlayManagerTest {
 
@@ -23,5 +34,17 @@ class OverlayManagerTest {
         mgr.close()
         mgr.close() // 幂等
         assertTrue(PlayerQuitEvent.getHandlerList().registeredListeners.none { it.listener is OverlayQuitListener })
+    }
+
+    // 说明：同样为绕开 PacketPlayerOverlay/PacketEvents，这里直接用 track() 注入假实现，
+    // 单独验证「destroy 触发 onDestroyed -> manager 摘除」这条泄漏链修复逻辑，不经过 create()。
+    @Test
+    fun `overlay destroy 后 manager 不再持有`() {
+        val mgr = OverlayManager(mockk<TaskScheduler>(relaxed = true), MockBukkit.createMockPlugin())
+        val overlay = FakeOverlay(mockk<TaskScheduler>(relaxed = true))
+        mgr.track(overlay)
+        assertEquals(1, mgr.trackedCount)
+        overlay.destroy()
+        assertEquals(0, mgr.trackedCount)
     }
 }

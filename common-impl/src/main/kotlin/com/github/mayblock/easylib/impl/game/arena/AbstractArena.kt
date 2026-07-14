@@ -31,7 +31,7 @@ abstract class AbstractArena<Player : ArenaPlayer, Entity : ArenaEntity>(
 
     override fun addPlayer(player: Player) {
         require(isArenaEnabled) { "Arena must be enabled before adding players" }
-        require(!players.contains(player)) { "Player $name already exists" }
+        require(!players.contains(player)) { "Player ${player.name} already exists in arena $name" }
         _players.add(player)
     }
 
@@ -60,12 +60,7 @@ abstract class AbstractArena<Player : ArenaPlayer, Entity : ArenaEntity>(
     }
 
     private fun onEnable() {
-        try {
-            onEnableArena()
-        } catch (e: Exception) {
-            e.printStackTrace()
-            isArenaEnabled = false
-        }
+        onEnableArena()
     }
 
     private fun onDisable() {

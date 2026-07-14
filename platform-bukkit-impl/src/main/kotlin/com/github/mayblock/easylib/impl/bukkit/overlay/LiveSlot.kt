@@ -17,7 +17,6 @@ internal class LiveSlot(private val spec: OverlaySlotSpec) {
             field = value.clone()
         }
 
-    val handlers: List<OverlayHandler> get() = spec.handlers
     val updateRules: List<OverlayUpdateRule> get() = spec.updateRules
 
     private val packetItemCache = Caffeine.newBuilder()

@@ -30,7 +30,7 @@ class ScoreboardFeature<A, Player : BukkitArenaPlayer> private constructor(
 
     override fun onInstall(context: A) {
         taskId = context.scheduleTask {
-            isAsync = true
+            isAsync = false
             onTick = {
                 refresh(context)
             }
@@ -39,15 +39,21 @@ class ScoreboardFeature<A, Player : BukkitArenaPlayer> private constructor(
 
     override fun onUninstall(context: A) {
         taskId?.let(context::cancelTask)
+        fastboardCache.values.forEach { it.delete() }
         fastboardCache.clear()
     }
 
     private fun refresh(arena: A) {
         if (arena.players.isEmpty()) return
+        val gone = fastboardCache.keys.filter { it !in arena.players }
+        gone.forEach { fastboardCache.remove(it)?.delete() }
         arena.players.filter { it.bukkitPlayer?.isOnline == true }.forEach { player ->
             val provider = providers.filter { it.accepts(player) }.maxByOrNull { it.priority }
             if (provider == null) return@forEach
-            val scoreboard = fastboardCache.getOrPut(player) { FastBoard(player.bukkitPlayer) }
+            val scoreboard = fastboardCache.getOrPut(player) {
+                val bukkitPlayer = player.bukkitPlayer ?: return@forEach
+                FastBoard(bukkitPlayer)
+            }
             scoreboard.updateTitle(provider.title(player).let {
                 ChatColor.translateAlternateColorCodes('&', it)
             })
@@ -65,7 +71,7 @@ class ScoreboardFeature<A, Player : BukkitArenaPlayer> private constructor(
         private val providers = mutableListOf<ScoreboardProvider<Player>>()
 
         override fun contains(element: ScoreboardProvider<Player>) = providers.contains(element)
-        override fun containsAll(elements: Collection<ScoreboardProvider<Player>>) = providers.addAll(elements)
+        override fun containsAll(elements: Collection<ScoreboardProvider<Player>>) = providers.containsAll(elements)
         override fun isEmpty() = providers.isEmpty()
         override fun iterator() = providers.iterator()
         override val size: Int get() = providers.size

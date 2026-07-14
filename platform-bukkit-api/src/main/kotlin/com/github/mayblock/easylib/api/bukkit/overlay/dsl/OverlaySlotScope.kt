@@ -13,7 +13,10 @@ import org.bukkit.inventory.ItemStack
  */
 @PlayerOverlayDsl
 interface OverlaySlotScope {
+    /** 点击发生在数据包处理线程，回调经调度器转发到**主线程**执行。 */
     fun onClick(priority: Priority = Priority.DEFAULT, block: OverlayClickEvent.() -> Unit)
+
+    /** 交互发生在数据包处理线程，回调经调度器转发到**主线程**执行。 */
     fun onInteract(priority: Priority = Priority.DEFAULT, block: OverlayInteractEvent.() -> Unit)
 
     /**

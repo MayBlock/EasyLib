@@ -56,14 +56,6 @@ class RealChestMenuTest {
         assertFailsWith<IllegalArgumentException> { m.setItem(27, item(Material.STONE)) }
     }
 
-    @Test fun `specOf 暴露 slot 声明`() {
-        val s =
-            SlotBuilder(InventoryClickEvent::class.java).build(item(Material.STONE), movable = true, placeable = true)
-        val m = menu(mapOf(6 to s))
-        assertEquals(true, m.specOf(6)!!.movable)
-        assertNull(m.specOf(7))
-    }
-
     @Test fun `publishOpen publishClose 走事件总线`() {
         val m = menu(mapOf(0 to spec(item(Material.STONE))))
         val events = mutableListOf<MenuEvent>()
@@ -77,10 +69,27 @@ class RealChestMenuTest {
         var clicks = 0
         val built =
             SlotBuilder(InventoryClickEvent::class.java).apply { onClick { clicks++ } }.build(item(Material.STONE))
-        val m = menu(mapOf(2 to built))
-        val p = server.addPlayer()
-        m.fireClickForTest(p, 2) // 见实现：仅用于测试的 publish 包装
-        m.fireClickForTest(p, 3)
+        val m = menu(mapOf(2 to built, 3 to spec(item(Material.DIAMOND))))
+        val view = open(m)
+        m.handleClick(clickEvent(view, 2))
+        m.handleClick(clickEvent(view, 3))
         assertEquals(1, clicks)
     }
+
+    private fun open(m: RealChestMenu): org.bukkit.inventory.InventoryView {
+        val p = server.addPlayer()
+        return p.openInventory(m.bukkitInventory)!!
+    }
+
+    private fun clickEvent(
+        view: org.bukkit.inventory.InventoryView,
+        rawSlot: Int,
+    ): org.bukkit.event.inventory.InventoryClickEvent =
+        org.bukkit.event.inventory.InventoryClickEvent(
+            view,
+            org.bukkit.event.inventory.InventoryType.SlotType.CONTAINER,
+            rawSlot,
+            org.bukkit.event.inventory.ClickType.LEFT,
+            org.bukkit.event.inventory.InventoryAction.PICKUP_ALL,
+        )
 }
