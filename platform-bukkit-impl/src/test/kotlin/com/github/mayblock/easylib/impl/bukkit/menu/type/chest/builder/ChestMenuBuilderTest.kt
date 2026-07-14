@@ -25,21 +25,21 @@ class ChestMenuBuilderTest {
     }
 
     @Test
-    fun `slot 透传 movable 与 placeable 到 SlotSpec`() {
+    fun `slot 透传 onTake onPlace 声明到 SlotSpec`() {
         val specs = buildSpecs {
             slot(0, item(Material.STONE))
-            slot(1, item(Material.DIAMOND), movable = true)
-            slot(2, item(Material.AIR), placeable = true)
+            slot(1, item(Material.DIAMOND)) { onTake { isCancelled = false } }
+            slot(2, item(Material.AIR)) { onPlace { isCancelled = false } }
         }
-        assertFalse(specs.getValue(0).movable); assertFalse(specs.getValue(0).placeable)
-        assertTrue(specs.getValue(1).movable); assertFalse(specs.getValue(1).placeable)
-        assertFalse(specs.getValue(2).movable); assertTrue(specs.getValue(2).placeable)
+        assertFalse(specs.getValue(0).hasPlaceHandlers)
+        assertFalse(specs.getValue(1).hasPlaceHandlers)
+        assertTrue(specs.getValue(2).hasPlaceHandlers)
     }
 
     @Test
-    fun `range 重载对每个槽位透传 flag`() {
-        val specs = buildSpecs { slot(3..5, item(Material.STONE), movable = true) }
+    fun `range 重载对每个槽位共享同一 SlotSpec 声明`() {
+        val specs = buildSpecs { slot(3..5, item(Material.STONE)) { onPlace { isCancelled = false } } }
         assertEquals(setOf(3, 4, 5), specs.keys)
-        assertTrue(specs.values.all { it.movable })
+        assertTrue(specs.values.all { it.hasPlaceHandlers })
     }
 }

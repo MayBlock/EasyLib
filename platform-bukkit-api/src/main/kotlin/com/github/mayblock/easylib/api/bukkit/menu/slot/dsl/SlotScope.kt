@@ -22,13 +22,15 @@ interface SlotScope<out C : SlotClickEvent> {
 
     /**
      * 物品被从本槽位取出时的把关点（回调只把关/观察，不搬运物品，契约见 [SlotTakeEvent]）。
-     * 目前仅箱子菜单使用本 DSL 并派发该事件。
+     * 事件默认取消：不注册本回调 ⇒ 永不放行；注册后须显式 `isCancelled = false` 才放行本次取出，
+     * 可按条件动态决定。目前仅箱子菜单使用本 DSL 并派发该事件。
      */
     fun onTake(priority: Priority = Priority.DEFAULT, block: SlotTakeEvent.() -> Unit)
 
     /**
      * 玩家物品被放入本槽位时的把关点（回调只把关/观察，不搬运物品，契约见 [SlotPlaceEvent]）。
-     * 目前仅箱子菜单使用本 DSL 并派发该事件。
+     * 事件默认取消：不注册本回调 ⇒ 永不放行；注册后须显式 `isCancelled = false` 才放行本次放入，
+     * 可按条件动态决定。目前仅箱子菜单使用本 DSL 并派发该事件。
      */
     fun onPlace(priority: Priority = Priority.DEFAULT, block: SlotPlaceEvent.() -> Unit)
 }

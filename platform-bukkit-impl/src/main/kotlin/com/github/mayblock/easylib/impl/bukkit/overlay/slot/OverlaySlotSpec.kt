@@ -7,7 +7,7 @@ import com.github.mayblock.easylib.api.util.Priority
 import org.bukkit.inventory.ItemStack
 
 /**
- * 覆盖槽的不可变声明：初始物品 + 点击/交互处理器 + 更新规则。零运行态；无 movable/placeable。
+ * 覆盖槽的不可变声明：初始物品 + 点击/交互处理器 + 更新规则。零运行态；无取出/放入转移语义。
  * 由 [com.github.mayblock.easylib.impl.bukkit.overlay.builder.OverlaySlotBuilder] 产出，运行期对应物是 [com.github.mayblock.easylib.impl.bukkit.overlay.slot.LiveSlot]。
  */
 internal class OverlaySlotSpec(

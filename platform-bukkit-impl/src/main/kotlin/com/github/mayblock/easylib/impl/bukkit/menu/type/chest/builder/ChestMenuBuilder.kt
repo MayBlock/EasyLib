@@ -26,39 +26,35 @@ internal class ChestMenuBuilder(
     override fun slot(
         index: Int,
         item: ItemStack,
-        movable: Boolean,
-        placeable: Boolean,
         metadata: ItemMeta.() -> Unit,
         block: (SlotScope<InventoryClickEvent>.() -> Unit)?,
     ) {
         require(index in 0 until size) { "slot must be in range [0, $size)" }
-        slots[index] = buildSlot(item, movable, placeable, metadata, block)
+        slots[index] = buildSlot(item, metadata, block)
     }
 
     override fun slot(
         range: IntRange,
         item: ItemStack,
-        movable: Boolean,
-        placeable: Boolean,
         metadata: ItemMeta.() -> Unit,
         block: (SlotScope<InventoryClickEvent>.() -> Unit)?,
     ) {
         require(range.first >= 0 && range.last < size) { "slot must be in range [0, $size)" }
-        val slot = buildSlot(item, movable, placeable, metadata, block)
+        val slot = buildSlot(item, metadata, block)
         range.forEach { slots[it] = slot }
     }
 
     private fun buildSlot(
         item: ItemStack,
-        movable: Boolean,
-        placeable: Boolean,
         metadata: ItemMeta.() -> Unit,
         block: (SlotScope<InventoryClickEvent>.() -> Unit)?,
     ): SlotSpec {
         // 先 clone 再改 meta：避免直接篡改调用方传入的 item 实例。
+        // 用 ?.also 而非 ItemStackExt.meta()：后者对 AIR 物品（空槽常见写法）会抛异常，
+        // 这里需要对无 meta 的物品（如 AIR）静默跳过，保留既有正确行为。
         return SlotBuilder(InventoryClickEvent::class.java)
             .apply { block?.invoke(this) }
-            .build(item.clone().also { it.itemMeta = it.itemMeta?.also(metadata) }, movable, placeable)
+            .build(item.clone().also { it.itemMeta = it.itemMeta?.also(metadata) })
     }
 
     fun build(): ChestMenu = factory(title, slots)

@@ -8,7 +8,7 @@ import org.bukkit.inventory.ItemStack
 
 /**
  * 玩家背包覆盖层：用数据包在玩家自己的背包窗口上叠加虚拟显示并捕获交互，**非真实容器**。
- * 只做「展示 + 交互」，不与真实背包做物品转移（故无 movable/placeable）。
+ * 只做「展示 + 交互」，不与真实背包做物品转移（故无取出/放入的转移事件契约）。
  *
  * 对外只暴露订阅侧事件源（[EventSource]），可监听 [com.github.mayblock.easylib.api.bukkit.overlay.slot.event.OverlayEvent]（show/hide、slot 点击/交互）。
  * 实例只应经 [PlayerOverlayFactory] 创建。

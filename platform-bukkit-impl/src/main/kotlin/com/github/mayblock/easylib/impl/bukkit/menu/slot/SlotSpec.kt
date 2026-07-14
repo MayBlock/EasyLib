@@ -1,27 +1,31 @@
 package com.github.mayblock.easylib.impl.bukkit.menu.slot
 
 import com.github.mayblock.easylib.api.bukkit.menu.slot.event.SlotClickEvent
+import com.github.mayblock.easylib.api.bukkit.menu.slot.event.SlotPlaceEvent
+import com.github.mayblock.easylib.api.bukkit.menu.slot.event.SlotTakeEvent
 import com.github.mayblock.easylib.api.bukkit.menu.slot.event.SlotUpdateEvent
 import com.github.mayblock.easylib.api.scheduler.TaskScheduler
 import com.github.mayblock.easylib.api.util.Priority
 import org.bukkit.inventory.ItemStack
 
 /**
- * 槽的「不可变声明」：用户通过 DSL 声明了什么（初始物品 + 点击处理器 + 更新规则 + 交互能力），
- * 零运行态。由 [com.github.mayblock.easylib.impl.bukkit.menu.slot.builder.SlotBuilder] 产出（chest 侧物品直接写入真实 Bukkit 容器）。
+ * 槽的「不可变声明」：用户通过 DSL 声明了什么（初始物品 + 处理器 + 更新规则），零运行态。
+ * 由 [com.github.mayblock.easylib.impl.bukkit.menu.slot.builder.SlotBuilder] 产出（chest 侧物品直接写入真实 Bukkit 容器）。
  *
- * @param movable 槽中物品可被玩家拿起（take 回调仅把关，物品移动由原生/引擎完成）
- * @param placeable 玩家可把自己背包的物品放入本槽（place 回调仅把关，物品移动由原生/引擎完成）
+ * 槽位不再有可拿取/可放置的静态布尔标志：取出/放入是否放行由 [SlotTakeEvent]/[SlotPlaceEvent] 的
+ * 事件契约（默认取消，handler 显式放行）决定，门控只看槽位是否声明（见 [ChestSlotGate]）。
  */
 internal class SlotSpec(
     val item: ItemStack,
-    val clickHandlers: List<ClickHandler>,
+    val handlers: List<SlotHandler>,
     val updateRules: List<UpdateRule>,
-    val movable: Boolean = false,
-    val placeable: Boolean = false,
-)
+) {
+    /** 本槽是否声明了任何 [SlotPlaceEvent] 处理器；构造期算好存字段，供 shift-入菜单候选槽预筛（纯优化）。 */
+    val hasPlaceHandlers: Boolean = handlers.any { SlotPlaceEvent::class.java.isAssignableFrom(it.type) }
+}
 
-internal class ClickHandler(
+/** 承载 [SlotClickEvent] 层级的全部处理器：onClick/onTake/onPlace 均以此类型收集，按 `type.isInstance` 过滤派发。 */
+internal class SlotHandler(
     val priority: Priority,
     val type: Class<out SlotClickEvent>,
     val block: SlotClickEvent.() -> Unit,

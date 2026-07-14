@@ -21,7 +21,7 @@ internal class MenuEventDispatcher(
     /** 把每个槽声明的点击处理器，作为「按 index 过滤」的监听挂到菜单总线上。 */
     fun wireSlotHandlers(specs: Map<Int, SlotSpec>) {
         specs.forEach { (index, spec) ->
-            spec.clickHandlers.forEach { handler ->
+            spec.handlers.forEach { handler ->
                 bus.subscribe(
                     EventListener(
                         handler.type,

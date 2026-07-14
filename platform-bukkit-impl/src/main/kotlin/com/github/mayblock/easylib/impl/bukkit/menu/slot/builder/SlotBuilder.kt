@@ -8,7 +8,7 @@ import com.github.mayblock.easylib.api.bukkit.menu.slot.event.SlotUpdateEvent
 import com.github.mayblock.easylib.api.event.Event
 import com.github.mayblock.easylib.api.scheduler.TaskScheduler
 import com.github.mayblock.easylib.api.util.Priority
-import com.github.mayblock.easylib.impl.bukkit.menu.slot.ClickHandler
+import com.github.mayblock.easylib.impl.bukkit.menu.slot.SlotHandler
 import com.github.mayblock.easylib.impl.bukkit.menu.slot.SlotSpec
 import com.github.mayblock.easylib.impl.bukkit.menu.slot.UpdateRule
 import org.bukkit.inventory.ItemStack
@@ -20,16 +20,16 @@ import kotlin.collections.plusAssign
  * 点击处理器以 [clickType] 标注事件类型——它会被注册到菜单总线并按 `type.isInstance` 过滤，
  * 因此把 `C.()->Unit` 当作 `SlotClickEvent.()->Unit` 存储是安全的。
  */
-internal class SlotBuilder<C : SlotClickEvent>(
+internal class SlotBuilder<out C : SlotClickEvent>(
     private val clickType: Class<out C>,
 ) : SlotScope<C> {
 
-    private val clicks = mutableListOf<ClickHandler>()
+    private val clicks = mutableListOf<SlotHandler>()
     private val updates = mutableListOf<UpdateRule>()
 
     override fun onClick(priority: Priority, block: C.() -> Unit) {
         @Suppress("UNCHECKED_CAST")
-        ClickHandler(priority, clickType, block as SlotClickEvent.() -> Unit).also(clicks::add)
+        SlotHandler(priority, clickType, block as SlotClickEvent.() -> Unit).also(clicks::add)
     }
 
     override fun onUpdate(trigger: TaskScheduler.Trigger, priority: Priority, block: SlotUpdateEvent.() -> Unit) {
@@ -37,15 +37,15 @@ internal class SlotBuilder<C : SlotClickEvent>(
     }
 
     override fun onTake(priority: Priority, block: SlotTakeEvent.() -> Unit) {
-        ClickHandler(priority, SlotTakeEvent::class.java, cancellingOnException(block)).also(clicks::add)
+        SlotHandler(priority, SlotTakeEvent::class.java, cancellingOnException(block)).also(clicks::add)
     }
 
     override fun onPlace(priority: Priority, block: SlotPlaceEvent.() -> Unit) {
-        ClickHandler(priority, SlotPlaceEvent::class.java, cancellingOnException(block)).also(clicks::add)
+        SlotHandler(priority, SlotPlaceEvent::class.java, cancellingOnException(block)).also(clicks::add)
     }
 
-    fun build(item: ItemStack, movable: Boolean = false, placeable: Boolean = false): SlotSpec =
-        SlotSpec(item, clicks.toList(), updates.toList(), movable, placeable)
+    fun build(item: ItemStack): SlotSpec =
+        SlotSpec(item, clicks.toList(), updates.toList())
 
     /**
      * 事件总线会吞掉监听器异常（记日志后继续）。take/place 回调是放行门：

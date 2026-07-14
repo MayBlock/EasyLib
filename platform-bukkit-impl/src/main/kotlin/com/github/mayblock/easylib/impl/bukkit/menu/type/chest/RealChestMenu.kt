@@ -59,9 +59,9 @@ internal class RealChestMenu(
     override val isDestroyed: Boolean get() = destroyed
 
     init {
-        // placeable 槽位与背包隐藏互斥：构建期即报错，避免运行时永远无法放置
-        require(!(hidePlayerInventory && specs.values.any { it.placeable })) {
-            "placeable slots require hidePlayerInventory = false"
+        // 声明了 onPlace 放行处理器的槽位与背包隐藏互斥：构建期即报错，避免运行时永远无法放置
+        require(!(hidePlayerInventory && specs.values.any { it.hasPlaceHandlers })) {
+            "onPlace handlers require hidePlayerInventory = false"
         }
         // 初始物品写入真实容器
         specs.forEach { (index, spec) -> if (!spec.item.isEmptyStack()) view.setItem(index, spec.item) }
@@ -111,12 +111,12 @@ internal class RealChestMenu(
         val player = e.whoClicked as? Player ?: return
         val rawSlot = e.rawSlot
         val isTop = rawSlot in 0 until type.size
+        val declared = isTop && specs.containsKey(rawSlot)
         // 信息性 onClick（已声明的顶部槽，任意点击，先于门/转移事件）
-        if (isTop && specs.containsKey(rawSlot)) {
+        if (declared) {
             dispatcher.publish(InventoryClickEvent(this, player, rawSlot, e.click))
         }
-        val spec = if (isTop) specs[rawSlot] else null
-        val decision = ChestSlotGate.decide(isTop, rawSlot, e.action, spec?.movable ?: false, spec?.placeable ?: false, hidePlayerInventory)
+        val decision = ChestSlotGate.decide(isTop, rawSlot, e.action, declared, hidePlayerInventory)
         when (decision) {
             is SlotDecision.Deny -> e.isCancelled = true
             is SlotDecision.AllowNative -> {}
@@ -174,8 +174,10 @@ internal class RealChestMenu(
     private fun handleShiftIntoMenu(player: Player, e: org.bukkit.event.inventory.InventoryClickEvent) {
         val source = e.currentItem?.takeUnless { it.isEmptyStack() } ?: return
         // view.getItem 返回拷贝（空槽为 null），planner 只读快照，语义不变。
-        val placeable = specs.filterValues { it.placeable }.keys.sorted().map { it to view.getItem(it) }
-        val plan = ShiftIntoMenuPlanner.plan(source, placeable)
+        // 候选槽预筛：无 DSL onPlace 的槽事件必然保持取消（没人放行），预筛是纯优化；
+        // 仅靠外部总线订阅放行的槽不参与 shift 分发（其 hasPlaceHandlers 为 false）。
+        val candidates = specs.filterValues { it.hasPlaceHandlers }.keys.sorted().map { it to view.getItem(it) }
+        val plan = ShiftIntoMenuPlanner.plan(source, candidates)
         var placedTotal = 0
         for (p in plan) {
             val placing = source.clone().apply { amount = p.amount }
@@ -204,7 +206,7 @@ internal class RealChestMenu(
         }
     }
 
-    /** 由监听器在主线程调用：按 spec §4.3 处理一次拖拽（仅向 placeable 顶部槽放行，否则整体取消）。 */
+    /** 由监听器在主线程调用：按 spec §4.3 处理一次拖拽（仅向已声明的顶部槽派发 onPlace 放行，否则整体取消）。 */
     override fun handleDrag(e: org.bukkit.event.inventory.InventoryDragEvent) {
         val player = e.whoClicked as? Player ?: return
         val topRaw = e.rawSlots.filter { it in 0 until type.size }
@@ -212,7 +214,7 @@ internal class RealChestMenu(
             if (hidePlayerInventory) e.isCancelled = true
             return
         }
-        if (topRaw.any { specs[it]?.placeable != true }) { e.isCancelled = true; return } // 触及不可放置顶部槽
+        if (topRaw.any { !specs.containsKey(it) }) { e.isCancelled = true; return } // 触及未声明的顶部槽
         for (slot in topRaw) {
             val newItem = e.newItems[slot] ?: continue
             val ev = SlotPlaceEvent(this, slot, player, newItem.clone(), sourceSlot = -1)

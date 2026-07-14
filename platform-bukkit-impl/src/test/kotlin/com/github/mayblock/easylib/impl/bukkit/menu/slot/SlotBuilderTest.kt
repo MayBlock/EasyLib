@@ -16,28 +16,27 @@ class SlotBuilderTest {
     private fun builder() = SlotBuilder(InventoryClickEvent::class.java)
 
     @Test
-    fun `build 默认 movable 与 placeable 为 false`() {
+    fun `build 默认无任何 handler`() {
         val spec = builder().build(item(Material.STONE))
-        assertFalse(spec.movable)
-        assertFalse(spec.placeable)
+        assertTrue(spec.handlers.isEmpty())
+        assertFalse(spec.hasPlaceHandlers)
     }
 
     @Test
-    fun `build 透传 movable 与 placeable`() {
-        val spec = builder().build(item(Material.STONE), movable = true, placeable = true)
-        assertTrue(spec.movable)
-        assertTrue(spec.placeable)
+    fun `hasPlaceHandlers 在声明 onPlace 后为 true`() {
+        val spec = builder().apply { onPlace { } }.build(item(Material.STONE))
+        assertTrue(spec.hasPlaceHandlers)
     }
 
     @Test
-    fun `onTake 与 onPlace 以对应事件类型收集为 ClickHandler`() {
+    fun `onTake 与 onPlace 以对应事件类型收集为 SlotHandler`() {
         val spec = builder().apply {
             onTake { }
             onPlace { }
         }.build(item(Material.STONE))
         assertEquals(
             listOf<Class<*>>(SlotTakeEvent::class.java, SlotPlaceEvent::class.java),
-            spec.clickHandlers.map { it.type },
+            spec.handlers.map { it.type },
         )
     }
 
@@ -46,8 +45,9 @@ class SlotBuilderTest {
         val spec = builder().apply {
             onTake { throw IllegalStateException("boom") }
         }.build(item(Material.STONE))
-        val event = SlotTakeEvent(mockk<Menu>(), 0, mockk<Player>(), item(Material.STONE), targetSlot = 0)
-        assertFailsWith<IllegalStateException> { spec.clickHandlers.single().block(event) }
+        // 显式先放行（isCancelled = false），验证异常路径把它重新按回取消——而不是仅依赖默认值。
+        val event = SlotTakeEvent(mockk<Menu>(), 0, mockk<Player>(), item(Material.STONE), targetSlot = 0, isCancelled = false)
+        assertFailsWith<IllegalStateException> { spec.handlers.single().block(event) }
         assertTrue(event.isCancelled)
     }
 
@@ -56,8 +56,8 @@ class SlotBuilderTest {
         val spec = builder().apply {
             onPlace { throw IllegalStateException("boom") }
         }.build(item(Material.STONE))
-        val event = SlotPlaceEvent(mockk<Menu>(), 0, mockk<Player>(), item(Material.STONE), sourceSlot = 3)
-        assertFailsWith<IllegalStateException> { spec.clickHandlers.single().block(event) }
+        val event = SlotPlaceEvent(mockk<Menu>(), 0, mockk<Player>(), item(Material.STONE), sourceSlot = 3, isCancelled = false)
+        assertFailsWith<IllegalStateException> { spec.handlers.single().block(event) }
         assertTrue(event.isCancelled)
     }
 }

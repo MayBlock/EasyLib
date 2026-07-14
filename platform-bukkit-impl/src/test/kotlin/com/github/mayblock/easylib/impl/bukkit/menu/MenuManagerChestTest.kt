@@ -39,11 +39,11 @@ class MenuManagerChestTest {
         assertEquals(Material.DIAMOND, menu.inventory.getItem(0)!!.type)
     }
 
-    @Test fun `placeable 且 hide=true 构建期报错`() {
+    @Test fun `声明 onPlace 且 hide=true 构建期报错`() {
         val mgr = manager()
         assertFailsWith<IllegalArgumentException> {
             mgr.createChestMenu(ChestMenuType.GENERIC_9X3, hidePlayerInventory = true) {
-                page(Component.text("t")) { slot(0, Material.AIR, placeable = true) }
+                page(Component.text("t")) { slot(0, Material.AIR) { onPlace { isCancelled = false } } }
             }
         }
     }

@@ -7,7 +7,7 @@ import com.github.mayblock.easylib.api.util.Priority
 import org.bukkit.inventory.ItemStack
 
 /**
- * 覆盖层单槽 DSL：仅展示 + 交互，**无 movable/placeable、无 take/place**。
+ * 覆盖层单槽 DSL：仅展示 + 交互，**无取出/放入的转移语义，无 take/place**。
  * 玩家操作（窗口内点击 / 手持左右键交互）→ [onAction]（[OverlaySlotActionEvent] 密封层级）；
  * 定时刷新 → [onUpdate]（[OverlayUpdateScope]，仍异步）。
  */

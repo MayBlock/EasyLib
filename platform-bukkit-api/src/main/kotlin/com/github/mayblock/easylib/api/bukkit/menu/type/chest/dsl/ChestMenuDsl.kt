@@ -28,24 +28,19 @@ interface ChestMenuScope {
     val type: ChestMenuType
 
     /**
-     * 声明一个槽位。
-     * @param movable 槽中物品可被玩家拿起（取出前经 `onTake` 把关，见 [SlotTakeEvent]；物品移动由原生完成）
-     * @param placeable 玩家可把自己背包的物品放入本槽（放入前经 `onPlace` 把关，见 [SlotPlaceEvent]；
-     *   要求菜单以 `hidePlayerInventory = false` 创建）
+     * 声明一个槽位。取出/放入不再由静态布尔配置，而是事件契约：[SlotTakeEvent]/[SlotPlaceEvent]
+     * 默认取消，声明 `onTake`/`onPlace` 并显式 `isCancelled = false` 才放行（见两事件类 KDoc）。
+     * 放入类操作要求菜单以 `hidePlayerInventory = false` 创建。
      */
     fun slot(
         index: Int,
         item: ItemStack,
-        movable: Boolean = false,
-        placeable: Boolean = false,
         metadata: ItemMeta.() -> Unit = {},
         block: (SlotScope<InventoryClickEvent>.() -> Unit)? = null
     )
     fun slot(
         range: IntRange,
         item: ItemStack,
-        movable: Boolean = false,
-        placeable: Boolean = false,
         metadata: ItemMeta.() -> Unit = {},
         block: (SlotScope<InventoryClickEvent>.() -> Unit)? = null
     )
@@ -55,23 +50,19 @@ fun ChestMenuScope.slot(
     index: Int,
     type: Material,
     amount: Int = 1,
-    movable: Boolean = false,
-    placeable: Boolean = false,
     metadata: ItemMeta.() -> Unit = {},
     block: (SlotScope<InventoryClickEvent>.() -> Unit)? = null
 ) {
-    slot(index, ItemStack(type, amount), movable, placeable, metadata, block)
+    slot(index, ItemStack(type, amount), metadata, block)
 }
 fun ChestMenuScope.slot(
     range: IntRange,
     type: Material,
     amount: Int = 1,
-    movable: Boolean = false,
-    placeable: Boolean = false,
     metadata: ItemMeta.() -> Unit = {},
     block: (SlotScope<InventoryClickEvent>.() -> Unit)? = null
 ) {
-    slot(range, ItemStack(type, amount), movable, placeable, metadata, block)
+    slot(range, ItemStack(type, amount), metadata, block)
 }
 
 fun ChestMenuScope.closeButton(
