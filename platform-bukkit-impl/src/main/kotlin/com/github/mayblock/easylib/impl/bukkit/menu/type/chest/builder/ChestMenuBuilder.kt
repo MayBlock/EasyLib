@@ -1,12 +1,13 @@
 package com.github.mayblock.easylib.impl.bukkit.menu.type.chest.builder
 
-import com.github.mayblock.easylib.api.bukkit.menu.slot.event.InventoryClickEvent
 import com.github.mayblock.easylib.api.bukkit.menu.slot.dsl.SlotScope
+import com.github.mayblock.easylib.api.bukkit.menu.slot.event.InventoryClickEvent
 import com.github.mayblock.easylib.api.bukkit.menu.type.chest.ChestMenu
 import com.github.mayblock.easylib.api.bukkit.menu.type.chest.ChestMenuType
 import com.github.mayblock.easylib.api.bukkit.menu.type.chest.dsl.ChestMenuScope
-import com.github.mayblock.easylib.impl.bukkit.menu.slot.builder.SlotBuilder
 import com.github.mayblock.easylib.impl.bukkit.menu.slot.SlotSpec
+import com.github.mayblock.easylib.impl.bukkit.menu.slot.builder.SlotBuilder
+import com.github.mayblock.easylib.impl.bukkit.util.meta
 import net.kyori.adventure.text.Component
 import org.bukkit.inventory.ItemStack
 import org.bukkit.inventory.meta.ItemMeta
@@ -26,8 +27,8 @@ internal class ChestMenuBuilder(
     override fun slot(
         index: Int,
         item: ItemStack,
-        metadata: ItemMeta.() -> Unit,
-        block: (SlotScope<InventoryClickEvent>.() -> Unit)?,
+        metadata: (ItemMeta.() -> Unit)?,
+        block: (SlotScope<InventoryClickEvent>.() -> Unit)?
     ) {
         require(index in 0 until size) { "slot must be in range [0, $size)" }
         slots[index] = buildSlot(item, metadata, block)
@@ -36,7 +37,7 @@ internal class ChestMenuBuilder(
     override fun slot(
         range: IntRange,
         item: ItemStack,
-        metadata: ItemMeta.() -> Unit,
+        metadata: (ItemMeta.() -> Unit)?,
         block: (SlotScope<InventoryClickEvent>.() -> Unit)?,
     ) {
         require(range.first >= 0 && range.last < size) { "slot must be in range [0, $size)" }
@@ -46,7 +47,7 @@ internal class ChestMenuBuilder(
 
     private fun buildSlot(
         item: ItemStack,
-        metadata: ItemMeta.() -> Unit,
+        metadata: (ItemMeta.() -> Unit)?,
         block: (SlotScope<InventoryClickEvent>.() -> Unit)?,
     ): SlotSpec {
         // 先 clone 再改 meta：避免直接篡改调用方传入的 item 实例。
@@ -54,7 +55,7 @@ internal class ChestMenuBuilder(
         // 这里需要对无 meta 的物品（如 AIR）静默跳过，保留既有正确行为。
         return SlotBuilder(InventoryClickEvent::class.java)
             .apply { block?.invoke(this) }
-            .build(item.clone().also { it.itemMeta = it.itemMeta?.also(metadata) })
+            .build(item.clone().also { item -> metadata?.let(item::meta) })
     }
 
     fun build(): ChestMenu = factory(title, slots)

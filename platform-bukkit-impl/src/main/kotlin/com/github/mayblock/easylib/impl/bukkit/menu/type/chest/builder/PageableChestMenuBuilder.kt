@@ -42,22 +42,22 @@ internal class PageableChestMenuBuilder(
     override fun setNextPageItem(
         item: ItemStack,
         slot: Int,
-        metadata: ItemMeta.() -> Unit
+        metadata: (ItemMeta.() -> Unit)?
     ) {
         // 先 clone 再改 meta：避免直接篡改调用方传入的 item 实例。
-        nextPageItem = Pair(slot, item.clone().also {
-            it.itemMeta = it.itemMeta?.apply(metadata)
+        nextPageItem = Pair(slot, item.clone().also { item ->
+            metadata?.let(item::meta)
         })
     }
 
     override fun setPreviousPageItem(
         item: ItemStack,
         slot: Int,
-        metadata: ItemMeta.() -> Unit
+        metadata: (ItemMeta.() -> Unit)?
     ) {
         // 先 clone 再改 meta：避免直接篡改调用方传入的 item 实例。
-        previousPageItem = Pair(slot, item.clone().also {
-            it.itemMeta = it.itemMeta?.apply(metadata)
+        previousPageItem = Pair(slot, item.clone().also { item ->
+            metadata?.let(item::meta)
         })
     }
 
