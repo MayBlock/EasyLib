@@ -4,4 +4,5 @@ plugins {
 }
 dependencies {
     api(libs.clikt.core)
+    implementation(libs.bundles.kotlinxEcosystem)
 }

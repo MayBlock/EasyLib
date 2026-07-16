@@ -3,7 +3,6 @@ package com.github.mayblock.easylib.impl.bukkit
 import com.github.mayblock.easylib.api.EasyLibApi
 import com.github.mayblock.easylib.api.bukkit.BukkitEasyLibApi
 import com.github.mayblock.easylib.api.bukkit.bukkitApi
-import com.github.mayblock.easylib.api.scheduler.TaskScheduler
 import com.github.mayblock.easylib.impl.bukkit.command.BukkitCommandRegistry
 import com.github.mayblock.easylib.impl.bukkit.extension.ItemExtensionApiImpl
 import com.github.mayblock.easylib.impl.bukkit.menu.MenuManager
@@ -26,7 +25,7 @@ class BukkitEasyLib(
     }
 
     val packetManager: PacketManager<Player> = BukkitPacketManager
-    override val taskScheduler: TaskScheduler = BukkitTaskScheduler(plugin)
+    override val taskScheduler = BukkitTaskScheduler(plugin)
     override val dispatcher = BukkitDispatcherImpl(plugin)
     // 注册其断线清理监听（onQuit）；shutdown() 时经 HandlerList.unregisterAll(this) 注销。
     override val promptApi = PromptApiImpl(packetManager).also {

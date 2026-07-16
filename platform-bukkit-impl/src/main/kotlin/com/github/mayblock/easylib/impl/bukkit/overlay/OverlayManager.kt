@@ -8,6 +8,7 @@ import com.github.mayblock.easylib.impl.bukkit.overlay.builder.PlayerOverlayBuil
 import com.github.mayblock.easylib.impl.bukkit.overlay.listener.OverlayQuitListener
 import com.github.mayblock.easylib.impl.bukkit.overlay.slot.SlotMap
 import com.github.mayblock.easylib.impl.bukkit.overlay.transport.PacketOverlayTransport
+import com.github.mayblock.easylib.impl.bukkit.scheduler.BukkitAsyncExecutor
 import org.bukkit.Bukkit
 import org.bukkit.event.HandlerList
 import org.bukkit.plugin.Plugin
@@ -16,7 +17,7 @@ import java.io.Closeable
 /** 覆盖层工厂：创建并跟踪覆盖层，`close()` 时统一销毁（清理更新循环 + 包监听 + 断线监听器）。 */
 class OverlayManager(
     private val taskScheduler: TaskScheduler,
-    plugin: Plugin,
+    private val plugin: Plugin,
 ) : PlayerOverlayFactory, Closeable {
 
     private val overlays = mutableListOf<PlayerOverlay>()
@@ -32,7 +33,7 @@ class OverlayManager(
     override fun create(block: PlayerOverlayScope.() -> Unit): PlayerOverlay =
         PlayerOverlayBuilder { slots ->
             val map = SlotMap(slots)
-            PlayerOverlayImpl(slots, map, taskScheduler, PacketOverlayTransport(map))
+            PlayerOverlayImpl(slots, map, taskScheduler, BukkitAsyncExecutor(plugin), PacketOverlayTransport(map))
         }
             .apply(block)
             .build()

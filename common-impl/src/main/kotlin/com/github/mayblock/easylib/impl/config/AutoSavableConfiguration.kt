@@ -37,7 +37,7 @@ internal open class AutoSaveConfiguration(
     protected val onAutoSave: (() -> Unit)? = null
 ) : Configuration by delegate, AutoSavable {
 
-    final override fun <T> set(path: String, value: T?) {
+    final override fun <T : Any> set(path: String, value: T?) {
         delegate.set(path, value)
         save()
     }

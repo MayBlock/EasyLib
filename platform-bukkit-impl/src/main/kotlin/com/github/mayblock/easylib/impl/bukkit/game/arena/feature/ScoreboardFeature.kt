@@ -30,10 +30,7 @@ class ScoreboardFeature<A, Player : BukkitArenaPlayer> private constructor(
 
     override fun onInstall(context: A) {
         taskId = context.scheduleTask {
-            isAsync = false
-            onTick = {
-                refresh(context)
-            }
+            refresh(context)
         }
     }
 

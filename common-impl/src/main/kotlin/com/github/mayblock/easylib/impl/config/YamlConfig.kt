@@ -28,8 +28,8 @@ class YamlConfiguration(val yml: YamlDocument) : Configuration {
     override fun isEmpty() = yml.isEmpty(true)
     override fun isNull(path: String) = yml.get(path) == null
 
-    override fun <T> get(path: String, type: Class<T>): T? = type.cast(yml.get(path))
-    override fun <T> set(path: String, value: T?) {
+    override fun <T : Any> get(path: String, type: Class<out T>): T? = type.cast(yml.get(path))
+    override fun <T : Any> set(path: String, value: T?) {
         yml.set(path, value)
     }
 

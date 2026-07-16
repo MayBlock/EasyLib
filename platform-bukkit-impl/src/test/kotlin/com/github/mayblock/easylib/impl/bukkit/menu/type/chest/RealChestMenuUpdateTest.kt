@@ -1,14 +1,15 @@
 package com.github.mayblock.easylib.impl.bukkit.menu.type.chest
 
-import io.mockk.mockk
-import com.github.mayblock.easylib.packetevents.PacketManager
 import com.github.mayblock.easylib.api.bukkit.menu.slot.event.InventoryClickEvent
 import com.github.mayblock.easylib.api.bukkit.menu.type.chest.ChestMenuType
 import com.github.mayblock.easylib.api.scheduler.TaskScheduler
 import com.github.mayblock.easylib.api.util.Priority
 import com.github.mayblock.easylib.impl.bukkit.menu.slot.SlotSpec
 import com.github.mayblock.easylib.impl.bukkit.menu.slot.builder.SlotBuilder
+import com.github.mayblock.easylib.impl.bukkit.scheduler.BukkitAsyncExecutor
 import com.github.mayblock.easylib.impl.bukkit.util.item
+import com.github.mayblock.easylib.packetevents.PacketManager
+import io.mockk.mockk
 import net.kyori.adventure.text.Component
 import org.bukkit.Material
 import org.mockbukkit.mockbukkit.MockBukkit
@@ -19,8 +20,12 @@ import kotlin.test.assertEquals
 import kotlin.time.Duration.Companion.seconds
 
 /** 立即同步执行每个被排的任务一次的假调度器（断言 isAsync=false）。 */
-private class AsyncTrackingScheduler(val asyncFlags: MutableList<Boolean> = mutableListOf()) : TaskScheduler {
-    override fun scheduleTask(task: TaskScheduler.Task): Int { asyncFlags += task.isAsync; task.onTick(); return 0 }
+private class AsyncTrackingScheduler(
+    val asyncFlags: MutableList<Boolean> = mutableListOf()
+) : TaskScheduler {
+    override fun scheduleTask(task: TaskScheduler.Task): Int {
+        asyncFlags += task.executor is BukkitAsyncExecutor; task.onTick(); return 0
+    }
     override fun cancelTask(taskId: Int): Boolean = true
     override fun cancelAllTasks() {}
 }
@@ -49,7 +54,11 @@ private class RecordingScheduler : TaskScheduler {
 class RealChestMenuUpdateTest {
 
     private lateinit var server: org.mockbukkit.mockbukkit.ServerMock
-    @BeforeTest fun setUp() { server = MockBukkit.mock() }
+
+    @BeforeTest
+    fun setUp() {
+        server = MockBukkit.mock()
+    }
     @AfterTest fun tearDown() { MockBukkit.unmock() }
 
     private fun menu(scheduler: TaskScheduler, specs: Map<Int, SlotSpec>) =

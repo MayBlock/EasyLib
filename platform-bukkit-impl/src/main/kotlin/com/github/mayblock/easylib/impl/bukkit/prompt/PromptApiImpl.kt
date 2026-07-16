@@ -1,7 +1,6 @@
 package com.github.mayblock.easylib.impl.bukkit.prompt
 
 import com.github.mayblock.easylib.api.bukkit.prompt.PromptApi
-import com.github.mayblock.easylib.api.scheduler.TaskScheduler
 import com.github.mayblock.easylib.api.util.Disposable
 import com.github.mayblock.easylib.api.util.Vector
 import com.github.mayblock.easylib.impl.bukkit.util.sendPackets
@@ -10,7 +9,6 @@ import com.github.mayblock.easylib.packetevents.packet.updateSign
 import com.github.mayblock.easylib.packetevents.util.toVector3i
 import com.github.retrooper.packetevents.event.PacketListener
 import com.github.retrooper.packetevents.event.PacketReceiveEvent
-import com.github.retrooper.packetevents.protocol.nbt.NBT
 import com.github.retrooper.packetevents.protocol.packettype.PacketType
 import com.github.retrooper.packetevents.protocol.world.states.WrappedBlockState
 import com.github.retrooper.packetevents.protocol.world.states.type.StateTypes
@@ -19,14 +17,13 @@ import com.github.retrooper.packetevents.wrapper.play.client.WrapperPlayClientUp
 import io.github.retrooper.packetevents.util.SpigotConversionUtil
 import kotlinx.coroutines.suspendCancellableCoroutine
 import org.bukkit.Bukkit
-import org.bukkit.Location
 import org.bukkit.entity.Player
 import org.bukkit.event.EventHandler
 import org.bukkit.event.HandlerList
 import org.bukkit.event.Listener
 import org.bukkit.event.player.PlayerQuitEvent
 import org.slf4j.LoggerFactory
-import java.util.UUID
+import java.util.*
 import java.util.concurrent.ConcurrentHashMap
 import kotlin.coroutines.resume
 
@@ -140,7 +137,7 @@ class PromptApiImpl(
      * 防止玩家中途下线导致 [promptList] 条目永久残留
      */
     @EventHandler
-    fun onQuit(e: PlayerQuitEvent) {
+    private fun onQuit(e: PlayerQuitEvent) {
         promptList.remove(e.player.uniqueId)?.second?.invoke(null)
     }
 }

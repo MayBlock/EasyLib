@@ -1,6 +1,7 @@
 package com.github.mayblock.easylib.impl.bukkit.overlay.slot
 
 import com.github.mayblock.easylib.api.bukkit.overlay.slot.dsl.OverlayUpdateScope
+import com.github.mayblock.easylib.api.scheduler.TaskExecutor
 import com.github.mayblock.easylib.api.scheduler.TaskScheduler
 import org.bukkit.inventory.ItemStack
 
@@ -16,6 +17,7 @@ import org.bukkit.inventory.ItemStack
 internal class SlotUpdateLoop(
     private val map: SlotMap,
     private val scheduler: TaskScheduler,
+    private val executor: TaskExecutor,
     private val repaint: (index: Int) -> Unit,
 ) {
     private val taskIds = mutableListOf<Int>()
@@ -34,20 +36,16 @@ internal class SlotUpdateLoop(
                 // 与事件总线同约定：priority 小值先执行。同 trigger 规则共享同一事务上下文
                 // 串行执行（后序规则可见前序修改），块全部结束后统一提交一次。
                 val ordered = rules.sortedBy { it.priority }
-                taskIds += scheduler.scheduleTask {
-                    trigger = ruleTrigger
-                    isAsync = true
-                    onTick = {
-                        val before = slot.item
-                        val scope = UpdateScope(index, before.clone())
-                        ordered.forEach { rule -> rule.block(scope) }
-                        // 提交提案：仅当规则确实改了物品（值比较），且本 tick 无人直接写入本槽
-                        // （写时克隆 ⇒ 每次写入都是新对象，=== 即版本戳）。有写入则提案作废，
-                        // 绝不用过期提案回滚更新的值。
-                        if (scope.item != before && slot.item === before) {
-                            slot.item = scope.item
-                            repaint(index)
-                        }
+                taskIds += scheduler.scheduleTask(ruleTrigger, executor) {
+                    val before = slot.item
+                    val scope = UpdateScope(index, before.clone())
+                    ordered.forEach { rule -> rule.block(scope) }
+                    // 提交提案：仅当规则确实改了物品（值比较），且本 tick 无人直接写入本槽
+                    // （写时克隆 ⇒ 每次写入都是新对象，=== 即版本戳）。有写入则提案作废，
+                    // 绝不用过期提案回滚更新的值。
+                    if (scope.item != before && slot.item === before) {
+                        slot.item = scope.item
+                        repaint(index)
                     }
                 }
             }

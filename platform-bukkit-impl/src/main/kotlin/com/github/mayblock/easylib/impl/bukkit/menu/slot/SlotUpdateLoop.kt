@@ -30,16 +30,12 @@ internal class SlotUpdateLoop(
                 // 与事件总线同约定：priority 小值先执行。同 trigger 规则共享同一事件对象
                 // 串行执行（后序规则可见前序修改），块全部结束后统一写入容器一次。
                 val ordered = rules.sortedBy { it.priority }
-                taskIds += taskScheduler.scheduleTask {
-                    trigger = ruleTrigger
-                    isAsync = false // 真实容器 setItem 必须主线程
-                    onTick = {
-                        // 读容器当前物品（getItem 已返回拷贝，事务快照语义与原实现一致）
-                        val current = menu.getItem(index) ?: item(Material.AIR)
-                        val event = SlotUpdateEvent(menu, index, current.clone())
-                        ordered.forEach { rule -> rule.block(event) }
-                        if (event.item != current) menu.setItem(index, event.item)
-                    }
+                taskIds += taskScheduler.scheduleTask(ruleTrigger) { // 操作物品需要主线程（默认主线程）
+                    // 读容器当前物品（getItem 已返回拷贝，事务快照语义与原实现一致）
+                    val current = menu.getItem(index) ?: item(Material.AIR)
+                    val event = SlotUpdateEvent(menu, index, current.clone())
+                    ordered.forEach { rule -> rule.block(event) }
+                    if (event.item != current) menu.setItem(index, event.item)
                 }
             }
         }

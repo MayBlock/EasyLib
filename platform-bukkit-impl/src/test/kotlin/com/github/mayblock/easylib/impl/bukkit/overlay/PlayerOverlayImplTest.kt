@@ -1,13 +1,14 @@
 package com.github.mayblock.easylib.impl.bukkit.overlay
 
-import com.github.mayblock.easylib.impl.bukkit.overlay.slot.OverlaySlotSpec
 import com.github.mayblock.easylib.api.bukkit.overlay.slot.dsl.onAction
-import com.github.mayblock.easylib.api.bukkit.overlay.slot.event.OverlaySlotActionEvent
 import com.github.mayblock.easylib.api.bukkit.overlay.slot.event.OverlayHideEvent
+import com.github.mayblock.easylib.api.bukkit.overlay.slot.event.OverlaySlotActionEvent
 import com.github.mayblock.easylib.api.event.on
+import com.github.mayblock.easylib.api.scheduler.TaskExecutor
 import com.github.mayblock.easylib.api.scheduler.TaskScheduler
 import com.github.mayblock.easylib.api.util.Disposable
 import com.github.mayblock.easylib.impl.bukkit.overlay.builder.OverlaySlotBuilder
+import com.github.mayblock.easylib.impl.bukkit.overlay.slot.OverlaySlotSpec
 import com.github.mayblock.easylib.impl.bukkit.overlay.slot.SlotMap
 import com.github.mayblock.easylib.impl.bukkit.overlay.transport.OverlayTransport
 import com.github.mayblock.easylib.impl.bukkit.util.item
@@ -78,10 +79,11 @@ class PlayerOverlayImplTest {
     private fun build(
         specs: Map<Int, OverlaySlotSpec>,
         scheduler: TaskScheduler = RecordingScheduler(),
+        executor: TaskExecutor = TaskExecutor.Direct,
         transport: FakeTransport = FakeTransport(),
     ): Triple<PlayerOverlayImpl, FakeTransport, TaskScheduler> {
         val map = SlotMap(specs)
-        val overlay = PlayerOverlayImpl(specs, map, scheduler, transport)
+        val overlay = PlayerOverlayImpl(specs, map, scheduler, executor, transport)
         return Triple(overlay, transport, scheduler)
     }
 

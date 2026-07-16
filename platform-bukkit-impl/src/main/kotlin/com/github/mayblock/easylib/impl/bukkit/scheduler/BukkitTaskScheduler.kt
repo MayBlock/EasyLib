@@ -9,7 +9,7 @@ import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.atomic.AtomicInteger
 
 class BukkitTaskScheduler(
-    private val plugin: Plugin
+    internal val plugin: Plugin
 ) : TaskScheduler {
 
     private val idGenerator = AtomicInteger(0)
@@ -43,43 +43,19 @@ class BukkitTaskScheduler(
             // 直接把 map 里的记录（占位或真实引用）摘掉即可。
             tasks.remove(id)
         }
-
         if (isOneShot) {
             tasks[id] = placeholder
         }
-
         val bukkitTask = when (trigger) {
-            TaskScheduler.Trigger.Once -> if (task.isAsync) {
-                Bukkit.getScheduler().runTaskAsynchronously(plugin, oneShotRunnable)
-            } else Bukkit.getScheduler().runTask(plugin, oneShotRunnable)
+            TaskScheduler.Trigger.Once ->
+                Bukkit.getScheduler().runTask(plugin, oneShotRunnable)
 
-            is TaskScheduler.Trigger.Delay -> if (task.isAsync) {
-                Bukkit.getScheduler().runTaskLaterAsynchronously(
-                    plugin,
-                    oneShotRunnable,
-                    trigger.delay.toTicks()
-                )
-            } else Bukkit.getScheduler().runTaskLater(
-                plugin,
-                oneShotRunnable,
-                trigger.delay.toTicks()
-            )
+            is TaskScheduler.Trigger.Delay ->
+                Bukkit.getScheduler().runTaskLater(plugin, oneShotRunnable, trigger.delay.toTicks())
 
-            is TaskScheduler.Trigger.Interval -> if (task.isAsync) {
-                Bukkit.getScheduler().runTaskTimerAsynchronously(
-                    plugin,
-                    repeatingRunnable,
-                    0,
-                    trigger.period.toTicks()
-                )
-            } else Bukkit.getScheduler().runTaskTimer(
-                plugin,
-                repeatingRunnable,
-                0,
-                trigger.period.toTicks()
-            )
+            is TaskScheduler.Trigger.Interval ->
+                Bukkit.getScheduler().runTaskTimer(plugin, repeatingRunnable, 0, trigger.period.toTicks())
         }
-
         if (isOneShot) {
             // 只有占位仍在（任务还没跑完自删）时才回填真实引用；
             // 若占位已经被自删，说明任务已经完成，不能让这条记录死而复生。
@@ -91,10 +67,9 @@ class BukkitTaskScheduler(
     }
 
     override fun cancelTask(taskId: Int): Boolean {
-        val removed = tasks.remove(taskId)?.also {
-            it.cancel()
-        } != null
-        return removed
+        val task = tasks.remove(taskId) ?: return false
+        task.cancel()
+        return true
     }
 
     override fun cancelAllTasks() {

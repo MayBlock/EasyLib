@@ -6,8 +6,8 @@ plugins {
 
 dependencies {
     implementation(project(":common-api"))
-    api(libs.bundles.kotlinxEcosystem)
     api(libs.slf4jApi)
+    implementation(libs.bundles.kotlinxEcosystem)
     implementation(libs.boostedYaml)
     testImplementation(kotlin("test"))
     testImplementation(libs.bundles.mockk)

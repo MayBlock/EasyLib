@@ -8,16 +8,21 @@ interface TaskScheduler {
     fun cancelTask(taskId: Int): Boolean
     fun cancelAllTasks()
 
-    fun scheduleTask(builder: TaskBuilder.() -> Unit): Int {
-        return TaskBuilder()
-            .apply(builder)
-            .build()
-            .let(::scheduleTask)
+    fun scheduleTask(
+        trigger: Trigger = Trigger.Once,
+        executor: TaskExecutor = TaskExecutor.Direct,
+        block: () -> Unit
+    ): Int {
+        return object : Task {
+            override val trigger: Trigger = trigger
+            override val executor: TaskExecutor = executor
+            override val onTick: () -> Unit = block
+        }.let(::scheduleTask)
     }
 
     interface Task {
         val trigger: Trigger
-        val isAsync: Boolean
+        val executor: TaskExecutor
         val onTick: () -> Unit
     }
 
@@ -26,24 +31,5 @@ interface TaskScheduler {
         data object Once : Trigger
         data class Delay(val delay: Duration) : Trigger
         data class Interval(val period: Duration) : Trigger
-    }
-
-    @DslMarker
-    annotation class TaskDsl
-
-    @TaskDsl
-    class TaskBuilder {
-        var trigger: Trigger = Trigger.Once
-        var isAsync: Boolean = false
-        var onTick: (() -> Unit)? = null
-
-        internal fun build(): Task {
-            require(onTick != null) { "onTick can not be null." }
-            return object : Task {
-                override val trigger = this@TaskBuilder.trigger
-                override val isAsync = this@TaskBuilder.isAsync
-                override val onTick = this@TaskBuilder.onTick!!
-            }
-        }
     }
 }

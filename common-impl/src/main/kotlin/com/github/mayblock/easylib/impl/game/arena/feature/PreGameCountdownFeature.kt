@@ -3,6 +3,7 @@ package com.github.mayblock.easylib.impl.game.arena.feature
 import com.github.mayblock.easylib.api.feature.Feature
 import com.github.mayblock.easylib.api.feature.FeatureKey
 import com.github.mayblock.easylib.api.game.arena.Arena
+import com.github.mayblock.easylib.api.scheduler.TaskExecutor
 import com.github.mayblock.easylib.api.scheduler.TaskScheduler
 import java.util.concurrent.atomic.AtomicLong
 import kotlin.time.Duration.Companion.milliseconds
@@ -11,6 +12,7 @@ open class PreGameCountdownFeature<T>(
     protected val requiredPlayers: Int,
     protected val playerCount: () -> Int,
     protected val startCountdown: Long,
+    protected val executor: TaskExecutor,
     protected val isActive: () -> Boolean,
     protected open val onCountdownTick: (State, Long) -> Unit = { _, _ -> },
     protected open val onStateChanged: (State, State) -> Unit = { _, _ -> },
@@ -26,6 +28,7 @@ open class PreGameCountdownFeature<T>(
             requiredPlayers,
             playerCount,
             startCountdown,
+            executor,
             isActive,
             onCountdownTick,
             onStateChanged,
@@ -47,6 +50,7 @@ private class CountdownTask(
     private val requiredPlayers: Int,
     private val playerCount: () -> Int,
     startCountdown: Long,
+    override val executor: TaskExecutor,
     private val isActive: () -> Boolean,
     private val onCountdownTick: (PreGameCountdownFeature.State, Long) -> Unit,
     private val onStateChanged: (PreGameCountdownFeature.State, PreGameCountdownFeature.State) -> Unit,
@@ -66,7 +70,6 @@ private class CountdownTask(
     private val timer = AtomicLong(initialCountdown)
 
     override val trigger: TaskScheduler.Trigger = TaskScheduler.Trigger.Interval(50.milliseconds)
-    override val isAsync: Boolean = false
     override val onTick = onTick@{
         if (!isActive()) return@onTick
         if (state != PreGameCountdownFeature.State.WAITING && state != PreGameCountdownFeature.State.READY) {

@@ -13,7 +13,7 @@ interface ConfigDelegate {
     fun reload()
     fun save()
     fun <T> value(key: String, default: T & Any): ConfigProperty<ConfigDelegate, T>
-    fun <T> valueOrNull(key: String, type: Class<T>, default: T?): ConfigProperty<ConfigDelegate, T?>
+    fun <T> valueOrNull(key: String, type: Class<out T>, default: T?): ConfigProperty<ConfigDelegate, T?>
     fun <T : Enum<T>> enumValue(key: String, default: T): ConfigProperty<ConfigDelegate, T>
 }
 

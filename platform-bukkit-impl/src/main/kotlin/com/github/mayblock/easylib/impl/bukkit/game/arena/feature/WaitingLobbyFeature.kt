@@ -10,6 +10,7 @@ import com.github.mayblock.easylib.api.game.arena.event.ArenaLeaveEvent
 import com.github.mayblock.easylib.api.scheduler.TaskScheduler
 import com.github.mayblock.easylib.api.util.Disposable
 import com.github.mayblock.easylib.impl.bukkit.game.arena.bridge.BridgeEvent
+import com.github.mayblock.easylib.impl.bukkit.scheduler.BukkitAsyncExecutor
 import com.github.mayblock.easylib.impl.bukkit.util.sendActionBar
 import com.github.mayblock.easylib.impl.bukkit.util.setProgressbar
 import com.github.mayblock.easylib.impl.bukkit.util.ticks
@@ -19,12 +20,14 @@ import org.bukkit.ChatColor
 import org.bukkit.GameMode
 import org.bukkit.Sound
 import org.bukkit.entity.Player
+import org.bukkit.plugin.Plugin
 import kotlin.math.ceil
 import kotlin.time.Duration
 import kotlin.time.Duration.Companion.seconds
 import kotlin.time.DurationUnit
 
 class WaitingLobbyFeature<T>(
+    plugin: Plugin,
     minPlayers: Int,
     private val maxPlayers: Int,
     playerCount: () -> Int,
@@ -35,7 +38,8 @@ class WaitingLobbyFeature<T>(
     requiredPlayers = minPlayers,
     playerCount = playerCount,
     startCountdown = countdownDuration.toTicks(),
-    isActive = isActive
+    executor = BukkitAsyncExecutor(plugin),
+    isActive = isActive,
 ) where T : BukkitArena<out BukkitArenaPlayer, out BukkitArenaEntity>, T : TaskScheduler {
 
     companion object Key : FeatureKey<WaitingLobbyFeature<*>>("WaitingLobbyFeature")

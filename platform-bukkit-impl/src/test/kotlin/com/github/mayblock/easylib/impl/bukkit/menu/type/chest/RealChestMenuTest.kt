@@ -1,16 +1,16 @@
 package com.github.mayblock.easylib.impl.bukkit.menu.type.chest
 
-import com.github.mayblock.easylib.packetevents.PacketManager
 import com.github.mayblock.easylib.api.bukkit.menu.MenuCloseEvent
 import com.github.mayblock.easylib.api.bukkit.menu.MenuEvent
 import com.github.mayblock.easylib.api.bukkit.menu.MenuOpenEvent
 import com.github.mayblock.easylib.api.bukkit.menu.slot.event.InventoryClickEvent
 import com.github.mayblock.easylib.api.bukkit.menu.type.chest.ChestMenuType
 import com.github.mayblock.easylib.api.event.on
-import com.github.mayblock.easylib.api.scheduler.TaskScheduler
-import com.github.mayblock.easylib.impl.bukkit.menu.slot.builder.SlotBuilder
 import com.github.mayblock.easylib.impl.bukkit.menu.slot.SlotSpec
+import com.github.mayblock.easylib.impl.bukkit.menu.slot.builder.SlotBuilder
+import com.github.mayblock.easylib.impl.bukkit.scheduler.BukkitTaskScheduler
 import com.github.mayblock.easylib.impl.bukkit.util.item
+import com.github.mayblock.easylib.packetevents.PacketManager
 import io.mockk.mockk
 import net.kyori.adventure.text.Component
 import org.bukkit.Material
@@ -27,7 +27,14 @@ class RealChestMenuTest {
     private fun spec(item: ItemStack) = SlotBuilder(InventoryClickEvent::class.java).build(item)
 
     private fun menu(specs: Map<Int, SlotSpec>) =
-        RealChestMenu(mockk<TaskScheduler>(relaxed = true), mockk<PacketManager<*>>(relaxed = true), Component.text("交易"), ChestMenuType.GENERIC_9X3, specs, hidePlayerInventory = false)
+        RealChestMenu(
+            mockk<BukkitTaskScheduler>(relaxed = true),
+            mockk<PacketManager<*>>(relaxed = true),
+            Component.text("交易"),
+            ChestMenuType.GENERIC_9X3,
+            specs,
+            hidePlayerInventory = false
+        )
 
     @Test fun `真实容器尺寸与初始物品`() {
         val m = menu(mapOf(11 to spec(item(Material.DIAMOND, 3))))

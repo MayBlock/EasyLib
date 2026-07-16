@@ -1,6 +1,6 @@
 package com.github.mayblock.easylib.api.feature
 
-interface Feature<Context> {
+interface Feature<Context : Any> {
 
     val dependencies: List<FeatureKey<*>> get() = emptyList()
 
@@ -8,7 +8,7 @@ interface Feature<Context> {
     fun onUninstall(context: Context)
 }
 
-interface FeatureRegistry<Context> {
+interface FeatureRegistry<Context : Any> {
     fun <FeatureContext : Context, F : Feature<FeatureContext>> install(key: FeatureKey<in F>, factory: () -> F): F
     fun <FeatureContext : Context, F : Feature<FeatureContext>> uninstall(key: FeatureKey<in F>)
     fun <F : Feature<*>> getFeature(key: FeatureKey<in F>): F?

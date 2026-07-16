@@ -1,10 +1,6 @@
 package com.github.mayblock.easylib.impl.bukkit.menu
 
-import com.github.mayblock.easylib.api.bukkit.menu.Menu
-import com.github.mayblock.easylib.api.bukkit.menu.MenuCloseEvent
-import com.github.mayblock.easylib.api.bukkit.menu.MenuFactory
-import com.github.mayblock.easylib.api.bukkit.menu.MenuOpenEvent
-import com.github.mayblock.easylib.api.bukkit.menu.MenuRegistry
+import com.github.mayblock.easylib.api.bukkit.menu.*
 import com.github.mayblock.easylib.api.bukkit.menu.type.chest.ChestMenu
 import com.github.mayblock.easylib.api.bukkit.menu.type.chest.ChestMenuType
 import com.github.mayblock.easylib.api.bukkit.menu.type.chest.dsl.PageableChestMenuScope

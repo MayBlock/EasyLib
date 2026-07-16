@@ -23,7 +23,7 @@ import org.bukkit.inventory.InventoryHolder
 internal class MenuInteractionListener(private val owner: MenuManager) : Listener {
 
     /** holder → 菜单：仅路由实现了 [BukkitMenu] 且归属本 manager 的实例。 */
-    private fun route(holder: InventoryHolder?): BukkitMenu? =
+    fun route(holder: InventoryHolder?): BukkitMenu? =
         (holder as? BukkitMenu)?.takeIf { it.owner === owner }
 
     @EventHandler(priority = EventPriority.HIGH, ignoreCancelled = true)

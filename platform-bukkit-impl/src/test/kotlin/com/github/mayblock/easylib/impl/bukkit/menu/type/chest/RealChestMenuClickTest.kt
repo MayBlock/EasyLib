@@ -1,18 +1,18 @@
 package com.github.mayblock.easylib.impl.bukkit.menu.type.chest
 
-import com.github.mayblock.easylib.packetevents.PacketManager
 import com.github.mayblock.easylib.api.bukkit.menu.slot.dsl.SlotScope
 import com.github.mayblock.easylib.api.bukkit.menu.slot.event.SlotPlaceEvent
 import com.github.mayblock.easylib.api.bukkit.menu.slot.event.SlotTakeEvent
 import com.github.mayblock.easylib.api.bukkit.menu.type.chest.ChestMenuType
 import com.github.mayblock.easylib.api.event.on
-import com.github.mayblock.easylib.api.scheduler.TaskScheduler
 import com.github.mayblock.easylib.api.util.Priority
 import com.github.mayblock.easylib.impl.bukkit.menu.MenuInteractionListener
 import com.github.mayblock.easylib.impl.bukkit.menu.MenuManager
-import com.github.mayblock.easylib.impl.bukkit.menu.slot.builder.SlotBuilder
 import com.github.mayblock.easylib.impl.bukkit.menu.slot.SlotSpec
+import com.github.mayblock.easylib.impl.bukkit.menu.slot.builder.SlotBuilder
+import com.github.mayblock.easylib.impl.bukkit.scheduler.BukkitTaskScheduler
 import com.github.mayblock.easylib.impl.bukkit.util.item
+import com.github.mayblock.easylib.packetevents.PacketManager
 import io.mockk.mockk
 import net.kyori.adventure.text.Component
 import org.bukkit.Material
@@ -43,7 +43,14 @@ class RealChestMenuClickTest {
         SlotBuilder(ApiInventoryClickEvent::class.java).apply { block?.invoke(this) }.build(item)
 
     private fun menu(specs: Map<Int, SlotSpec>): RealChestMenu =
-        RealChestMenu(mockk<TaskScheduler>(relaxed = true), mockk<PacketManager<*>>(relaxed = true), Component.text("t"), ChestMenuType.GENERIC_9X3, specs, hidePlayerInventory = false)
+        RealChestMenu(
+            mockk<BukkitTaskScheduler>(relaxed = true),
+            mockk<PacketManager<*>>(relaxed = true),
+            Component.text("t"),
+            ChestMenuType.GENERIC_9X3,
+            specs,
+            hidePlayerInventory = false
+        )
 
     private fun open(m: RealChestMenu): Pair<Player, InventoryView> {
         val p = server.addPlayer()
@@ -230,7 +237,11 @@ class RealChestMenuClickTest {
         val m = menu(mapOf(5 to spec(item(Material.DIAMOND)))) // 无 handler 的声明槽
         // 监听器路由前会校验菜单归属（防止多 MenuManager 实例重复处理），
         // 因此这里显式把 m 挂到一个 manager 名下，再用同一 manager 构造监听器。
-        val mgr = MenuManager(mockk<TaskScheduler>(relaxed = true), mockk<PacketManager<*>>(relaxed = true), MockBukkit.createMockPlugin())
+        val mgr = MenuManager(
+            mockk<BukkitTaskScheduler>(relaxed = true),
+            mockk<PacketManager<*>>(relaxed = true),
+            MockBukkit.createMockPlugin()
+        )
         m.owner = mgr
         val (_, view) = open(m)
         val listener = MenuInteractionListener(mgr)

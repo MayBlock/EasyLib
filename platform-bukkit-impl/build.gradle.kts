@@ -10,6 +10,7 @@ dependencies {
     compileOnly("org.spigotmc:spigot-api:26.1.2-R0.1-SNAPSHOT")
     compileOnly(libs.packetEvents.spigot)
     compileOnly(libs.adventure.serializer.legacy)
+    implementation(libs.bundles.kotlinxEcosystem)
     implementation(libs.nbtApi)
     implementation(libs.fastboard)
     implementation(libs.caffeine)

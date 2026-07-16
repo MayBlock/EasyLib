@@ -1,11 +1,11 @@
 package com.github.mayblock.easylib.impl.bukkit.overlay
 
-import com.github.mayblock.easylib.impl.bukkit.overlay.slot.OverlaySlotSpec
 import com.github.mayblock.easylib.api.bukkit.overlay.slot.event.OverlayEvent
 import com.github.mayblock.easylib.api.event.EventBus
 import com.github.mayblock.easylib.api.event.EventListener
 import com.github.mayblock.easylib.api.event.EventSource
 import com.github.mayblock.easylib.api.scheduler.TaskScheduler
+import com.github.mayblock.easylib.impl.bukkit.overlay.slot.OverlaySlotSpec
 import com.github.mayblock.easylib.impl.event.SimpleEventBus
 
 /**
@@ -42,7 +42,9 @@ internal class OverlayEventDispatcher(
      * resync 发包不受影响，仍在 netty 线程原地执行（归 [com.github.mayblock.easylib.impl.bukkit.overlay.transport.OverlayTransport] 管）。
      */
     fun publishOnMainThread(event: OverlayEvent) {
-        scheduler.scheduleTask { onTick = { publish(event) } }
+        scheduler.scheduleTask {
+            publish(event)
+        }
     }
 
     fun close() = bus.unsubscribeAll()

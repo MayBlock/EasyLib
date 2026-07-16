@@ -41,7 +41,7 @@ abstract class BaseConfigDelegate(
         }.also(properties::add)
     }
 
-    override fun <T> valueOrNull(key: String, type: Class<T>, default: T?): Property<ConfigDelegate, T?> {
+    override fun <T> valueOrNull(key: String, type: Class<out T>, default: T?): Property<ConfigDelegate, T?> {
         return object : Property<ConfigDelegate, T?>(config) {
 
             override fun getValue(thisRef: ConfigDelegate, property: KProperty<*>): T? {

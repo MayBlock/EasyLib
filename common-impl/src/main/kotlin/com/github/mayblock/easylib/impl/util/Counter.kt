@@ -1,67 +1,46 @@
 package com.github.mayblock.easylib.impl.util
 
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.delay
-import kotlinx.coroutines.launch
+import com.github.mayblock.easylib.api.scheduler.TaskExecutor
+import com.github.mayblock.easylib.api.scheduler.TaskScheduler
+import com.github.mayblock.easylib.api.util.Disposable
+import java.util.concurrent.CopyOnWriteArrayList
 import java.util.concurrent.atomic.AtomicInteger
+import java.util.concurrent.atomic.AtomicReference
 import kotlin.time.Duration
 
 class Counter(
     private val interval: Duration,
-    private val scope: CoroutineScope,
+    private val scheduler: TaskScheduler,
     private val initialValue: Int = 0,
-    private val type: Type = Type.INCREMENT,
+    private val step: Int = 1,
+    private val notifyExecutor: TaskExecutor = TaskExecutor.Direct
 ) {
 
-    enum class Type {
-        INCREMENT,
-        DECREMENT,
-    }
-
-    private val listeners = mutableListOf<suspend (Int, Controller) -> Unit>()
+    private val listeners = CopyOnWriteArrayList<(Int) -> Unit>()
     private val counter = AtomicInteger(initialValue)
-    private val controller = Controller(this)
-    private var isActive = false
-
-    inner class Controller(val counter: Counter) {
-        fun stop() {
-            isActive = false
-        }
-
-        fun set(newValue: Int) {
-            counter.counter.set(newValue)
-        }
-
-        fun reset() {
-            counter.counter.set(initialValue)
-        }
-    }
+    private var disposableRef = AtomicReference<Disposable?>(null)
 
     fun get() = counter.get()
+    fun set(value: Int) = counter.set(value)
+    fun reset() = counter.set(initialValue)
 
-    fun addListener(block: suspend (Int, Controller) -> Unit) {
+    fun addListener(block: (Int) -> Unit) {
         listeners.add(block)
     }
 
-    fun start(): Controller {
-        isActive = true
-        scope.launch {
-            while (isActive) {
-                val count = when (type) {
-                    Type.INCREMENT -> {
-                        counter.incrementAndGet()
-                    }
+    fun removeListener(block: (Int) -> Unit) = listeners.remove(block)
 
-                    Type.DECREMENT -> {
-                        counter.decrementAndGet()
-                    }
-                }
-                listeners.forEach { block ->
-                    block(count, controller)
-                }
-                delay(interval)
-            }
+    fun start() {
+        val placeholder = Disposable { }
+        if (!disposableRef.compareAndSet(null, placeholder)) return
+        val taskId = scheduler.scheduleTask(TaskScheduler.Trigger.Interval(interval), notifyExecutor) {
+            val count = counter.addAndGet(step)
+            listeners.forEach { it(count) }
         }
-        return Controller(this)
+        disposableRef.set(Disposable { scheduler.cancelTask(taskId) })
+    }
+
+    fun stop() {
+        disposableRef.getAndSet(null)?.dispose()
     }
 }

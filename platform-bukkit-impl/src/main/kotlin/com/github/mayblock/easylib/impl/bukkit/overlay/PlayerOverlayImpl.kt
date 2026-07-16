@@ -1,16 +1,17 @@
 package com.github.mayblock.easylib.impl.bukkit.overlay
 
-import com.github.mayblock.easylib.impl.bukkit.overlay.slot.SlotUpdateLoop
-import com.github.mayblock.easylib.impl.bukkit.overlay.slot.OverlaySlotSpec
+import com.github.mayblock.easylib.api.bukkit.overlay.PlayerOverlay
 import com.github.mayblock.easylib.api.bukkit.overlay.slot.event.OverlayEvent
 import com.github.mayblock.easylib.api.bukkit.overlay.slot.event.OverlayHideEvent
 import com.github.mayblock.easylib.api.bukkit.overlay.slot.event.OverlayShowEvent
 import com.github.mayblock.easylib.api.bukkit.overlay.slot.event.OverlaySlotActionEvent
-import com.github.mayblock.easylib.api.bukkit.overlay.PlayerOverlay
 import com.github.mayblock.easylib.api.event.EventSource
+import com.github.mayblock.easylib.api.scheduler.TaskExecutor
 import com.github.mayblock.easylib.api.scheduler.TaskScheduler
 import com.github.mayblock.easylib.api.util.Disposable
+import com.github.mayblock.easylib.impl.bukkit.overlay.slot.OverlaySlotSpec
 import com.github.mayblock.easylib.impl.bukkit.overlay.slot.SlotMap
+import com.github.mayblock.easylib.impl.bukkit.overlay.slot.SlotUpdateLoop
 import com.github.mayblock.easylib.impl.bukkit.overlay.transport.OverlayTransport
 import com.github.mayblock.easylib.impl.bukkit.util.ViewerRegistry
 import com.github.mayblock.easylib.impl.bukkit.util.isEmptyStack
@@ -33,12 +34,13 @@ internal class PlayerOverlayImpl(
     specs: Map<Int, OverlaySlotSpec>,
     private val map: SlotMap,
     scheduler: TaskScheduler,
+    executor: TaskExecutor,
     private val transport: OverlayTransport,
     private val dispatcher: OverlayEventDispatcher = OverlayEventDispatcher(scheduler),
 ) : PlayerOverlay, EventSource<OverlayEvent> by dispatcher {
 
     private val viewers = ViewerRegistry()
-    private val updateLoop = SlotUpdateLoop(map, scheduler, ::repaint)
+    private val updateLoop = SlotUpdateLoop(map, scheduler, executor, ::repaint)
     private var transportSub: Disposable? = null
 
     /** 覆盖层销毁时的清理钩子（由持有者，如 [OverlayManager]，挂接以停止追踪本实例）。 */

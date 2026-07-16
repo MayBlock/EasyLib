@@ -1,12 +1,12 @@
 package com.github.mayblock.easylib.impl.bukkit.menu
 
-import com.github.mayblock.easylib.packetevents.PacketManager
 import com.github.mayblock.easylib.api.bukkit.menu.MenuCloseEvent
 import com.github.mayblock.easylib.api.bukkit.menu.type.chest.ChestMenuType
 import com.github.mayblock.easylib.api.bukkit.menu.type.chest.dsl.slot
 import com.github.mayblock.easylib.api.event.on
-import com.github.mayblock.easylib.api.scheduler.TaskScheduler
 import com.github.mayblock.easylib.impl.bukkit.menu.type.chest.RealChestMenu
+import com.github.mayblock.easylib.impl.bukkit.scheduler.BukkitTaskScheduler
+import com.github.mayblock.easylib.packetevents.PacketManager
 import io.mockk.mockk
 import net.kyori.adventure.text.Component
 import org.bukkit.Material
@@ -14,13 +14,7 @@ import org.bukkit.event.inventory.InventoryCloseEvent
 import org.bukkit.event.inventory.InventoryOpenEvent
 import org.bukkit.event.player.PlayerQuitEvent
 import org.mockbukkit.mockbukkit.MockBukkit
-import kotlin.test.AfterTest
-import kotlin.test.BeforeTest
-import kotlin.test.Test
-import kotlin.test.assertEquals
-import kotlin.test.assertFailsWith
-import kotlin.test.assertFalse
-import kotlin.test.assertTrue
+import kotlin.test.*
 
 class MenuManagerChestTest {
 
@@ -28,7 +22,11 @@ class MenuManagerChestTest {
     @BeforeTest fun setUp() { server = MockBukkit.mock() }
     @AfterTest fun tearDown() { MockBukkit.unmock() }
 
-    private fun manager() = MenuManager(mockk<TaskScheduler>(relaxed = true), mockk<PacketManager<*>>(relaxed = true), MockBukkit.createMockPlugin())
+    private fun manager() = MenuManager(
+        mockk<BukkitTaskScheduler>(relaxed = true),
+        mockk<PacketManager<*>>(relaxed = true),
+        MockBukkit.createMockPlugin()
+    )
 
     @Test fun `createChestMenu 产出真实容器菜单`() {
         val mgr = manager()

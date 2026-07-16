@@ -2,27 +2,19 @@ package com.github.mayblock.easylib.impl.bukkit.menu
 
 import com.github.mayblock.easylib.api.bukkit.menu.MenuEvent
 import com.github.mayblock.easylib.api.event.EventSource
-import com.github.mayblock.easylib.api.scheduler.TaskScheduler
+import com.github.mayblock.easylib.impl.bukkit.scheduler.BukkitTaskScheduler
 import com.github.mayblock.easylib.impl.event.SimpleEventBus
 import com.github.mayblock.easylib.packetevents.PacketManager
 import io.mockk.mockk
+import net.kyori.adventure.text.Component
 import org.bukkit.Bukkit
 import org.bukkit.entity.Player
-import org.bukkit.event.inventory.ClickType
-import org.bukkit.event.inventory.InventoryAction
-import org.bukkit.event.inventory.InventoryClickEvent
-import org.bukkit.event.inventory.InventoryCloseEvent
-import org.bukkit.event.inventory.InventoryDragEvent
-import org.bukkit.event.inventory.InventoryOpenEvent
-import org.bukkit.event.inventory.InventoryType
+import org.bukkit.event.inventory.*
+import org.bukkit.event.player.PlayerQuitEvent
 import org.bukkit.inventory.Inventory
 import org.bukkit.inventory.ItemStack
 import org.mockbukkit.mockbukkit.MockBukkit
-import kotlin.test.AfterTest
-import kotlin.test.BeforeTest
-import kotlin.test.Test
-import kotlin.test.assertEquals
-import kotlin.test.assertTrue
+import kotlin.test.*
 
 /**
  * 监听器 UI 无关性验收：路由只认 [BukkitMenu] 接口 + owner 归属，对具体 UI 类型零感知。
@@ -36,7 +28,11 @@ class MenuInteractionListenerTest {
     @AfterTest fun tearDown() { MockBukkit.unmock() }
 
     private fun manager() =
-        MenuManager(mockk<TaskScheduler>(relaxed = true), mockk<PacketManager<*>>(relaxed = true), MockBukkit.createMockPlugin())
+        MenuManager(
+            mockk<BukkitTaskScheduler>(relaxed = true),
+            mockk<PacketManager<*>>(relaxed = true),
+            MockBukkit.createMockPlugin()
+        )
 
     /** 非 chest 的第二种 UI：漏斗容器菜单，仅记录各 handle* 的调用。 */
     private class FakeHopperMenu(
@@ -95,7 +91,7 @@ class MenuInteractionListenerTest {
         val p = server.addPlayer()
         p.openInventory(menu.inventory)!!
 
-        listener.onQuit(org.bukkit.event.player.PlayerQuitEvent(p, "quit"))
+        listener.onQuit(PlayerQuitEvent(p, Component.empty(), PlayerQuitEvent.QuitReason.DISCONNECTED))
         assertEquals(listOf<Player>(p), menu.closes)
     }
 

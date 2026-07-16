@@ -22,10 +22,10 @@ internal class OverlayQuitListener(
 ) : Listener {
 
     @EventHandler
-    fun onQuit(e: PlayerQuitEvent) = overlays().forEach { it.onPlayerQuit(e.player) }
+    private fun onQuit(e: PlayerQuitEvent) = overlays().forEach { it.onPlayerQuit(e.player) }
 
     @EventHandler
-    fun onInventoryOpen(e: InventoryOpenEvent) {
+    private fun onInventoryOpen(e: InventoryOpenEvent) {
         val player = e.player as? Player ?: return
         overlays().forEach { it.hideIfViewing(player) }
     }

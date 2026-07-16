@@ -6,7 +6,7 @@ import com.github.mayblock.easylib.api.feature.FeatureRegistry
 import org.slf4j.LoggerFactory
 import java.util.concurrent.ConcurrentHashMap
 
-class SimpleFeatureRegistry<Context>(
+class SimpleFeatureRegistry<Context : Any>(
     private val context: Context
 ) : FeatureRegistry<Context> {
 
