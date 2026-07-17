@@ -1,6 +1,6 @@
 package com.github.mayblock.easylib.impl.bukkit.overlay
 
-import com.github.mayblock.easylib.api.bukkit.overlay.slot.event.OverlayEvent
+import com.github.mayblock.easylib.api.bukkit.overlay.OverlayEvent
 import com.github.mayblock.easylib.api.event.EventBus
 import com.github.mayblock.easylib.api.event.EventListener
 import com.github.mayblock.easylib.api.event.EventSource

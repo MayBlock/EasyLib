@@ -7,6 +7,7 @@ import com.github.mayblock.easylib.api.bukkit.menu.type.chest.dsl.PageableChestM
 import com.github.mayblock.easylib.api.event.on
 import com.github.mayblock.easylib.api.scheduler.TaskScheduler
 import com.github.mayblock.easylib.api.util.Priority
+import com.github.mayblock.easylib.impl.bukkit.menu.listener.MenuInteractionListener
 import com.github.mayblock.easylib.impl.bukkit.menu.type.chest.RealChestMenu
 import com.github.mayblock.easylib.impl.bukkit.menu.type.chest.builder.PageableChestMenuBuilder
 import com.github.mayblock.easylib.packetevents.PacketManager
@@ -16,8 +17,7 @@ import org.bukkit.event.HandlerList
 import org.bukkit.inventory.InventoryHolder
 import org.bukkit.plugin.Plugin
 import java.io.Closeable
-import java.util.Collections
-import java.util.IdentityHashMap
+import java.util.*
 
 class MenuManager(
     private val taskScheduler: TaskScheduler,

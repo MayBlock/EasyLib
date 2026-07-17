@@ -32,7 +32,7 @@ import org.bukkit.inventory.ItemStack
  * 与更新循环（[SlotUpdateLoop]）组合起来，自身只负责编排与点击/拖拽的放行门决策。
  *
  * 自身即 [org.bukkit.inventory.InventoryHolder]；点击/拖拽/开关由
- * [com.github.mayblock.easylib.impl.bukkit.menu.MenuInteractionListener] 按 holder 经 [BukkitMenu] 接口路由回本菜单。
+ * [com.github.mayblock.easylib.impl.bukkit.menu.listener.MenuInteractionListener] 按 holder 经 [BukkitMenu] 接口路由回本菜单。
  * 菜单级事件总线仅暴露订阅侧（[EventSource]），`emit` 由 [MenuEventDispatcher] 内部持有。
  */
 internal class RealChestMenu(

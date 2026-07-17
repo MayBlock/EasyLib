@@ -5,6 +5,7 @@ import com.github.mayblock.easylib.api.bukkit.menu.MenuDestroyEvent
 import com.github.mayblock.easylib.api.bukkit.menu.type.chest.ChestMenuType
 import com.github.mayblock.easylib.api.bukkit.menu.type.chest.dsl.slot
 import com.github.mayblock.easylib.api.event.on
+import com.github.mayblock.easylib.impl.bukkit.menu.listener.MenuInteractionListener
 import com.github.mayblock.easylib.impl.bukkit.menu.type.chest.RealChestMenu
 import com.github.mayblock.easylib.impl.bukkit.scheduler.BukkitTaskScheduler
 import com.github.mayblock.easylib.packetevents.PacketManager
@@ -85,7 +86,7 @@ class MenuManagerChestTest {
         // 断线兜底：此时玩家的 openInventory 仍指向菜单视图（上面是手工构造的事件，
         // 并未真正关闭视图），模拟「服务端在 quit 前已先触发过 InventoryCloseEvent」
         // 的双调场景 → onQuit → handleClose（第 2 次，应被幂等保护拦下）
-        server.pluginManager.callEvent(PlayerQuitEvent(p, "quit"))
+        server.pluginManager.callEvent(PlayerQuitEvent(p, Component.empty(), PlayerQuitEvent.QuitReason.DISCONNECTED))
 
         assertEquals(1, closes, "正常关窗 + quit 兜底双调时 MenuCloseEvent 应只派发一次")
     }
@@ -101,7 +102,7 @@ class MenuManagerChestTest {
         val p = server.addPlayer()
         p.openInventory(menu.inventory)!!
 
-        server.pluginManager.callEvent(PlayerQuitEvent(p, "quit"))
+        server.pluginManager.callEvent(PlayerQuitEvent(p, Component.empty(), PlayerQuitEvent.QuitReason.DISCONNECTED))
 
         assertEquals(1, closes, "直接 quit 时 MenuCloseEvent 应恰好派发一次")
     }

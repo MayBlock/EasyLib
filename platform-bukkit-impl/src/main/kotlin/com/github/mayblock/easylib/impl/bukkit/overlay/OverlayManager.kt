@@ -1,9 +1,9 @@
 package com.github.mayblock.easylib.impl.bukkit.overlay
 
+import com.github.mayblock.easylib.api.bukkit.overlay.OverlayDestroyEvent
 import com.github.mayblock.easylib.api.bukkit.overlay.PlayerOverlay
 import com.github.mayblock.easylib.api.bukkit.overlay.PlayerOverlayFactory
 import com.github.mayblock.easylib.api.bukkit.overlay.dsl.PlayerOverlayScope
-import com.github.mayblock.easylib.api.bukkit.overlay.slot.event.OverlayDestroyEvent
 import com.github.mayblock.easylib.api.event.on
 import com.github.mayblock.easylib.api.scheduler.TaskScheduler
 import com.github.mayblock.easylib.api.util.Priority
@@ -16,8 +16,7 @@ import org.bukkit.Bukkit
 import org.bukkit.event.HandlerList
 import org.bukkit.plugin.Plugin
 import java.io.Closeable
-import java.util.Collections
-import java.util.IdentityHashMap
+import java.util.*
 
 /** 覆盖层工厂：创建并跟踪覆盖层，`close()` 时统一销毁（清理更新循环 + 包监听 + 断线监听器）。 */
 class OverlayManager(

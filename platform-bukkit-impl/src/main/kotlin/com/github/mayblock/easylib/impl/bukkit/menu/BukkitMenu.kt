@@ -9,7 +9,7 @@ import org.bukkit.inventory.ItemStack
 
 /**
  * impl 侧所有 Bukkit 菜单的公共契约：既是路由锚点（[InventoryHolder]——Bukkit 事件经
- * holder 找回菜单），也是 [MenuInteractionListener] 的交互分发目标。
+ * holder 找回菜单），也是 [com.github.mayblock.easylib.impl.bukkit.menu.listener.MenuInteractionListener] 的交互分发目标。
  * 新增 UI 类型（如铁砧）：实现本接口即可自动获得事件路由，无需改动监听器。
  */
 internal interface BukkitMenu : Menu, InventoryHolder {

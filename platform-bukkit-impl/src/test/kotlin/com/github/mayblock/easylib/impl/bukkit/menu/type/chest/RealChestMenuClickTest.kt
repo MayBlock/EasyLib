@@ -6,8 +6,8 @@ import com.github.mayblock.easylib.api.bukkit.menu.slot.event.SlotTakeEvent
 import com.github.mayblock.easylib.api.bukkit.menu.type.chest.ChestMenuType
 import com.github.mayblock.easylib.api.event.on
 import com.github.mayblock.easylib.api.util.Priority
-import com.github.mayblock.easylib.impl.bukkit.menu.MenuInteractionListener
 import com.github.mayblock.easylib.impl.bukkit.menu.MenuManager
+import com.github.mayblock.easylib.impl.bukkit.menu.listener.MenuInteractionListener
 import com.github.mayblock.easylib.impl.bukkit.menu.slot.SlotSpec
 import com.github.mayblock.easylib.impl.bukkit.menu.slot.builder.SlotBuilder
 import com.github.mayblock.easylib.impl.bukkit.scheduler.BukkitTaskScheduler

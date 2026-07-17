@@ -1,10 +1,6 @@
 package com.github.mayblock.easylib.impl.bukkit.overlay
 
-import com.github.mayblock.easylib.api.bukkit.overlay.PlayerOverlay
-import com.github.mayblock.easylib.api.bukkit.overlay.slot.event.OverlayDestroyEvent
-import com.github.mayblock.easylib.api.bukkit.overlay.slot.event.OverlayEvent
-import com.github.mayblock.easylib.api.bukkit.overlay.slot.event.OverlayHideEvent
-import com.github.mayblock.easylib.api.bukkit.overlay.slot.event.OverlayShowEvent
+import com.github.mayblock.easylib.api.bukkit.overlay.*
 import com.github.mayblock.easylib.api.bukkit.overlay.slot.event.OverlaySlotActionEvent
 import com.github.mayblock.easylib.api.event.EventSource
 import com.github.mayblock.easylib.api.scheduler.TaskExecutor
