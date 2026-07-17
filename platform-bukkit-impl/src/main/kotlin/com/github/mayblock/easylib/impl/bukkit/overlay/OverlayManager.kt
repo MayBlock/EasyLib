@@ -45,7 +45,10 @@ class OverlayManager(
             }
 
     override fun close() {
-        overlays.forEach { it.destroy() }
+        // destroy() 会同步派发 OverlayDestroyEvent，其 MONITOR 监听会修改 overlays 本身；
+        // 必须遍历快照，否则会在 forEach 过程中并发结构性修改 overlays 导致 CME
+        // （与 MenuManager.close() 同源问题，此前 overlay 侧漏掉了这道防护）。
+        overlays.toList().forEach { it.destroy() }
         HandlerList.unregisterAll(quitListener)
         overlays.clear()
     }
