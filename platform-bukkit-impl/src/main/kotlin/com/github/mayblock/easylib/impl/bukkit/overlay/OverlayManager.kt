@@ -3,7 +3,10 @@ package com.github.mayblock.easylib.impl.bukkit.overlay
 import com.github.mayblock.easylib.api.bukkit.overlay.PlayerOverlay
 import com.github.mayblock.easylib.api.bukkit.overlay.PlayerOverlayFactory
 import com.github.mayblock.easylib.api.bukkit.overlay.dsl.PlayerOverlayScope
+import com.github.mayblock.easylib.api.bukkit.overlay.slot.event.OverlayDestroyEvent
+import com.github.mayblock.easylib.api.event.on
 import com.github.mayblock.easylib.api.scheduler.TaskScheduler
+import com.github.mayblock.easylib.api.util.Priority
 import com.github.mayblock.easylib.impl.bukkit.overlay.builder.PlayerOverlayBuilder
 import com.github.mayblock.easylib.impl.bukkit.overlay.listener.OverlayQuitListener
 import com.github.mayblock.easylib.impl.bukkit.overlay.slot.SlotMap
@@ -35,18 +38,11 @@ class OverlayManager(
             .apply(block)
             .build()
             .let { it as PlayerOverlayImpl }
-            .let(::track)
-
-    /**
-     * 登记一个覆盖层实例并挂接销毁回调，销毁时自动从 [overlays] 摘除（防泄漏链）。
-     * 抽出为独立函数：既是 [create] 的实现，也便于测试直接注入假实现验证摘除逻辑
-     * （真实的 [PlayerOverlayImpl] 依赖 PacketEvents 单例，单测环境下无法构造）。
-     */
-    internal fun track(overlay: PlayerOverlayImpl): PlayerOverlay {
-        overlays.add(overlay)
-        overlay.onDestroyed = { overlays.remove(overlay) }
-        return overlay
-    }
+            .also { overlay ->
+                overlays.add(overlay)
+                // MONITOR 垫底，与菜单侧记账一致：上游的 destroy 订阅者先跑完，记账最后做。
+                overlay.on { on<OverlayDestroyEvent>(Priority.MONITOR) { overlays.remove(overlay) } }
+            }
 
     override fun close() {
         overlays.forEach { it.destroy() }

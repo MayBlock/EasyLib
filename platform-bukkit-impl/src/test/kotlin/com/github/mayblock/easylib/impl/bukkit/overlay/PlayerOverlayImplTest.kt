@@ -1,6 +1,7 @@
 package com.github.mayblock.easylib.impl.bukkit.overlay
 
 import com.github.mayblock.easylib.api.bukkit.overlay.slot.dsl.onAction
+import com.github.mayblock.easylib.api.bukkit.overlay.slot.event.OverlayDestroyEvent
 import com.github.mayblock.easylib.api.bukkit.overlay.slot.event.OverlayHideEvent
 import com.github.mayblock.easylib.api.bukkit.overlay.slot.event.OverlaySlotActionEvent
 import com.github.mayblock.easylib.api.event.on
@@ -209,10 +210,10 @@ class PlayerOverlayImplTest {
     }
 
     @Test
-    fun `destroy 末尾触发 onDestroyed 回调，且只触发一次（幂等销毁）`() {
+    fun `destroy 末尾派发 OverlayDestroyEvent，且只派发一次（幂等销毁）`() {
         val (o, _, _) = build(mapOf(3 to specOf(item(Material.STONE))))
         var calls = 0
-        o.onDestroyed = { calls++ }
+        o.on { on<OverlayDestroyEvent> { calls++ } }
         o.destroy()
         assertEquals(1, calls)
         o.destroy()

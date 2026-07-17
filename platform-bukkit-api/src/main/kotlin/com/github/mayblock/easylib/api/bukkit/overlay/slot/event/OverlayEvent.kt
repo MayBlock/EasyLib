@@ -20,3 +20,12 @@ class OverlayHideEvent(
     override val overlay: PlayerOverlay,
     val player: Player,
 ) : OverlayEvent
+
+/**
+ * 覆盖层被销毁时派发（[PlayerOverlay.destroy]）。派发时 [overlay] 的 `isDestroyed` 已为 true，
+ * 事件总线尚未拆除；本事件是订阅者做清理的最后时机，其后总线即被关闭。
+ * 幂等：重复 destroy 不会重复派发。
+ */
+class OverlayDestroyEvent(
+    override val overlay: PlayerOverlay,
+) : OverlayEvent

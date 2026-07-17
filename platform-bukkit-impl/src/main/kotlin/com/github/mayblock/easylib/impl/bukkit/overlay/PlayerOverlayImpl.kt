@@ -1,6 +1,7 @@
 package com.github.mayblock.easylib.impl.bukkit.overlay
 
 import com.github.mayblock.easylib.api.bukkit.overlay.PlayerOverlay
+import com.github.mayblock.easylib.api.bukkit.overlay.slot.event.OverlayDestroyEvent
 import com.github.mayblock.easylib.api.bukkit.overlay.slot.event.OverlayEvent
 import com.github.mayblock.easylib.api.bukkit.overlay.slot.event.OverlayHideEvent
 import com.github.mayblock.easylib.api.bukkit.overlay.slot.event.OverlayShowEvent
@@ -42,9 +43,6 @@ internal class PlayerOverlayImpl(
     private val viewers = ViewerRegistry()
     private val updateLoop = SlotUpdateLoop(map, scheduler, executor, ::repaint)
     private var transportSub: Disposable? = null
-
-    /** 覆盖层销毁时的清理钩子（由持有者，如 [OverlayManager]，挂接以停止追踪本实例）。 */
-    internal var onDestroyed: (() -> Unit)? = null
 
     override var isDestroyed: Boolean = false
         private set
@@ -114,6 +112,13 @@ internal class PlayerOverlayImpl(
         repaint(index)
     }
 
+    /**
+     * 顺序契约（与菜单侧 [com.github.mayblock.easylib.impl.bukkit.menu.type.chest.RealChestMenu.destroy] 一致）：
+     * 先置 [isDestroyed]，再派发 [OverlayDestroyEvent]，最后才关总线。
+     * - 置位早于派发：订阅者看到的是一致状态（此时 show/hide 会正确 check 失败）。
+     * - 派发早于 close()：close() 会 unsubscribeAll，之后派发无人收听。
+     * - removeViewer 循环早于置位：它派发 [OverlayHideEvent]，语义上属于「销毁前的正常关闭」。
+     */
     override fun destroy() {
         if (isDestroyed) return
         viewers.snapshot().forEach { player ->
@@ -122,10 +127,10 @@ internal class PlayerOverlayImpl(
         }
         updateLoop.stop()
         transportSub?.dispose()
-        dispatcher.close()
         viewers.clear()
         isDestroyed = true
-        onDestroyed?.invoke()
+        dispatcher.publish(OverlayDestroyEvent(this))
+        dispatcher.close()
     }
 
     private inner class TransportCallbacks : OverlayTransport.Callbacks {
