@@ -14,15 +14,6 @@ import org.bukkit.inventory.ItemStack
  */
 internal interface BukkitMenu : Menu, InventoryHolder {
 
-    /**
-     * 登记本菜单的 manager；由 [MenuManager] 的 register() 赋值，[MenuInteractionListener]
-     * 据此校验事件归属（多 manager 防重复处理）。直接构造的测试实例可手动赋值。
-     * 声明为 `var`（而非简报草图中的 `val`）是刻意取舍：manager 只持有 [BukkitMenu] 引用、
-     * 对具体 UI 类型零感知，若声明为 `val` 则 register() 无法经接口类型完成赋值，
-     * 只能反过来向下转型到具体实现类——恰是本次解耦要消除的耦合。
-     */
-    var owner: MenuManager?
-
     fun handleOpen(player: Player)
     fun handleClick(e: InventoryClickEvent)
     fun handleDrag(e: InventoryDragEvent)

@@ -44,11 +44,8 @@ internal class RealChestMenu(
     private val hidePlayerInventory: Boolean = true,
     /** destroy() 末尾回调，供 [MenuManager] 撤销登记（避免 menus 只增不减）。 */
     private val onDestroyed: (RealChestMenu) -> Unit = {},
-    private val dispatcher: MenuEventDispatcher = MenuEventDispatcher(),
+    private val dispatcher: MenuEventDispatcher = MenuEventDispatcher()
 ) : ChestMenu, BukkitMenu, EventSource<MenuEvent> by dispatcher {
-
-    /** 登记本菜单的 manager；由 register() 赋值，供监听器校验事件归属，防止多 manager 实例重复处理。 */
-    override var owner: MenuManager? = null
 
     private val view = RealChestView(this, type, title, packetManager)
     private val viewers = ViewerRegistry()

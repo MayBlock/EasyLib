@@ -242,7 +242,7 @@ class RealChestMenuClickTest {
             mockk<PacketManager<*>>(relaxed = true),
             MockBukkit.createMockPlugin()
         )
-        m.owner = mgr
+        mgr.register(m)
         val (_, view) = open(m)
         val listener = MenuInteractionListener(mgr)
         val e = click(view, 5, InventoryAction.PICKUP_ALL)

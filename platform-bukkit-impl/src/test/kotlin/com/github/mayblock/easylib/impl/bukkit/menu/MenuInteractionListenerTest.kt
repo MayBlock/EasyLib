@@ -17,7 +17,8 @@ import org.mockbukkit.mockbukkit.MockBukkit
 import kotlin.test.*
 
 /**
- * 监听器 UI 无关性验收：路由只认 [BukkitMenu] 接口 + owner 归属，对具体 UI 类型零感知。
+ * 监听器 UI 无关性验收：路由只认 [BukkitMenu] 接口，归属由 [MenuManager] 查自己的名册裁定，
+ * 监听器与菜单对具体 UI 类型均零感知。
  * 用一个非 chest 的第二种 [BukkitMenu] 假实现（漏斗容器）证明：新增 UI 类型
  * 只需实现 [BukkitMenu]，无需改动 [MenuInteractionListener]。
  */
@@ -39,7 +40,6 @@ class MenuInteractionListenerTest {
         bus: SimpleEventBus<MenuEvent> = SimpleEventBus(),
     ) : BukkitMenu, EventSource<MenuEvent> by bus {
 
-        override var owner: MenuManager? = null
         private val inv: Inventory = Bukkit.createInventory(this, InventoryType.HOPPER)
 
         val opens = mutableListOf<Player>()
@@ -65,7 +65,7 @@ class MenuInteractionListenerTest {
 
     @Test fun `同一监听器把 open click drag close 路由给非 chest 的 BukkitMenu 实现`() {
         val mgr = manager()
-        val menu = FakeHopperMenu().apply { owner = mgr }
+        val menu = FakeHopperMenu().also { mgr.register(it) }
         val listener = MenuInteractionListener(mgr)
         val p = server.addPlayer()
         val view = p.openInventory(menu.inventory)!!
@@ -86,7 +86,7 @@ class MenuInteractionListenerTest {
 
     @Test fun `quit 兜底也按接口路由到非 chest 实现`() {
         val mgr = manager()
-        val menu = FakeHopperMenu().apply { owner = mgr }
+        val menu = FakeHopperMenu().also { mgr.register(it) }
         val listener = MenuInteractionListener(mgr)
         val p = server.addPlayer()
         p.openInventory(menu.inventory)!!
@@ -98,7 +98,7 @@ class MenuInteractionListenerTest {
     @Test fun `归属其他 manager 的菜单不被本监听器路由（多 manager 防重复处理）`() {
         val mgr = manager()
         val other = manager()
-        val menu = FakeHopperMenu().apply { owner = other }
+        val menu = FakeHopperMenu().also { other.register(it) }
         val listener = MenuInteractionListener(mgr)
         val p = server.addPlayer()
         val view = p.openInventory(menu.inventory)!!

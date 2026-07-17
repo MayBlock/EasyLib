@@ -12,8 +12,11 @@ import com.github.mayblock.easylib.packetevents.PacketManager
 import org.bukkit.Bukkit
 import org.bukkit.entity.Player
 import org.bukkit.event.HandlerList
+import org.bukkit.inventory.InventoryHolder
 import org.bukkit.plugin.Plugin
 import java.io.Closeable
+import java.util.Collections
+import java.util.IdentityHashMap
 
 class MenuManager(
     private val taskScheduler: TaskScheduler,
@@ -21,7 +24,9 @@ class MenuManager(
     plugin: Plugin,
 ) : MenuFactory, MenuRegistry, Closeable {
 
-    private val menus = mutableListOf<Menu>()
+    // 身份语义（而非 equals）：与 activeMenus 的 `it.value === menu`、getViewers 的 `it === menu` 对齐。
+    // 顺带使 route() 的归属判定为 O(1)。
+    private val menus: MutableSet<Menu> = Collections.newSetFromMap(IdentityHashMap())
     private val activeMenus = mutableMapOf<Player, Menu>()
     private val listener = MenuInteractionListener(this).also {
         Bukkit.getPluginManager().registerEvents(it, plugin)
@@ -51,16 +56,28 @@ class MenuManager(
         }.apply(block)
             .build()
 
-    /** 登记菜单，并通过其事件源跟踪活跃观察者（开/关菜单驱动 [activeMenus]）。 */
-    private fun <M : Menu> register(menu: M): M {
-        // 经 BukkitMenu 接口赋 owner：manager 对具体 UI 类型（chest/铁砧/……）零感知。
-        (menu as? BukkitMenu)?.owner = this
+    /**
+     * 登记菜单，并通过其事件源跟踪活跃观察者（开/关菜单驱动 [activeMenus]）。
+     *
+     * `internal` 而非 `private`：真实调用者是 [createChestMenu]；模块内可见使得
+     * 测试可用任意 [BukkitMenu] 实现构造归属关系，走的是与生产一致的注册路径。
+     * Kotlin 的 `internal` 为模块级，上游调用方不可见。
+     */
+    internal fun <M : Menu> register(menu: M): M {
         menu.on {
             on<MenuOpenEvent> { activeMenus[player] = menu }
             on<MenuCloseEvent> { if (activeMenus[player] === menu) activeMenus.remove(player) }
         }
         return menu.also(menus::add)
     }
+
+    /**
+     * 归属裁定：holder 是否为本 manager 名册中的菜单。
+     * 同一 server 上可能存在多个 [MenuManager]，各自的 [MenuInteractionListener] 都会收到
+     * 全局 Bukkit 事件，故必须裁定归属，否则同一事件被多个 manager 重复处理。
+     */
+    internal fun route(holder: InventoryHolder?): BukkitMenu? =
+        (holder as? BukkitMenu)?.takeIf { it in menus }
 
     /** 菜单 destroy() 时的回调：撤销登记，避免 [menus]/[activeMenus] 只增不减地累积已销毁的菜单。 */
     private fun forget(menu: Menu) {

@@ -104,4 +104,22 @@ class MenuManagerChestTest {
 
         assertEquals(1, closes, "直接 quit 时 MenuCloseEvent 应恰好派发一次")
     }
+
+    // ---- 名册（menus）的可观察面是 route()：destroy 后应被摘除 ----
+    //
+    // 不能用 hasActiveMenu/getViewers 断言此事：destroy() 第一步 view.closeAll() 即触发
+    // InventoryCloseEvent → handleClose → MenuCloseEvent → activeMenus 清空，
+    // 那条断言无论记账跑没跑都成立，是空断言。
+
+    @Test
+    fun `destroy 后菜单从名册摘除，不再被路由`() {
+        val mgr = manager()
+        val menu = mgr.createChestMenu(ChestMenuType.GENERIC_9X3, hidePlayerInventory = false) {
+            page(Component.text("t")) { slot(0, Material.DIAMOND) }
+        } as RealChestMenu
+
+        assertNotNull(mgr.route(menu), "创建后应在名册中")
+        menu.destroy()
+        assertNull(mgr.route(menu), "destroy 后应已摘除，否则 menus 只增不减")
+    }
 }

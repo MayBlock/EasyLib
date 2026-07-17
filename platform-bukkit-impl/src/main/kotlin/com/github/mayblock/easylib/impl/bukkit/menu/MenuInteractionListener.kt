@@ -17,14 +17,14 @@ import org.bukkit.inventory.InventoryHolder
  * 由 [owner] 这个 [MenuManager] 在 plugin 上注册/注销。
  *
  * 每个 [MenuManager] 实例各自持有并注册一个本监听器；当同一 server 上存在多个
- * MenuManager 时，各自的监听器都会收到全局的 Bukkit 事件，因此路由前必须校验
- * 目标菜单确实属于本监听器所属的 [owner]，否则同一事件会被多个 manager 重复处理。
+ * MenuManager 时，各自的监听器都会收到全局的 Bukkit 事件，因此路由前必须裁定归属，
+ * 否则同一事件会被多个 manager 重复处理。归属由 [owner] 查自己的名册回答，
+ * 菜单对象自身不携带归属信息。
  */
 internal class MenuInteractionListener(private val owner: MenuManager) : Listener {
 
-    /** holder → 菜单：仅路由实现了 [BukkitMenu] 且归属本 manager 的实例。 */
-    fun route(holder: InventoryHolder?): BukkitMenu? =
-        (holder as? BukkitMenu)?.takeIf { it.owner === owner }
+    /** holder → 菜单：归属裁定交给 [MenuManager] 自查名册（见 [MenuManager.route]）。 */
+    fun route(holder: InventoryHolder?): BukkitMenu? = owner.route(holder)
 
     @EventHandler(priority = EventPriority.HIGH, ignoreCancelled = true)
     fun onInvClick(e: InventoryClickEvent) { route(e.inventory.holder)?.handleClick(e) }
