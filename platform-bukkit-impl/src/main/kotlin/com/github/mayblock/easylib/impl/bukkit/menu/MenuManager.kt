@@ -6,6 +6,7 @@ import com.github.mayblock.easylib.api.bukkit.menu.type.chest.ChestMenuType
 import com.github.mayblock.easylib.api.bukkit.menu.type.chest.dsl.PageableChestMenuScope
 import com.github.mayblock.easylib.api.event.on
 import com.github.mayblock.easylib.api.scheduler.TaskScheduler
+import com.github.mayblock.easylib.api.util.Priority
 import com.github.mayblock.easylib.impl.bukkit.menu.type.chest.RealChestMenu
 import com.github.mayblock.easylib.impl.bukkit.menu.type.chest.builder.PageableChestMenuBuilder
 import com.github.mayblock.easylib.packetevents.PacketManager
@@ -50,8 +51,7 @@ class MenuManager(
                 title,
                 type,
                 slots,
-                hidePlayerInventory,
-                onDestroyed = ::forget
+                hidePlayerInventory
             ).also(::register)
         }.apply(block)
             .build()
@@ -67,6 +67,12 @@ class MenuManager(
         menu.on {
             on<MenuOpenEvent> { activeMenus[player] = menu }
             on<MenuCloseEvent> { if (activeMenus[player] === menu) activeMenus.remove(player) }
+            // MONITOR 垫底：上游的 destroy 处理器须先跑完（届时名册仍完整、getViewers 仍可用），
+            // 记账最后做。用 DEFAULT 会因「register 的订阅早于上游插入 + 稳定排序」而抢先执行。
+            on<MenuDestroyEvent>(Priority.MONITOR) {
+                menus.remove(menu)
+                activeMenus.entries.removeIf { it.value === menu }
+            }
         }
         return menu.also(menus::add)
     }
@@ -79,14 +85,8 @@ class MenuManager(
     internal fun route(holder: InventoryHolder?): BukkitMenu? =
         (holder as? BukkitMenu)?.takeIf { it in menus }
 
-    /** 菜单 destroy() 时的回调：撤销登记，避免 [menus]/[activeMenus] 只增不减地累积已销毁的菜单。 */
-    private fun forget(menu: Menu) {
-        menus.remove(menu)
-        activeMenus.entries.removeIf { it.value === menu }
-    }
-
     override fun close() {
-        // destroy() 会经 onDestroyed 回调触发 forget()，进而修改 menus 本身；
+        // destroy() 会同步派发 MenuDestroyEvent，其 MONITOR 监听会修改 menus 本身；
         // 必须遍历快照，否则会在 forEach 过程中并发结构性修改 menus 导致 CME。
         menus.toList().forEach { it.destroy() }
         HandlerList.unregisterAll(listener)

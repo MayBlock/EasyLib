@@ -1,6 +1,7 @@
 package com.github.mayblock.easylib.impl.bukkit.menu
 
 import com.github.mayblock.easylib.api.bukkit.menu.MenuCloseEvent
+import com.github.mayblock.easylib.api.bukkit.menu.MenuDestroyEvent
 import com.github.mayblock.easylib.api.bukkit.menu.type.chest.ChestMenuType
 import com.github.mayblock.easylib.api.bukkit.menu.type.chest.dsl.slot
 import com.github.mayblock.easylib.api.event.on
@@ -121,5 +122,41 @@ class MenuManagerChestTest {
         assertNotNull(mgr.route(menu), "创建后应在名册中")
         menu.destroy()
         assertNull(mgr.route(menu), "destroy 后应已摘除，否则 menus 只增不减")
+    }
+
+    @Test
+    fun `destroy 派发 MenuDestroyEvent 给上游订阅者`() {
+        val mgr = manager()
+        val menu = mgr.createChestMenu(ChestMenuType.GENERIC_9X3, hidePlayerInventory = false) {
+            page(Component.text("t")) { slot(0, Material.DIAMOND) }
+        } as RealChestMenu
+        var destroys = 0
+        menu.on { on<MenuDestroyEvent> { destroys++ } }
+
+        menu.destroy()
+        // 二次 destroy 不应让订阅者再收到一次。注意本断言钉的是「对外只派发一次」这个契约，
+        // 而非 destroyed 短路这一具体实现：即便删掉 `if (destroyed) return`，第二次 publish
+        // 也会落进已被首次 close() 清空的总线，计数仍为 1。要钉短路本身需另找可观察副作用。
+        menu.destroy()
+
+        assertEquals(1, destroys, "MenuDestroyEvent 应恰好派发一次")
+    }
+
+    @Test
+    fun `manager 的记账在上游 destroy 处理器之后执行（名册仍完整）`() {
+        val mgr = manager()
+        val menu = mgr.createChestMenu(ChestMenuType.GENERIC_9X3, hidePlayerInventory = false) {
+            page(Component.text("t")) { slot(0, Material.DIAMOND) }
+        } as RealChestMenu
+        var inRegistryDuringHandler: Boolean? = null
+        // 上游用默认优先级订阅。register() 的订阅发生在 createChestMenu 返回之前，
+        // 故本监听必然晚于 manager 的监听插入；若 manager 用 Priority.DEFAULT 记账，
+        // 稳定排序会让 manager 先跑，此处将读到 null。
+        menu.on { on<MenuDestroyEvent> { inRegistryDuringHandler = mgr.route(menu) != null } }
+
+        menu.destroy()
+
+        assertEquals(true, inRegistryDuringHandler, "上游 destroy 处理器执行时菜单应仍在名册中：manager 记账须以 Priority.MONITOR 垫底")
+        assertNull(mgr.route(menu), "记账最终仍须完成")
     }
 }

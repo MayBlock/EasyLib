@@ -1,6 +1,7 @@
 package com.github.mayblock.easylib.impl.bukkit.menu.type.chest
 
 import com.github.mayblock.easylib.api.bukkit.menu.MenuCloseEvent
+import com.github.mayblock.easylib.api.bukkit.menu.MenuDestroyEvent
 import com.github.mayblock.easylib.api.bukkit.menu.MenuEvent
 import com.github.mayblock.easylib.api.bukkit.menu.MenuOpenEvent
 import com.github.mayblock.easylib.api.bukkit.menu.slot.event.InventoryClickEvent
@@ -13,7 +14,6 @@ import com.github.mayblock.easylib.api.scheduler.TaskScheduler
 import com.github.mayblock.easylib.api.util.Disposable
 import com.github.mayblock.easylib.impl.bukkit.menu.BukkitMenu
 import com.github.mayblock.easylib.impl.bukkit.menu.MenuEventDispatcher
-import com.github.mayblock.easylib.impl.bukkit.menu.MenuManager
 import com.github.mayblock.easylib.impl.bukkit.menu.slot.SlotSpec
 import com.github.mayblock.easylib.impl.bukkit.menu.slot.SlotUpdateLoop
 import com.github.mayblock.easylib.impl.bukkit.util.ViewerRegistry
@@ -42,8 +42,6 @@ internal class RealChestMenu(
     override val type: ChestMenuType,
     private val specs: Map<Int, SlotSpec>,
     private val hidePlayerInventory: Boolean = true,
-    /** destroy() 末尾回调，供 [MenuManager] 撤销登记（避免 menus 只增不减）。 */
-    private val onDestroyed: (RealChestMenu) -> Unit = {},
     private val dispatcher: MenuEventDispatcher = MenuEventDispatcher()
 ) : ChestMenu, BukkitMenu, EventSource<MenuEvent> by dispatcher {
 
@@ -93,14 +91,21 @@ internal class RealChestMenu(
         if (hidePlayerInventory) view.refreshBottom(player)
     }
 
+    /**
+     * 顺序契约：先置 [destroyed]，再派发 [MenuDestroyEvent]，最后才关总线。
+     * - 置位早于派发：订阅者看到的是一致状态（此时 open() 会正确 check 失败）。
+     * - 派发早于 close()：close() 会 unsubscribeAll，之后派发无人收听。
+     * - closeAll() 早于置位：它会触发 InventoryCloseEvent → handleClose → MenuCloseEvent，
+     *   语义上属于「销毁前的正常关窗」，顺序正确。
+     */
     override fun destroy() {
         if (destroyed) return
         view.closeAll() // 快照遍历防 CME（见 RealChestView.closeAll）
         updateLoop.stop()
         hideMask?.dispose()
-        dispatcher.close()
         destroyed = true
-        onDestroyed(this)
+        dispatcher.publish(MenuDestroyEvent(this))
+        dispatcher.close()
     }
 
     /** 由监听器在主线程调用：按放行门决策处理一次点击。 */
