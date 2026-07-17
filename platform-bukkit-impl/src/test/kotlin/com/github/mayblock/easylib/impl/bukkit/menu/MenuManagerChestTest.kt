@@ -152,6 +152,8 @@ class MenuManagerChestTest {
         // 上游用默认优先级订阅。register() 的订阅发生在 createChestMenu 返回之前，
         // 故本监听必然晚于 manager 的监听插入；若 manager 用 Priority.DEFAULT 记账，
         // 稳定排序会让 manager 先跑，此处将读到 null。
+        // 注意 route() 是 internal：本测试钉住的时序对上游并不可观察（见 MenuManager.register
+        // 的 MONITOR 注释）。它守的是「框架记账最后做」这条内部契约本身。
         menu.on { on<MenuDestroyEvent> { inRegistryDuringHandler = mgr.route(menu) != null } }
 
         menu.destroy()

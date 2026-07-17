@@ -67,10 +67,20 @@ class MenuManager(
         menu.on {
             on<MenuOpenEvent> { activeMenus[player] = menu }
             on<MenuCloseEvent> { if (activeMenus[player] === menu) activeMenus.remove(player) }
-            // MONITOR 垫底：上游的 destroy 处理器须先跑完（届时名册仍完整、getViewers 仍可用），
-            // 记账最后做。用 DEFAULT 会因「register 的订阅早于上游插入 + 稳定排序」而抢先执行。
+            // MONITOR 垫底：记账须在所有 destroy 订阅者之后执行。用 DEFAULT 会因
+            // 「register 的订阅早于上游插入 + 稳定排序」而抢先。
+            //
+            // 别高估它当前的收益：MenuRegistry 对上游暴露的 getActiveMenu/hasActiveMenu/
+            // getViewers 只读 activeMenus，而 activeMenus 早在 destroy() 首步 closeAll()
+            // 触发 MenuCloseEvent 时就已清空——此刻上游无论记账是否垫底都读不到观察者。
+            // MONITOR 实际保住的只有 menus 名册，而它仅经 internal 的 route() 可见。
+            // 保留它的理由是原则性的（框架记账最后做）加前瞻性的（若 MenuRegistry 将来
+            // 暴露读 menus 的 API，时序已经是对的）。
             on<MenuDestroyEvent>(Priority.MONITOR) {
                 menus.remove(menu)
+                // 正常路径下这行是 no-op（closeAll 已清空 activeMenus）；它兜的是
+                // MenuInteractionListener.onQuit 所防的那种「服务端未先发 InventoryCloseEvent」
+                // 的断线错位场景。别当死代码清掉。
                 activeMenus.entries.removeIf { it.value === menu }
             }
         }

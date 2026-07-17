@@ -210,14 +210,25 @@ class PlayerOverlayImplTest {
     }
 
     @Test
-    fun `destroy 末尾派发 OverlayDestroyEvent，且只派发一次（幂等销毁）`() {
+    fun `destroy 末尾派发 OverlayDestroyEvent，且恰好只派发一次`() {
         val (o, _, _) = build(mapOf(3 to specOf(item(Material.STONE))))
         var calls = 0
         o.on { on<OverlayDestroyEvent> { calls++ } }
         o.destroy()
-        assertEquals(1, calls)
+        // 二次 destroy 不应让订阅者再收到一次。注意本断言钉的是「对外只派发一次」这个契约，
+        // 而非 isDestroyed 短路这一具体实现：即便删掉 `if (isDestroyed) return`，第二次 publish
+        // 也会落进已被首次 close() 清空的总线，计数仍为 1。
         o.destroy()
-        assertEquals(1, calls)
+        assertEquals(1, calls, "OverlayDestroyEvent 应恰好派发一次")
+    }
+
+    @Test
+    fun `派发 OverlayDestroyEvent 时 isDestroyed 已置位（订阅者看到一致状态）`() {
+        val (o, _, _) = build(mapOf(3 to specOf(item(Material.STONE))))
+        var seenDestroyed: Boolean? = null
+        o.on { on<OverlayDestroyEvent> { seenDestroyed = overlay.isDestroyed } }
+        o.destroy()
+        assertTrue(seenDestroyed == true, "派发须晚于 isDestroyed = true；否则订阅者读到不一致状态")
     }
 
     @Test

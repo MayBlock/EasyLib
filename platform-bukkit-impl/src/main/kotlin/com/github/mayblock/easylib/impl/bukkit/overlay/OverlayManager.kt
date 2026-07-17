@@ -16,6 +16,8 @@ import org.bukkit.Bukkit
 import org.bukkit.event.HandlerList
 import org.bukkit.plugin.Plugin
 import java.io.Closeable
+import java.util.Collections
+import java.util.IdentityHashMap
 
 /** 覆盖层工厂：创建并跟踪覆盖层，`close()` 时统一销毁（清理更新循环 + 包监听 + 断线监听器）。 */
 class OverlayManager(
@@ -23,7 +25,9 @@ class OverlayManager(
     private val plugin: Plugin,
 ) : PlayerOverlayFactory, Closeable {
 
-    private val overlays = mutableListOf<PlayerOverlay>()
+    // 身份语义（而非 equals），与菜单侧 MenuManager.menus 对齐：注销走的是 `remove(overlay)`，
+    // 若将来 PlayerOverlayImpl 获得 equals 覆写，equals 路径会摘错实例。
+    private val overlays: MutableSet<PlayerOverlay> = Collections.newSetFromMap(IdentityHashMap())
 
     /** 单一共享的断线清理监听器：把 quit 玩家从所有活动覆盖层移除（防 viewers 泄漏）。 */
     private val quitListener = OverlayQuitListener { overlays.filterIsInstance<PlayerOverlayImpl>() }.also {
