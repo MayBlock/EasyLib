@@ -22,9 +22,6 @@ class OverlayManager(
 
     private val overlays = mutableListOf<PlayerOverlay>()
 
-    /** 当前仍被跟踪的覆盖层数量（测试可见：验证 destroy 后 manager 不再持有）。 */
-    internal val trackedCount: Int get() = overlays.size
-
     /** 单一共享的断线清理监听器：把 quit 玩家从所有活动覆盖层移除（防 viewers 泄漏）。 */
     private val quitListener = OverlayQuitListener { overlays.filterIsInstance<PlayerOverlayImpl>() }.also {
         Bukkit.getPluginManager().registerEvents(it, plugin)

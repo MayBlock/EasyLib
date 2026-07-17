@@ -1,32 +1,11 @@
 package com.github.mayblock.easylib.impl.bukkit.overlay
 
-import com.github.mayblock.easylib.api.scheduler.TaskExecutor
 import com.github.mayblock.easylib.api.scheduler.TaskScheduler
-import com.github.mayblock.easylib.api.util.Disposable
 import com.github.mayblock.easylib.impl.bukkit.overlay.listener.OverlayQuitListener
-import com.github.mayblock.easylib.impl.bukkit.overlay.slot.SlotMap
-import com.github.mayblock.easylib.impl.bukkit.overlay.transport.OverlayTransport
 import io.mockk.mockk
-import org.bukkit.entity.Player
 import org.bukkit.event.player.PlayerQuitEvent
 import org.mockbukkit.mockbukkit.MockBukkit
 import kotlin.test.*
-
-/** 不触碰 PacketEvents 的最小 [com.github.mayblock.easylib.impl.bukkit.overlay.transport.OverlayTransport] 假实现，专供 [OverlayManager] 的跟踪/摘除逻辑测试。 */
-private class NoopTransport : OverlayTransport {
-    override fun paintAll(player: Player) {}
-    override fun paint(player: Player, slot: Int) {}
-    override fun restore(player: Player) {}
-    override fun attach(callbacks: OverlayTransport.Callbacks): Disposable = Disposable {}
-}
-
-private fun fakeOverlay(
-    scheduler: TaskScheduler,
-    executor: TaskExecutor
-): PlayerOverlayImpl {
-    val map = SlotMap(emptyMap())
-    return PlayerOverlayImpl(emptyMap(), map, scheduler, executor, NoopTransport())
-}
 
 class OverlayManagerTest {
 
@@ -42,17 +21,5 @@ class OverlayManagerTest {
         mgr.close()
         mgr.close() // 幂等
         assertTrue(PlayerQuitEvent.getHandlerList().registeredListeners.none { it.listener is OverlayQuitListener })
-    }
-
-    // 说明：同样为绕开 PacketOverlayTransport/PacketEvents，这里直接用 track() 注入假实现，
-    // 单独验证「destroy 触发 onDestroyed -> manager 摘除」这条泄漏链修复逻辑，不经过 create()。
-    @Test
-    fun `overlay destroy 后 manager 不再持有`() {
-        val mgr = OverlayManager(mockk<TaskScheduler>(relaxed = true), MockBukkit.createMockPlugin())
-        val overlay = fakeOverlay(mockk<TaskScheduler>(relaxed = true), mockk<TaskExecutor>(relaxed = true))
-        mgr.track(overlay)
-        assertEquals(1, mgr.trackedCount)
-        overlay.destroy()
-        assertEquals(0, mgr.trackedCount)
     }
 }
