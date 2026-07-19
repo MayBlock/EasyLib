@@ -56,6 +56,8 @@ internal class PacketBuilderContext : PacketCollector, PacketBuilderScope {
         WrapperPlayServerBundle().collect()
     }
 
+    private fun PacketWrapper<*>.collect() = also(packets::add)
+
     class PlayerPacketFactory internal constructor(
         private val collect: PacketWrapper<*>.() -> Unit
     ) : PacketScope.PlayerPacketScope {
@@ -176,6 +178,4 @@ internal class PacketBuilderContext : PacketCollector, PacketBuilderScope {
             WrapperPlayServerOpenSignEditor(position, isFrontText).collect()
         }
     }
-
-    private fun PacketWrapper<*>.collect() = also(packets::add)
 }
