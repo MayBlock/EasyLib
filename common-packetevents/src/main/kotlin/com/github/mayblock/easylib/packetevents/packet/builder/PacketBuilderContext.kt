@@ -60,6 +60,11 @@ internal class PacketBuilderContext : PacketCollector, PacketBuilderScope {
         private val collect: PacketWrapper<*>.() -> Unit
     ) : PacketScope.PlayerPacketScope {
 
+        override fun setExperience(experienceBar: Float, level: Int, totalExperience: Int) {
+            check(experienceBar in 0.0..1.0) { "ExperienceBar must be between 0 and 1.0" }
+            WrapperPlayServerSetExperience(experienceBar, level, totalExperience).collect()
+        }
+
         override fun changeGameState(state: WrapperPlayServerChangeGameState.Reason, param: Float) {
             WrapperPlayServerChangeGameState(state, param).collect()
         }
@@ -139,7 +144,7 @@ internal class PacketBuilderContext : PacketCollector, PacketBuilderScope {
         }
 
         override fun equipments(vararg equipment: Equipment) {
-            WrapperPlayServerEntityEquipment(entityId, equipment.toList())
+            WrapperPlayServerEntityEquipment(entityId, equipment.toList()).collect()
         }
 
         override fun animation(type: WrapperPlayServerEntityAnimation.EntityAnimationType) {

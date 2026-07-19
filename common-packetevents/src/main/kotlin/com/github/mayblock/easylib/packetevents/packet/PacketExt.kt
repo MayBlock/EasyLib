@@ -12,6 +12,11 @@ import com.github.retrooper.packetevents.protocol.player.User
 import com.github.retrooper.packetevents.protocol.world.blockentity.BlockEntityTypes
 import com.github.retrooper.packetevents.wrapper.play.server.WrapperPlayServerChangeGameState
 
+fun PacketScope.PlayerPacketScope.setExperience(level: Int, totalExperience: Int) {
+    val experienceBar = (totalExperience % 100).toFloat() / 100.0f
+    this.setExperience(experienceBar, level, totalExperience)
+}
+
 fun PacketScope.PlayerPacketScope.gameMode(gameMode: GameMode) {
     this.changeGameState(
         WrapperPlayServerChangeGameState.Reason.CHANGE_GAME_MODE,

@@ -32,6 +32,7 @@ interface PacketScope {
 
     @PacketDsl
     interface PlayerPacketScope {
+        fun setExperience(experienceBar: Float, level: Int, totalExperience: Int)
         fun changeGameState(state: WrapperPlayServerChangeGameState.Reason, param: Float)
         fun camera(watchedEntityId: Int)
         fun rotation(yaw: Float, pitch: Float)

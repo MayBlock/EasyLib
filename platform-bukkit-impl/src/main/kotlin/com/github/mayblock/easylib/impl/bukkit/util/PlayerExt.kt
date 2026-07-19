@@ -4,10 +4,6 @@ import net.md_5.bungee.api.ChatMessageType
 import net.md_5.bungee.api.chat.TextComponent
 import org.bukkit.entity.Player
 
-fun Player.setProgressbar(float: Float) {
-    this.exp = 0.99f * float
-}
-
 fun Collection<Player>.sendMessage(text: String) {
     this.forEach { it.sendMessage(text) }
 }

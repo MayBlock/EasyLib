@@ -12,7 +12,7 @@ import com.github.mayblock.easylib.api.util.Disposable
 import com.github.mayblock.easylib.impl.bukkit.game.arena.bridge.BridgeEvent
 import com.github.mayblock.easylib.impl.bukkit.scheduler.BukkitAsyncExecutor
 import com.github.mayblock.easylib.impl.bukkit.util.sendActionBar
-import com.github.mayblock.easylib.impl.bukkit.util.setProgressbar
+import com.github.mayblock.easylib.impl.bukkit.util.sendPackets
 import com.github.mayblock.easylib.impl.bukkit.util.ticks
 import com.github.mayblock.easylib.impl.bukkit.util.toTicks
 import com.github.mayblock.easylib.impl.game.arena.feature.PreGameCountdownFeature
@@ -87,8 +87,11 @@ class WaitingLobbyFeature<T>(
 
     private fun Player.updateReadyHud(remaining: Duration) {
         val remainingSeconds = ceil(remaining.toDouble(DurationUnit.SECONDS)).toInt()
-        this.level = remainingSeconds
-        this.setProgressbar(remaining.toTicks().toFloat() / startCountdown)
+        this.sendPackets {
+            forPlayer {
+                setExperience(remaining.toTicks().toFloat() / startCountdown, remainingSeconds, totalExperience)
+            }
+        }
         this.sendActionBar("${remainingSeconds}s 即将开始！ ($playerStatus)")
         broadcastCountdownTitle(remaining)
     }
