@@ -33,6 +33,7 @@ class BukkitEventBridge<A, P : BukkitArenaPlayer, E : BukkitArenaEntity> private
 
     var isDestroyed: Boolean = false
         private set
+
     private val bukkitListener = BukkitListener().also {
         Bukkit.getPluginManager().registerEvents(it, plugin)
     }
@@ -50,16 +51,16 @@ class BukkitEventBridge<A, P : BukkitArenaPlayer, E : BukkitArenaEntity> private
             val target = (e.target as? Player)?.let {
                 arena.getPlayer(it.uniqueId)
             } ?: return
-            val bridgeEvent = BridgeEvent.PlayerTargetedByEntityEvent(
+            e.isCancelled = BridgeEvent.PlayerTargetedByEntityEvent(
                 target,
                 e.entity,
                 e.reason,
                 isCancelled = e.isCancelled
-            ).also(arena::emit)
-            if (bridgeEvent.target !== target) {
-                bridgeEvent.target.bukkitPlayer?.let { e.target = it }
-            }
-            e.isCancelled = bridgeEvent.isCancelled
+            ).also(arena::emit).apply {
+                this.target.takeIf { it !== target }
+                    ?.bukkitPlayer
+                    ?.let { e.target = it }
+            }.isCancelled
         }
 
         @EventHandler(priority = EventPriority.LOWEST)
