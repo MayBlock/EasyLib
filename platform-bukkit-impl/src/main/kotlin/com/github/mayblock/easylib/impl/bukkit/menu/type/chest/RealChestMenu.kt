@@ -14,6 +14,7 @@ import com.github.mayblock.easylib.api.scheduler.TaskScheduler
 import com.github.mayblock.easylib.api.util.Disposable
 import com.github.mayblock.easylib.impl.bukkit.menu.BukkitMenu
 import com.github.mayblock.easylib.impl.bukkit.menu.MenuEventDispatcher
+import com.github.mayblock.easylib.impl.bukkit.menu.slot.SlotDisplayMap
 import com.github.mayblock.easylib.impl.bukkit.menu.slot.SlotSpec
 import com.github.mayblock.easylib.impl.bukkit.menu.slot.SlotUpdateLoop
 import com.github.mayblock.easylib.impl.bukkit.util.ViewerRegistry
@@ -47,7 +48,10 @@ internal class RealChestMenu(
 
     private val view = RealChestView(this, type, title, packetManager)
     private val viewers = ViewerRegistry()
-    private val updateLoop = SlotUpdateLoop(taskScheduler, specs, this)
+    internal val displayMap = SlotDisplayMap() // internal：供同模块测试观察显示缓存
+    private val updateLoop = SlotUpdateLoop(
+        taskScheduler, specs, this, viewers::snapshot, displayMap
+    ) { it.updateInventory() }
     private var hideMask: Disposable? = null
 
     private var destroyed = false
@@ -81,6 +85,7 @@ internal class RealChestMenu(
     override fun handleOpen(player: Player) {
         if (!viewers.add(player)) return
         updateLoop.start() // 幂等
+        updateLoop.seed(player) // 同步种子：InventoryOpenEvent 先于首包，首帧即假显示（spec §8）
         dispatcher.publish(MenuOpenEvent(this, player))
     }
 

@@ -22,8 +22,9 @@ interface SlotScope<out C : SlotClickEvent> {
     fun onClick(priority: Priority = Priority.DEFAULT, block: C.() -> Unit)
 
     /**
-     * 定时更新规则。同一槽位上 [trigger] 相等的规则合并为一个调度任务，按 [priority]
-     * 升序（小值先）串行执行——后序规则可见前序修改；块全部结束后统一写入容器一次。
+     * 显示更新规则（纯视觉，契约见 [SlotUpdateEvent]）：按 [trigger] 周期对每个观察者各触发一次，
+     * 对 `displayItem` 的修改只影响该玩家看到的样子，不写回真实容器。
+     * 同一槽位上 [trigger] 相等的规则合并为一个调度任务，按 [priority] 升序（小值先）串行执行。
      */
     fun onUpdate(trigger: TaskScheduler.Trigger, priority: Priority = Priority.DEFAULT, block: SlotUpdateEvent.() -> Unit)
 
