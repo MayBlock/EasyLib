@@ -53,6 +53,8 @@ internal class RealChestMenu(
         taskScheduler, specs, this, viewers::snapshot, displayMap
     ) { it.updateInventory() }
     private var hideMask: Disposable? = null
+    private var displayMask: Disposable? = null
+    private val hasUpdateRules = specs.values.any { it.updateRules.isNotEmpty() }
 
     private var destroyed = false
     override val isDestroyed: Boolean get() = destroyed
@@ -68,6 +70,12 @@ internal class RealChestMenu(
         dispatcher.wireSlotHandlers(specs)
         // hide 遮罩只影响 viewers 中的玩家；构造期直接 attach（packetManager 已注入，MockBukkit 下可 mock）
         if (hidePlayerInventory) hideMask = view.attachHideMask(viewers::contains)
+        // 显示层改写只在存在 onUpdate 规则时注册（无规则的菜单零开销、行为与旧版一致）
+        if (hasUpdateRules) {
+            displayMask = view.attachDisplayMask(viewers::contains) { viewerId, slot ->
+                displayMap.lookup(viewerId, slot)?.packetItem
+            }
+        }
     }
 
     override fun getInventory(): Inventory = view.inventory
@@ -79,7 +87,10 @@ internal class RealChestMenu(
 
     override fun getItem(index: Int): ItemStack? = view.getItem(index)
 
-    override fun setItem(index: Int, item: ItemStack?) = view.setItem(index, item)
+    override fun setItem(index: Int, item: ItemStack?) {
+        view.setItem(index, item)
+        updateLoop.recomputeSlot(index) // 已知新值路径：同步重算显示（spec §8）
+    }
 
     /** 观察者增减是 update loop 的唯一开关（0→1 start、→0 stop），与 overlay 同语义。 */
     override fun handleOpen(player: Player) {
@@ -91,6 +102,7 @@ internal class RealChestMenu(
 
     override fun handleClose(player: Player) {
         if (!viewers.remove(player)) return // 幂等：close+quit 双调只派发一次
+        displayMap.remove(player.uniqueId)
         if (viewers.isEmpty) updateLoop.stop()
         dispatcher.publish(MenuCloseEvent(this, player))
         if (hidePlayerInventory) view.refreshBottom(player)
@@ -108,6 +120,7 @@ internal class RealChestMenu(
         view.closeAll() // 快照遍历防 CME（见 RealChestView.closeAll）
         updateLoop.stop()
         hideMask?.dispose()
+        displayMask?.dispose()
         destroyed = true
         dispatcher.publish(MenuDestroyEvent(this))
         dispatcher.close()
@@ -136,6 +149,7 @@ internal class RealChestMenu(
                 )
                 dispatcher.publish(ev)
                 if (ev.isCancelled) e.isCancelled = true
+                else updateLoop.invalidateSlot(decision.slot)
             }
             is SlotDecision.FirePlace -> {
                 val ev = SlotPlaceEvent(
@@ -146,6 +160,7 @@ internal class RealChestMenu(
                 )
                 dispatcher.publish(ev)
                 if (ev.isCancelled) e.isCancelled = true
+                else updateLoop.invalidateSlot(decision.slot)
             }
             is SlotDecision.FireSwap -> {
                 // swap 与 drag 的观察者回调应无副作用，因为 Bukkit 的原子性使某个观察者
@@ -166,6 +181,7 @@ internal class RealChestMenu(
                 )
                 dispatcher.publish(place)
                 if (place.isCancelled) e.isCancelled = true
+                else updateLoop.invalidateSlot(decision.slot)
             }
             SlotDecision.ShiftIntoMenu -> {
                 e.isCancelled = true
@@ -182,6 +198,7 @@ internal class RealChestMenu(
         val candidates = specs.filterValues { it.hasPlaceHandlers }.keys.sorted().map { it to view.getItem(it) }
         val plan = ShiftIntoMenuPlanner.plan(source, candidates)
         var placedTotal = 0
+        val placedSlots = mutableSetOf<Int>()
         for (p in plan) {
             val placing = source.clone().apply { amount = p.amount }
             val ev = SlotPlaceEvent(this, p.slot, player, placing.clone())
@@ -193,6 +210,7 @@ internal class RealChestMenu(
             if (existing == null) {
                 view.setItem(p.slot, placing)
                 placedTotal += p.amount
+                placedSlots += p.slot
             } else {
                 val room = existing.maxStackSize - existing.amount
                 val add = minOf(room, p.amount)
@@ -200,9 +218,11 @@ internal class RealChestMenu(
                 existing.amount += add
                 view.setItem(p.slot, existing) // getItem 是拷贝，改完须写回
                 placedTotal += add
+                placedSlots += p.slot
             }
         }
         if (placedTotal > 0) {
+            placedSlots.forEach(updateLoop::recomputeSlot) // 已知新值：同步重算，随后的重绘/广播携带新显示
             val remaining = source.amount - placedTotal
             e.currentItem = if (remaining <= 0) null else source.clone().apply { amount = remaining }
             player.updateInventory()
@@ -224,5 +244,7 @@ internal class RealChestMenu(
             dispatcher.publish(ev)
             if (ev.isCancelled) { e.isCancelled = true; return } // 原生拖拽只能整体取消
         }
+        // 全部放行：拖拽由 Bukkit 在事件返回后应用，走失效路径（spec §8）
+        topRaw.forEach { if (e.newItems[it] != null) updateLoop.invalidateSlot(it) }
     }
 }
