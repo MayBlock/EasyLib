@@ -14,7 +14,7 @@
 factory.createChestMenu(GENERIC_9X3) {
     page("标题") {
         slot(13) { item(Material.DIAMOND); onClick { player.sendMessage("clicked $type") } }
-        slot(15) { item(Material.CLOCK); onUpdate(trigger = Interval(1.seconds)) { item = ... } }
+        slot(15) { item(Material.CLOCK); onUpdate(trigger = Interval(1.seconds)) { displayItem = ... } }
     }
 }
 ```
@@ -291,7 +291,7 @@ val menu = factory.createChestMenu(ChestMenuType.GENERIC_9X3) {
             item(Material.CLOCK)
             onUpdate(trigger = Trigger.Interval(1.seconds)) {                 // this: SlotUpdateEvent
               // 回调体内 SlotScope.item() 被 @SlotDsl 屏蔽（防误改槽声明），构造物品用裸 ItemStack
-              item = ItemStack(Material.CLOCK).apply { itemMeta = itemMeta?.apply { setDisplayName("§e$nowText") } }
+              displayItem = ItemStack(Material.CLOCK).apply { itemMeta = itemMeta?.apply { setDisplayName("§e$nowText") } }
             }
         }
         closeButton(26)
@@ -307,6 +307,8 @@ menu.on {
 ```
 
 DSL 写法与现状一致；唯一对调用方可见的变化是「多了 `menu.on{}` 订阅能力 + `onUpdate` 手感修复」。
+
+onUpdate 为**显示层**（2026-07-21 spec）：`displayItem` 的修改经数据包改写呈现给该观察者，不写回真实容器；每次触发从真实物品基底重算；取出放行拿到真实物品，放入放行后以新物品为基底重新美化。真实变更用 `menu.setItem`。amount 伪造建议只用于纯展示槽（允许搬运的槽上客户端预测会有可收敛的视觉抖动）。
 
 ### 8.1 交互式槽位与背包屏蔽（增量，spec 见 `superpowers/specs/2026-07-02-menu-interactive-slots-design.md`）
 

@@ -1,7 +1,7 @@
 # 菜单槽位虚拟显示层（onUpdate 数据包化）设计
 
 日期：2026-07-21
-状态：已与维护者逐节确认（§设计七节无异议）
+状态：已与维护者逐节确认（§设计七节无异议）；实施于 2026-07-21 计划
 前置调查：PacketEvents 假物品行业实践调查（见 §2）；代码库关键节点核实（见 §3）
 
 ## 1. 背景与目标
@@ -53,10 +53,10 @@
 
 ## 6. API 变化
 
-`SlotUpdateEvent(menu, index, player, item)`：新增 `val player: Player`，参数位对齐 `SlotClickEvent`。构造器破坏性变更 + 语义变更（维护者已确认）。
+`SlotUpdateEvent(menu, index, player, displayItem)`：新增 `val player: Player`，参数位对齐 `SlotClickEvent`。构造器破坏性变更 + 语义变更（维护者已确认）。
 
 KDoc 重写为显示层契约：
-- `item` 初值 = 真实物品克隆；对它的修改**纯视觉**（仅影响该 player 所见）。
+- `displayItem` 初值 = 真实物品克隆；对它的修改**纯视觉**（仅影响该 player 所见）。
 - 每次触发从真实基底重算；跨周期累积需自存状态。
 - 同槽**同 trigger** 多规则合并串行（priority 升序，后者可见前者修改）——保留现行为。
 - 同槽**不同 trigger** 的规则组各自从真实基底全量重算、后触发者整体覆盖（组间不再经容器串联）。明示：一个槽的显示规则应共用一个 trigger。
@@ -78,7 +78,7 @@ KDoc 重写为显示层契约：
 
 **`SlotUpdateLoop` 重写（调度骨架保留）**
 - 保留：同 trigger 归组、priority 串行、按需启停（0→1 start、→0 stop）。
-- 任务体：对每个当前 viewer 构造 `SlotUpdateEvent(menu, index, player, real.clone())` → 跑组内规则 → 与缓存比较，变更则存 `SlotDisplayMap` 并记该 player 入脏集。
+- 任务体：对每个当前 viewer 构造 `SlotUpdateEvent(menu, index, player, displayItem)` 初值为真实物品克隆 → 跑组内规则 → 与缓存比较，变更则存 `SlotDisplayMap` 并记该 player 入脏集。
 - 另暴露 `seed(player)`（开窗种子，§8 范围规则）与按槽重算入口（供 setItem/shift/点击后触点调用）；Delay 组"本周期已触发"标记是 loop 的运行态（`SlotSpec` 保持零运行态的既有契约）。
 - 脏集消费：每 tick 至多一次的合并刷新任务，对每个脏 player 调 `player.updateInventory()`（服务器自发全量包、stateId 天然正确、经改写层变假；多槽/多 trigger 同 tick 变更合并为一次重同步）。
 
