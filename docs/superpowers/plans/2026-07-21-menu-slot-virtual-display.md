@@ -685,7 +685,6 @@ Co-Authored-By: Claude Fable 5 <noreply@anthropic.com>"
 ```
 
 > 修订（Task 3 review）：SET_SLOT 槽位守卫收紧为 `in 0 until topSize`——排除 windowId=-1/-2 特殊形态的负槽位（光标同步等），结构性保证「光标不碰」约束（原 `< topSize` 放行负值）。
-```
 
 - [ ] **Step 2: 编译**
 
