@@ -101,4 +101,43 @@ internal class RealChestView(
                 }
             }
         })
+
+    /**
+     * 显示层改写（spec §7，方案 A 的唯一显示通道）：对 viewer 的容器窗口（windowId != 0）
+     * WINDOW_ITEMS / SET_SLOT 包，顶部声明槽（< topSize）查 [lookup]——命中换假物品，
+     * 未命中透传真实。carriedItem/光标与底部区不碰（底部归 hideMask；光标必须真实——
+     * 放行取出时拿到真身正是契约）。与 [attachHideMask] 同模式：改写不自发包，
+     * stateId/windowId 原样透传，天然无递归与失步风险。
+     */
+    fun attachDisplayMask(
+        isViewer: (Player) -> Boolean,
+        lookup: (viewerId: java.util.UUID, slot: Int) -> com.github.retrooper.packetevents.protocol.item.ItemStack?,
+    ): Disposable =
+        packetManager.registerListener(object : PacketListener {
+            override fun onPacketSend(e: PacketSendEvent) {
+                val player = e.getPlayer() as? Player ?: return
+                if (!isViewer(player)) return
+                when (e.packetType) {
+                    PacketType.Play.Server.WINDOW_ITEMS -> {
+                        val packet = WrapperPlayServerWindowItems(e)
+                        if (packet.windowId == 0) return
+                        val items = packet.items.toMutableList()
+                        var changed = false
+                        for (slot in 0 until minOf(topSize, items.size)) {
+                            val display = lookup(player.uniqueId, slot) ?: continue
+                            items[slot] = display
+                            changed = true
+                        }
+                        if (changed) packet.items = items
+                    }
+                    PacketType.Play.Server.SET_SLOT -> {
+                        val packet = WrapperPlayServerSetSlot(e)
+                        if (packet.windowId == 0) return
+                        if (packet.slot < topSize) {
+                            lookup(player.uniqueId, packet.slot)?.let { packet.item = it }
+                        }
+                    }
+                }
+            }
+        })
 }
