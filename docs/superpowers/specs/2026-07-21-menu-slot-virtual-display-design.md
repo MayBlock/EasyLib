@@ -72,7 +72,7 @@ KDoc 重写为显示层契约：
 - 操作：`compute` 结果存入、`invalidate(slot)`（全 viewer）、`remove(viewer)`、`lookup(viewer, slot)`。
 
 **`RealChestView.attachDisplayMask(isViewer, lookup)`（新增，与 attachHideMask 同模式同文件）**
-- 出站拦 `WINDOW_ITEMS`/`SET_SLOT`；viewer 且 `windowId != 0` 且 `slot < topSize`：查 `lookup`，命中换假物品，未命中透传真实。
+- 出站拦 `WINDOW_ITEMS`/`SET_SLOT`；viewer 且 `windowId != 0` 且 `slot in 0 until topSize`（排除 windowId=-1/-2 特殊形态的负槽位，结构性保证「光标不碰」——Task 3 复审修订）：查 `lookup`，命中换假物品，未命中透传真实。
 - `carriedItem`/光标包/底部区不碰（底部归 hideMask；光标必须真实——放行取出时拿真身正是需求）。
 - 仅当菜单存在任何 `updateRules` 时注册；无 onUpdate 的菜单零开销、行为与今日完全一致。
 

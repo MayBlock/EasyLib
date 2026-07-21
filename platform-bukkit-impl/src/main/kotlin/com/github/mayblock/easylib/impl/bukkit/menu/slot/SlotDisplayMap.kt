@@ -33,6 +33,7 @@ internal class SlotDisplayMap {
         }
     }
 
+    /** 只读契约：返回条目的 [Entry.bukkitItem] 不做出参克隆，调用方不得改动（改动会静默污染缓存）。 */
     fun lookup(viewerId: UUID, slot: Int): Entry? = byViewer[viewerId]?.get(slot)
 
     /** 真实物品经原生点击变更后（新值未知）：清全 viewer 该槽，改写层透传真实，等下一次重算。 */
