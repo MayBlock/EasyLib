@@ -14,3 +14,4 @@ fun Duration.toTicks(): Long = (this.inWholeMilliseconds / 50).coerceAtLeast(1)
 val Long.ticks
     get() = (this * 50)
         .toDuration(DurationUnit.MILLISECONDS)
+val Int.ticks get() = this.toLong().ticks

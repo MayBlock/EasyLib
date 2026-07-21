@@ -4,8 +4,11 @@ import net.md_5.bungee.api.ChatMessageType
 import net.md_5.bungee.api.chat.TextComponent
 import org.bukkit.entity.Player
 
-fun Collection<Player>.sendMessage(text: String) {
-    this.forEach { it.sendMessage(text) }
+inline fun Collection<Player>.sendMessage(text: String, block: (Player) -> Unit = {}) {
+    this.forEach {
+        it.sendMessage(text)
+        block(it)
+    }
 }
 
 fun Player.sendActionBar(text: String) {
@@ -15,8 +18,11 @@ fun Player.sendActionBar(text: String) {
     )
 }
 
-fun Collection<Player>.sendActionBar(text: String) {
-    this.forEach { it.sendActionBar(text) }
+inline fun Collection<Player>.sendActionBar(text: String, block: (Player) -> Unit = {}) {
+    this.forEach {
+        it.sendActionBar(text)
+        block(it)
+    }
 }
 
 fun Player.sendTitle(
@@ -29,12 +35,16 @@ fun Player.sendTitle(
     this.sendTitle(title ?: "", subtitle, fadeIn, stay, fadeOut)
 }
 
-fun Collection<Player>.sendTitle(
+inline fun Collection<Player>.sendTitle(
     title: String? = null,
     subtitle: String? = null,
     fadeIn: Int = 20,
     stay: Int = 60,
     fadeOut: Int = 20,
+    block: (Player) -> Unit = {}
 ) {
-    this.forEach { it.sendTitle(title, subtitle, fadeIn, stay, fadeOut) }
+    this.forEach {
+        it.sendTitle(title, subtitle, fadeIn, stay, fadeOut)
+        block(it)
+    }
 }
