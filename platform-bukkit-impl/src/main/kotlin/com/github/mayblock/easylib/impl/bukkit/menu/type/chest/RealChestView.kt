@@ -133,7 +133,7 @@ internal class RealChestView(
                     PacketType.Play.Server.SET_SLOT -> {
                         val packet = WrapperPlayServerSetSlot(e)
                         if (packet.windowId == 0) return
-                        if (packet.slot < topSize) {
+                        if (packet.slot in 0 until topSize) {
                             lookup(player.uniqueId, packet.slot)?.let { packet.item = it }
                         }
                     }
