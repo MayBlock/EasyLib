@@ -6,7 +6,7 @@ import com.github.mayblock.easylib.api.util.Priority
 import com.github.mayblock.easylib.impl.bukkit.overlay.builder.OverlaySlotBuilder
 import com.github.mayblock.easylib.impl.bukkit.overlay.slot.SlotMap
 import com.github.mayblock.easylib.impl.bukkit.overlay.slot.SlotUpdateLoop
-import com.github.mayblock.easylib.impl.bukkit.util.item
+import com.github.mayblock.easylib.impl.bukkit.util.stack
 import org.bukkit.Material
 import org.mockbukkit.mockbukkit.MockBukkit
 import kotlin.test.AfterTest
@@ -53,8 +53,8 @@ class SlotUpdateLoopTest {
     fun `update 规则按注入的 executor tick，并在物品变化时重绘`() {
         val scheduler = ExecutorTrackingScheduler()
         val spec = OverlaySlotBuilder().apply {
-            onUpdate(TaskScheduler.Trigger.Interval(1.seconds)) { item = item(Material.CLOCK, 5) }
-        }.build(item(Material.AIR))
+            onUpdate(TaskScheduler.Trigger.Interval(1.seconds)) { item = stack(Material.CLOCK, 5) }
+        }.build(stack(Material.AIR))
         val map = SlotMap(mapOf(4 to spec))
         val repaints = mutableListOf<Int>()
         SlotUpdateLoop(map, scheduler, MarkerExecutor, { repaints += it }).start()
@@ -63,16 +63,16 @@ class SlotUpdateLoopTest {
         assertEquals(listOf(4), repaints)
         // 循环本身对线程模型不置可否：只把注入的 executor 原样转发给调度器。
         // 「overlay 走异步」是 OverlayManager 注入 BukkitAsyncExecutor 的决定，不是本类的契约。
-        assertEquals(listOf<TaskExecutor>(MarkerExecutor), scheduler.executors)
+        assertEquals(listOf(MarkerExecutor), scheduler.executors)
     }
 
     @Test
     fun `update 规则赋值的外部对象以副本存入，事后改动不波及内部`() {
         val scheduler = ExecutorTrackingScheduler()
-        val template = item(Material.CLOCK, 1) // 规则块持有的外部模板（惯用写法）
+        val template = stack(Material.CLOCK, 1) // 规则块持有的外部模板（惯用写法）
         val spec = OverlaySlotBuilder().apply {
             onUpdate(TaskScheduler.Trigger.Interval(1.seconds)) { item = template }
-        }.build(item(Material.AIR))
+        }.build(stack(Material.AIR))
         val map = SlotMap(mapOf(4 to spec))
         SlotUpdateLoop(map, scheduler, TaskExecutor.Direct) { }.start()
 
@@ -90,9 +90,9 @@ class SlotUpdateLoopTest {
                 item.amount += 1 // 低优先级后执行：应看到高优先级的结果并在其上累加
             }
             onUpdate(TaskScheduler.Trigger.Interval(1.seconds), priority = Priority(1)) {
-                item = item(Material.CLOCK, 1) // 高优先级（小值）先执行
+                item = stack(Material.CLOCK, 1) // 高优先级（小值）先执行
             }
-        }.build(item(Material.PAPER, 1))
+        }.build(stack(Material.PAPER, 1))
         val map = SlotMap(mapOf(4 to spec))
         val repaints = mutableListOf<Int>()
         SlotUpdateLoop(map, scheduler, MarkerExecutor) { repaints += it }.start()
@@ -101,7 +101,7 @@ class SlotUpdateLoopTest {
         assertEquals(2, map[4]!!.item.amount) // …后 +1，可见前序结果
         assertEquals(listOf(4), repaints) // 单次提交/重绘
         // 只调度了一个任务 ⇒ 两条同 trigger 规则确实合并；且 executor 依旧原样转发。
-        assertEquals(listOf<TaskExecutor>(MarkerExecutor), scheduler.executors)
+        assertEquals(listOf(MarkerExecutor), scheduler.executors)
     }
 
     @Test
@@ -110,10 +110,10 @@ class SlotUpdateLoopTest {
         lateinit var mapRef: SlotMap
         val spec = OverlaySlotBuilder().apply {
             onUpdate(TaskScheduler.Trigger.Interval(1.seconds)) {
-                item = item(Material.CLOCK, 2) // 本 tick 的提案
-                mapRef[4]!!.item = item(Material.DIAMOND) // tick 内有人直接写入（setItem 的底层路径）
+                item = stack(Material.CLOCK, 2) // 本 tick 的提案
+                mapRef[4]!!.item = stack(Material.DIAMOND) // tick 内有人直接写入（setItem 的底层路径）
             }
-        }.build(item(Material.PAPER))
+        }.build(stack(Material.PAPER))
         val map = SlotMap(mapOf(4 to spec))
         mapRef = map
         val repaints = mutableListOf<Int>()
@@ -128,7 +128,7 @@ class SlotUpdateLoopTest {
         val scheduler = CountingScheduler()
         val spec = OverlaySlotBuilder().apply {
             onUpdate(TaskScheduler.Trigger.Interval(1.seconds)) { }
-        }.build(item(Material.AIR))
+        }.build(stack(Material.AIR))
         val map = SlotMap(mapOf(4 to spec))
         val loop = SlotUpdateLoop(map, scheduler, TaskExecutor.Direct) { }
 
@@ -144,7 +144,7 @@ class SlotUpdateLoopTest {
         val scheduler = CountingScheduler()
         val spec = OverlaySlotBuilder().apply {
             onUpdate(TaskScheduler.Trigger.Interval(1.seconds)) { }
-        }.build(item(Material.AIR))
+        }.build(stack(Material.AIR))
         val map = SlotMap(mapOf(4 to spec))
         val loop = SlotUpdateLoop(map, scheduler, TaskExecutor.Direct) { }
 

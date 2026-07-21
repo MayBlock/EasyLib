@@ -4,7 +4,7 @@ import com.github.mayblock.easylib.api.scheduler.TaskScheduler
 import com.github.mayblock.easylib.impl.bukkit.overlay.builder.OverlaySlotBuilder
 import com.github.mayblock.easylib.impl.bukkit.overlay.slot.LiveSlot
 import com.github.mayblock.easylib.impl.bukkit.overlay.slot.SlotMap
-import com.github.mayblock.easylib.impl.bukkit.util.item
+import com.github.mayblock.easylib.impl.bukkit.util.stack
 import org.bukkit.Material
 import org.mockbukkit.mockbukkit.MockBukkit
 import kotlin.test.*
@@ -15,7 +15,7 @@ class OverlaySlotMapTest {
     @AfterTest fun tearDown() { MockBukkit.unmock() }
 
     private fun spec(block: OverlaySlotBuilder.() -> Unit = {}) =
-        OverlaySlotBuilder().apply(block).build(item(Material.STONE))
+        OverlaySlotBuilder().apply(block).build(stack(Material.STONE))
 
     @Test
     fun `get 返回声明槽的 LiveSlot，未声明返回 null`() {
@@ -41,7 +41,7 @@ class OverlaySlotMapTest {
     fun `LiveSlot item 可变且初值为 spec 物品`() {
         val s = LiveSlot(spec())
         assertEquals(Material.STONE, s.item.type)
-        val diamond = item(Material.DIAMOND)
+        val diamond = stack(Material.DIAMOND)
         s.item = diamond
         assertEquals(diamond, s.item) // 写入内容生效
         assertNotSame(diamond, s.item) // 写时克隆：存的是副本，外部引用改不到内部
@@ -49,7 +49,7 @@ class OverlaySlotMapTest {
 
     @Test
     fun `LiveSlot 持有 spec 物品的独立副本，构建后改原对象不波及内部`() {
-        val template = item(Material.STONE, 1)
+        val template = stack(Material.STONE, 1)
         val s = LiveSlot(OverlaySlotBuilder().build(template))
         template.amount = 99 // 外部（DSL 调用者）仍握着原对象并原地改
         assertEquals(1, s.item.amount) // 内部副本不受影响，缓存 key 稳定

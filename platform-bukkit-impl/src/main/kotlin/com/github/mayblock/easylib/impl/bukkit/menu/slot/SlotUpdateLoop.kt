@@ -3,7 +3,7 @@ package com.github.mayblock.easylib.impl.bukkit.menu.slot
 import com.github.mayblock.easylib.api.bukkit.menu.slot.event.SlotUpdateEvent
 import com.github.mayblock.easylib.api.scheduler.TaskScheduler
 import com.github.mayblock.easylib.impl.bukkit.menu.BukkitMenu
-import com.github.mayblock.easylib.impl.bukkit.util.item
+import com.github.mayblock.easylib.impl.bukkit.util.stack
 import org.bukkit.Material
 
 /**
@@ -32,7 +32,7 @@ internal class SlotUpdateLoop(
                 val ordered = rules.sortedBy { it.priority }
                 taskIds += taskScheduler.scheduleTask(ruleTrigger) { // 操作物品需要主线程（默认主线程）
                     // 读容器当前物品（getItem 已返回拷贝，事务快照语义与原实现一致）
-                    val current = menu.getItem(index) ?: item(Material.AIR)
+                    val current = menu.getItem(index) ?: stack(Material.AIR)
                     val event = SlotUpdateEvent(menu, index, current.clone())
                     ordered.forEach { rule -> rule.block(event) }
                     if (event.item != current) menu.setItem(index, event.item)

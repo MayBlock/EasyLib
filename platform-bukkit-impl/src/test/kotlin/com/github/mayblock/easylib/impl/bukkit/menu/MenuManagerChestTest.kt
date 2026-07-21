@@ -33,7 +33,11 @@ class MenuManagerChestTest {
     @Test fun `createChestMenu 产出真实容器菜单`() {
         val mgr = manager()
         val menu = mgr.createChestMenu(ChestMenuType.GENERIC_9X3) {
-            page(Component.text("t")) { slot(0, Material.DIAMOND) }
+            page(Component.text("t")) {
+                slot(0) {
+                    item(Material.DIAMOND)
+                }
+            }
         }
         assertTrue(menu is RealChestMenu)
         assertEquals(Material.DIAMOND, menu.inventory.getItem(0)!!.type)
@@ -43,7 +47,13 @@ class MenuManagerChestTest {
         val mgr = manager()
         assertFailsWith<IllegalArgumentException> {
             mgr.createChestMenu(ChestMenuType.GENERIC_9X3, hidePlayerInventory = true) {
-                page(Component.text("t")) { slot(0, Material.AIR) { onPlace { isCancelled = false } } }
+                page(Component.text("t")) {
+                    slot(0) {
+                        onPlace {
+                            isCancelled = false
+                        }
+                    }
+                }
             }
         }
     }
@@ -52,7 +62,7 @@ class MenuManagerChestTest {
     fun `关闭事件经监听器清理活跃菜单`() {
         val mgr = manager()
         val menu = mgr.createChestMenu(ChestMenuType.GENERIC_9X3, hidePlayerInventory = false) {
-            page(Component.text("t")) { slot(0, Material.DIAMOND) }
+            page(Component.text("t")) { slot(0) { item(Material.DIAMOND) } }
         } as RealChestMenu
         val p = server.addPlayer()
         val view = p.openInventory(menu.inventory)!!
@@ -74,7 +84,7 @@ class MenuManagerChestTest {
     fun `正常关窗后再触发 quit 兜底，MenuCloseEvent 只派发一次`() {
         val mgr = manager()
         val menu = mgr.createChestMenu(ChestMenuType.GENERIC_9X3, hidePlayerInventory = false) {
-            page(Component.text("t")) { slot(0, Material.DIAMOND) }
+            page(Component.text("t")) { slot(0) { item(Material.DIAMOND) } }
         } as RealChestMenu
         var closes = 0
         menu.on { on<MenuCloseEvent> { closes++ } }
@@ -95,7 +105,7 @@ class MenuManagerChestTest {
     fun `直接 quit（无正常关窗），MenuCloseEvent 恰好派发一次`() {
         val mgr = manager()
         val menu = mgr.createChestMenu(ChestMenuType.GENERIC_9X3, hidePlayerInventory = false) {
-            page(Component.text("t")) { slot(0, Material.DIAMOND) }
+            page(Component.text("t")) { slot(0) { item(Material.DIAMOND) } }
         } as RealChestMenu
         var closes = 0
         menu.on { on<MenuCloseEvent> { closes++ } }
@@ -117,7 +127,7 @@ class MenuManagerChestTest {
     fun `destroy 后菜单从名册摘除，不再被路由`() {
         val mgr = manager()
         val menu = mgr.createChestMenu(ChestMenuType.GENERIC_9X3, hidePlayerInventory = false) {
-            page(Component.text("t")) { slot(0, Material.DIAMOND) }
+            page(Component.text("t")) { slot(0) { item(Material.DIAMOND) } }
         } as RealChestMenu
 
         assertNotNull(mgr.route(menu), "创建后应在名册中")
@@ -129,7 +139,7 @@ class MenuManagerChestTest {
     fun `destroy 派发 MenuDestroyEvent 给上游订阅者`() {
         val mgr = manager()
         val menu = mgr.createChestMenu(ChestMenuType.GENERIC_9X3, hidePlayerInventory = false) {
-            page(Component.text("t")) { slot(0, Material.DIAMOND) }
+            page(Component.text("t")) { slot(0) { item(Material.DIAMOND) } }
         } as RealChestMenu
         var destroys = 0
         menu.on { on<MenuDestroyEvent> { destroys++ } }
@@ -147,7 +157,7 @@ class MenuManagerChestTest {
     fun `manager 的记账在上游 destroy 处理器之后执行（名册仍完整）`() {
         val mgr = manager()
         val menu = mgr.createChestMenu(ChestMenuType.GENERIC_9X3, hidePlayerInventory = false) {
-            page(Component.text("t")) { slot(0, Material.DIAMOND) }
+            page(Component.text("t")) { slot(0) { item(Material.DIAMOND) } }
         } as RealChestMenu
         var inRegistryDuringHandler: Boolean? = null
         // 上游用默认优先级订阅。register() 的订阅发生在 createChestMenu 返回之前，

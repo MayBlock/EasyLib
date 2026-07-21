@@ -6,12 +6,19 @@ import com.github.mayblock.easylib.api.bukkit.menu.slot.event.SlotTakeEvent
 import com.github.mayblock.easylib.api.bukkit.menu.slot.event.SlotUpdateEvent
 import com.github.mayblock.easylib.api.scheduler.TaskScheduler
 import com.github.mayblock.easylib.api.util.Priority
+import org.bukkit.Material
+import org.bukkit.inventory.ItemStack
+import org.bukkit.inventory.meta.ItemMeta
 
 @DslMarker
 annotation class SlotDsl
 
 @SlotDsl
 interface SlotScope<out C : SlotClickEvent> {
+
+    fun item(item: ItemStack)
+    fun item(type: Material, amount: Int = 1, metadata: (ItemMeta.() -> Unit)? = null)
+
     fun onClick(priority: Priority = Priority.DEFAULT, block: C.() -> Unit)
 
     /**

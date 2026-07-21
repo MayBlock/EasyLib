@@ -6,7 +6,7 @@ import com.github.mayblock.easylib.api.bukkit.overlay.PlayerOverlay
 import com.github.mayblock.easylib.api.bukkit.overlay.dsl.slot
 import com.github.mayblock.easylib.api.bukkit.overlay.slot.dsl.onAction
 import com.github.mayblock.easylib.impl.bukkit.overlay.builder.PlayerOverlayBuilder
-import com.github.mayblock.easylib.impl.bukkit.util.item
+import com.github.mayblock.easylib.impl.bukkit.util.stack
 import io.mockk.mockk
 import org.bukkit.Material
 import org.mockbukkit.mockbukkit.MockBukkit
@@ -42,7 +42,7 @@ class PlayerOverlayBuilderTest {
 
     @Test
     fun `slot 的 item 以副本存入，metadata 应用于副本而非调用者对象`() {
-        val template = item(Material.DIAMOND, 1)
+        val template = stack(Material.DIAMOND, 1)
         build { slot(0, template, metadata = { isUnbreakable = true }) }
         assertFalse(template.itemMeta!!.isUnbreakable) // 调用者对象未被原地修改
         assertTrue(captured[0]!!.item.itemMeta!!.isUnbreakable) // metadata 生效在内部副本上

@@ -6,26 +6,36 @@ import org.bukkit.event.player.PlayerInteractEvent
 import org.bukkit.inventory.ItemStack
 import org.bukkit.inventory.meta.ItemMeta
 
-fun ItemStack?.isEmptyStack(): Boolean =
+internal fun ItemStack?.isEmptyStack(): Boolean =
     this == null || type.isAir || amount <= 0
 
-fun item(
+internal fun stack(
+    item: ItemStack
+) = ItemStack(item)
+
+internal fun stack(
+    type: Material,
+    amount: Int = 1,
+) = ItemStack(type, amount)
+
+internal inline fun stack(
     item: ItemStack,
-    metadata: (ItemMeta.() -> Unit)? = null
-): ItemStack = metadata?.let(item::meta) ?: item
+    metadata: ItemMeta.() -> Unit
+): ItemStack = item.meta(metadata)
 
-fun item(type: Material, amount: Int = 1, metadata: (ItemMeta.() -> Unit)? = null) =
-    item(ItemStack(type, amount), metadata)
+internal inline fun stack(type: Material, amount: Int = 1, metadata: ItemMeta.() -> Unit = {}) =
+    stack(ItemStack(type, amount), metadata)
 
-fun ItemStack.meta(block: ItemMeta.() -> Unit) = this.meta<ItemMeta>(block)
+inline fun ItemStack.meta(block: ItemMeta.() -> Unit) = this.meta<ItemMeta>(block)
 
 @JvmName("metaWithType")
 inline fun <reified T : ItemMeta> ItemStack.meta(block: T.() -> Unit): ItemStack {
-    require(!this.type.isAir) { "Cannot set metadata on air item" }
     val meta = (this.itemMeta as? T)
         ?: throw IllegalArgumentException("this item's ItemMeta is not ${T::class.simpleName}")
     block(meta)
-    this.itemMeta = meta
+    if (!this.setItemMeta(meta)) {
+        throw IllegalArgumentException("Not applicable to this material: ${this.type}")
+    }
     return this
 }
 

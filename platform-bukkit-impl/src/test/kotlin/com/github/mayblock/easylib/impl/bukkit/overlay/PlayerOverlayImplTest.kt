@@ -12,7 +12,7 @@ import com.github.mayblock.easylib.impl.bukkit.overlay.builder.OverlaySlotBuilde
 import com.github.mayblock.easylib.impl.bukkit.overlay.slot.OverlaySlotSpec
 import com.github.mayblock.easylib.impl.bukkit.overlay.slot.SlotMap
 import com.github.mayblock.easylib.impl.bukkit.overlay.transport.OverlayTransport
-import com.github.mayblock.easylib.impl.bukkit.util.item
+import com.github.mayblock.easylib.impl.bukkit.util.stack
 import io.mockk.every
 import io.mockk.mockk
 import org.bukkit.Material
@@ -92,7 +92,7 @@ class PlayerOverlayImplTest {
 
     @Test
     fun `getItem 返回声明槽当前物品，未声明或 AIR 返回 null`() {
-        val (o, _, _) = build(mapOf(3 to specOf(item(Material.STONE, 5)), 4 to specOf(item(Material.AIR))))
+        val (o, _, _) = build(mapOf(3 to specOf(stack(Material.STONE, 5)), 4 to specOf(stack(Material.AIR))))
         assertEquals(Material.STONE, o.getItem(3)!!.type)
         assertEquals(5, o.getItem(3)!!.amount)
         assertNull(o.getItem(4))
@@ -101,15 +101,15 @@ class PlayerOverlayImplTest {
 
     @Test
     fun `getItem 返回防御副本，改动返回值不波及 overlay 内部`() {
-        val (o, _, _) = build(mapOf(3 to specOf(item(Material.STONE, 1))))
+        val (o, _, _) = build(mapOf(3 to specOf(stack(Material.STONE, 1))))
         o.getItem(3)!!.amount = 99
         assertEquals(1, o.getItem(3)!!.amount)
     }
 
     @Test
     fun `setItem 存入防御副本，改动入参不波及 overlay 内部`() {
-        val (o, _, _) = build(mapOf(3 to specOf(item(Material.AIR))))
-        val input = item(Material.DIAMOND, 1)
+        val (o, _, _) = build(mapOf(3 to specOf(stack(Material.AIR))))
+        val input = stack(Material.DIAMOND, 1)
         o.setItem(3, input)
         input.amount = 99
         assertEquals(1, o.getItem(3)!!.amount)
@@ -117,12 +117,12 @@ class PlayerOverlayImplTest {
 
     @Test
     fun `setItem 写入声明槽，null 等价 AIR，并对在线观察者重绘`() {
-        val (o, transport, _) = build(mapOf(3 to specOf(item(Material.AIR))))
+        val (o, transport, _) = build(mapOf(3 to specOf(stack(Material.AIR))))
         val player = mockPlayer()
         o.show(player)
         transport.paintCalls.clear() // 只关心 setItem 触发的重绘
 
-        o.setItem(3, item(Material.DIAMOND, 2))
+        o.setItem(3, stack(Material.DIAMOND, 2))
         assertEquals(Material.DIAMOND, o.getItem(3)!!.type)
         o.setItem(3, null)
         assertNull(o.getItem(3))
@@ -131,15 +131,15 @@ class PlayerOverlayImplTest {
 
     @Test
     fun `setItem 对未声明槽抛 IllegalArgumentException`() {
-        val (o, _, _) = build(mapOf(3 to specOf(item(Material.AIR))))
-        assertFailsWith<IllegalArgumentException> { o.setItem(4, item(Material.DIAMOND)) }
+        val (o, _, _) = build(mapOf(3 to specOf(stack(Material.AIR))))
+        assertFailsWith<IllegalArgumentException> { o.setItem(4, stack(Material.DIAMOND)) }
     }
 
     // ---- show/hide/quit/hideIfViewing：与 transport 的交互次数 ----
 
     @Test
     fun `show 调用 paintAll 恰好一次并登记观察者`() {
-        val (o, transport, _) = build(mapOf(3 to specOf(item(Material.STONE))))
+        val (o, transport, _) = build(mapOf(3 to specOf(stack(Material.STONE))))
         val player = mockPlayer()
         o.show(player)
         assertEquals(listOf(player), transport.paintAllCalls)
@@ -147,7 +147,7 @@ class PlayerOverlayImplTest {
 
     @Test
     fun `hide 调用 restore 恰好一次`() {
-        val (o, transport, _) = build(mapOf(3 to specOf(item(Material.STONE))))
+        val (o, transport, _) = build(mapOf(3 to specOf(stack(Material.STONE))))
         val player = mockPlayer()
         o.show(player)
         assertTrue(o.hide(player))
@@ -156,7 +156,7 @@ class PlayerOverlayImplTest {
 
     @Test
     fun `hide 对未观察玩家返回 false 且不调用 restore`() {
-        val (o, transport, _) = build(mapOf(3 to specOf(item(Material.STONE))))
+        val (o, transport, _) = build(mapOf(3 to specOf(stack(Material.STONE))))
         val player = mockPlayer()
         assertFalse(o.hide(player))
         assertTrue(transport.restoreCalls.isEmpty())
@@ -164,7 +164,7 @@ class PlayerOverlayImplTest {
 
     @Test
     fun `onPlayerQuit 移除观察者并派发 OverlayHideEvent，不调用 restore，幂等`() {
-        val (o, transport, _) = build(mapOf(3 to specOf(item(Material.STONE))))
+        val (o, transport, _) = build(mapOf(3 to specOf(stack(Material.STONE))))
         val player = mockPlayer()
         o.show(player)
         var hides = 0
@@ -178,7 +178,7 @@ class PlayerOverlayImplTest {
 
     @Test
     fun `hideIfViewing 对观察中的玩家移除观察者、派发 OverlayHideEvent 并调用 restore`() {
-        val (o, transport, _) = build(mapOf(3 to specOf(item(Material.STONE))))
+        val (o, transport, _) = build(mapOf(3 to specOf(stack(Material.STONE))))
         val player = mockPlayer()
         o.show(player)
         var hides = 0
@@ -190,7 +190,7 @@ class PlayerOverlayImplTest {
 
     @Test
     fun `hideIfViewing 对非观察者是无操作`() {
-        val (o, transport, _) = build(mapOf(3 to specOf(item(Material.STONE))))
+        val (o, transport, _) = build(mapOf(3 to specOf(stack(Material.STONE))))
         val bystander = mockPlayer()
         var hides = 0
         o.on { on<OverlayHideEvent> { hides++ } }
@@ -203,7 +203,7 @@ class PlayerOverlayImplTest {
 
     @Test
     fun `destroy 后 isDestroyed 为真`() {
-        val (o, _, _) = build(mapOf(3 to specOf(item(Material.STONE))))
+        val (o, _, _) = build(mapOf(3 to specOf(stack(Material.STONE))))
         assertFalse(o.isDestroyed)
         o.destroy()
         assertTrue(o.isDestroyed)
@@ -211,7 +211,7 @@ class PlayerOverlayImplTest {
 
     @Test
     fun `destroy 末尾派发 OverlayDestroyEvent，且恰好只派发一次`() {
-        val (o, _, _) = build(mapOf(3 to specOf(item(Material.STONE))))
+        val (o, _, _) = build(mapOf(3 to specOf(stack(Material.STONE))))
         var calls = 0
         o.on { on<OverlayDestroyEvent> { calls++ } }
         o.destroy()
@@ -224,7 +224,7 @@ class PlayerOverlayImplTest {
 
     @Test
     fun `派发 OverlayDestroyEvent 时 isDestroyed 已置位（订阅者看到一致状态）`() {
-        val (o, _, _) = build(mapOf(3 to specOf(item(Material.STONE))))
+        val (o, _, _) = build(mapOf(3 to specOf(stack(Material.STONE))))
         var seenDestroyed: Boolean? = null
         o.on { on<OverlayDestroyEvent> { seenDestroyed = overlay.isDestroyed } }
         o.destroy()
@@ -233,7 +233,7 @@ class PlayerOverlayImplTest {
 
     @Test
     fun `destroy 对每个 viewer 调用 restore 并释放 transportSub`() {
-        val (o, transport, _) = build(mapOf(3 to specOf(item(Material.STONE))))
+        val (o, transport, _) = build(mapOf(3 to specOf(stack(Material.STONE))))
         val p1 = mockPlayer()
         val p2 = mockPlayer()
         o.show(p1)
@@ -248,7 +248,7 @@ class PlayerOverlayImplTest {
     @Test
     fun `声明的 onAction 处理器经总线按 index 过滤派发`() {
         var actions = 0
-        val (_, transport, _) = build(mapOf(3 to specOf(item(Material.STONE)) { onAction { actions++ } }))
+        val (_, transport, _) = build(mapOf(3 to specOf(stack(Material.STONE)) { onAction { actions++ } }))
         val player = mockPlayer()
         transport.callbacks!!.onClick(player, 3, ClickType.LEFT)
         transport.callbacks!!.onClick(player, 4, ClickType.LEFT)
@@ -258,7 +258,7 @@ class PlayerOverlayImplTest {
     @Test
     fun `onAction 块内可用 when 区分 Click 与 Interact 来源`() {
         val kinds = mutableListOf<String>()
-        val (_, transport, _) = build(mapOf(3 to specOf(item(Material.STONE)) {
+        val (_, transport, _) = build(mapOf(3 to specOf(stack(Material.STONE)) {
             onAction {
                 kinds += when (this) {
                     is OverlaySlotActionEvent.Click -> "click:$clickType"
@@ -274,7 +274,7 @@ class PlayerOverlayImplTest {
 
     @Test
     fun `callbacks onClick 经调度器转发到主线程后派发 Click 事件`() {
-        val (o, transport, _) = build(mapOf(3 to specOf(item(Material.STONE))))
+        val (o, transport, _) = build(mapOf(3 to specOf(stack(Material.STONE))))
         val player = mockPlayer()
         var received: OverlaySlotActionEvent.Click? = null
         o.on { on<OverlaySlotActionEvent.Click> { received = this } }
@@ -288,7 +288,7 @@ class PlayerOverlayImplTest {
     @Test
     fun `update loop 按观察者存在与否启停，幂等且可重启`() {
         val scheduler = RecordingScheduler()
-        val spec = mapOf(0 to specOf(item(Material.AIR)) {
+        val spec = mapOf(0 to specOf(stack(Material.AIR)) {
             onUpdate(TaskScheduler.Trigger.Once) { }
         })
         val (o, _, _) = build(spec, scheduler = scheduler)

@@ -21,7 +21,9 @@ class ItemStackExtTest {
 
     @Test
     fun `meta block modifications are persisted to the item`() {
-        val item = item(Material.ARROW).meta { setDisplayName("Next") }
+        val item = stack(Material.ARROW) {
+            setDisplayName("Next")
+        }
         assertEquals("Next", item.itemMeta?.displayName)
     }
 }

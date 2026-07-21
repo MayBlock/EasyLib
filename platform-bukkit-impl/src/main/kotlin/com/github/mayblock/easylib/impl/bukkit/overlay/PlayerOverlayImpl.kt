@@ -12,7 +12,7 @@ import com.github.mayblock.easylib.impl.bukkit.overlay.slot.SlotUpdateLoop
 import com.github.mayblock.easylib.impl.bukkit.overlay.transport.OverlayTransport
 import com.github.mayblock.easylib.impl.bukkit.util.ViewerRegistry
 import com.github.mayblock.easylib.impl.bukkit.util.isEmptyStack
-import com.github.mayblock.easylib.impl.bukkit.util.item
+import com.github.mayblock.easylib.impl.bukkit.util.stack
 import com.github.mayblock.easylib.impl.util.extension.ifTrue
 import org.bukkit.Material
 import org.bukkit.entity.Player
@@ -104,7 +104,7 @@ internal class PlayerOverlayImpl(
 
     override fun setItem(index: Int, item: ItemStack?) {
         val slot = requireNotNull(map[index]) { "slot $index is not declared on this overlay" }
-        slot.item = item ?: item(Material.AIR)
+        slot.item = item ?: stack(Material.AIR)
         repaint(index)
     }
 

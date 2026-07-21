@@ -4,7 +4,7 @@ import com.github.mayblock.easylib.api.bukkit.overlay.slot.dsl.onAction
 import com.github.mayblock.easylib.api.bukkit.overlay.slot.event.OverlaySlotActionEvent
 import com.github.mayblock.easylib.api.scheduler.TaskScheduler
 import com.github.mayblock.easylib.impl.bukkit.overlay.builder.OverlaySlotBuilder
-import com.github.mayblock.easylib.impl.bukkit.util.item
+import com.github.mayblock.easylib.impl.bukkit.util.stack
 import org.bukkit.Material
 import org.mockbukkit.mockbukkit.MockBukkit
 import kotlin.test.AfterTest
@@ -21,7 +21,7 @@ class OverlaySlotBuilderTest {
     fun `onAction 以密封父类型收集为 handler`() {
         val spec = OverlaySlotBuilder().apply {
             onAction { }
-        }.build(item(Material.STONE))
+        }.build(stack(Material.STONE))
         assertEquals(
             listOf<Class<*>>(OverlaySlotActionEvent::class.java),
             spec.handlers.map { it.type },
@@ -32,14 +32,14 @@ class OverlaySlotBuilderTest {
     fun `onUpdate 收集为 updateRule`() {
         val spec = OverlaySlotBuilder().apply {
             onUpdate(trigger = TaskScheduler.Trigger.Once) { }
-        }.build(item(Material.STONE))
+        }.build(stack(Material.STONE))
         assertEquals(1, spec.updateRules.size)
         assertEquals(0, spec.handlers.size)
     }
 
     @Test
     fun `build 透传初始物品`() {
-        val spec = OverlaySlotBuilder().build(item(Material.DIAMOND, 3))
+        val spec = OverlaySlotBuilder().build(stack(Material.DIAMOND, 3))
         assertEquals(Material.DIAMOND, spec.item.type)
         assertEquals(3, spec.item.amount)
     }

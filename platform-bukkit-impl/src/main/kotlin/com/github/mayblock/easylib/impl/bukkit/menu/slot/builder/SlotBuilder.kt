@@ -11,8 +11,10 @@ import com.github.mayblock.easylib.api.util.Priority
 import com.github.mayblock.easylib.impl.bukkit.menu.slot.SlotHandler
 import com.github.mayblock.easylib.impl.bukkit.menu.slot.SlotSpec
 import com.github.mayblock.easylib.impl.bukkit.menu.slot.UpdateRule
+import com.github.mayblock.easylib.impl.bukkit.util.meta
+import org.bukkit.Material
 import org.bukkit.inventory.ItemStack
-import kotlin.collections.plusAssign
+import org.bukkit.inventory.meta.ItemMeta
 
 /**
  * 实现 api 的 [com.github.mayblock.easylib.api.bukkit.menu.slot.dsl.SlotScope]，把用户声明收集成不可变的 [com.github.mayblock.easylib.impl.bukkit.menu.slot.SlotSpec]。纯声明、无运行态、无总线。
@@ -24,8 +26,29 @@ internal class SlotBuilder<out C : SlotClickEvent>(
     private val clickType: Class<out C>,
 ) : SlotScope<C> {
 
+    /** 惰性默认：未声明物品时仅在 [build] 落为 AIR——构造期不建 ItemStack（无服务器的纯单测里构造 builder 必须安全）。 */
+    private var item: ItemStack? = null
+
     private val clicks = mutableListOf<SlotHandler>()
     private val updates = mutableListOf<UpdateRule>()
+
+    override fun item(item: ItemStack) {
+        // clone：避免调用方事后改动传入实例穿透进 SlotSpec/真实容器
+        //（也隔离分页导航物品这类同一实例多次声明的共享，见 PageableChestMenuBuilder）。
+        this.item = item.clone()
+    }
+
+    override fun item(
+        type: Material,
+        amount: Int,
+        metadata: (ItemMeta.() -> Unit)?
+    ) {
+        val stack = ItemStack(type, amount)
+        if (metadata != null) {
+            stack.meta(metadata)
+        }
+        this.item = stack
+    }
 
     override fun onClick(priority: Priority, block: C.() -> Unit) {
         @Suppress("UNCHECKED_CAST")
@@ -44,8 +67,8 @@ internal class SlotBuilder<out C : SlotClickEvent>(
         SlotHandler(priority, SlotPlaceEvent::class.java, cancellingOnException(block)).also(clicks::add)
     }
 
-    fun build(item: ItemStack): SlotSpec =
-        SlotSpec(item, clicks.toList(), updates.toList())
+    fun build(): SlotSpec =
+        SlotSpec(item ?: ItemStack(Material.AIR), clicks.toList(), updates.toList())
 
     /**
      * 事件总线会吞掉监听器异常（记日志后继续）。take/place 回调是放行门：

@@ -5,8 +5,8 @@ import com.github.mayblock.easylib.api.bukkit.menu.type.chest.ChestMenuType
 import com.github.mayblock.easylib.api.bukkit.menu.type.chest.dsl.ChestMenuScope
 import com.github.mayblock.easylib.api.bukkit.menu.type.chest.dsl.PageableChestMenuScope
 import com.github.mayblock.easylib.impl.bukkit.menu.slot.SlotSpec
-import com.github.mayblock.easylib.impl.bukkit.util.item
 import com.github.mayblock.easylib.impl.bukkit.util.meta
+import com.github.mayblock.easylib.impl.bukkit.util.stack
 import net.kyori.adventure.text.Component
 import org.bukkit.ChatColor
 import org.bukkit.Material
@@ -28,13 +28,13 @@ internal class PageableChestMenuBuilder(
 
     private var nextPageItem: Pair<Int, ItemStack> = Pair(
         size - 4,
-        item(Material.ARROW).meta {
+        stack(Material.ARROW).meta {
             setDisplayName("${ChatColor.GREEN}Next Page")
         }
     )
     private var previousPageItem: Pair<Int, ItemStack> = Pair(
         size - 6,
-        item(Material.ARROW).meta {
+        stack(Material.ARROW).meta {
             setDisplayName("${ChatColor.GREEN}Previous Page")
         }
     )
@@ -70,7 +70,8 @@ internal class PageableChestMenuBuilder(
                 if (i + 1 < pages.size) {
                     val (index, item) = nextPageItem
                     require(!page.hasSlot(index)) { "slot $index is reserved for page navigation" }
-                    page.slot(index, item) {
+                    page.slot(index) {
+                        item(item)
                         onClick {
                             builtMenus[i + 1].open(player)
                         }
@@ -79,7 +80,8 @@ internal class PageableChestMenuBuilder(
                 if (i - 1 >= 0) {
                     val (index, item) = previousPageItem
                     require(!page.hasSlot(index)) { "slot $index is reserved for page navigation" }
-                    page.slot(index, item) {
+                    page.slot(index) {
+                        item(item)
                         onClick {
                             builtMenus[i - 1].open(player)
                         }

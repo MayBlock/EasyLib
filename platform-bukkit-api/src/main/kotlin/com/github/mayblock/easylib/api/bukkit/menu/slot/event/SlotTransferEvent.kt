@@ -22,14 +22,12 @@ import org.bukkit.inventory.ItemStack
  *
  * @param index 物品来源的菜单槽位
  * @param item 被取走物品的副本
- * @param targetSlot 目标真实背包槽位（best-effort）；原生取出通常无法得知，取不到时为 -1
  */
 class SlotTakeEvent(
     menu: Menu,
     index: Int,
     player: Player,
     val item: ItemStack,
-    val targetSlot: Int,
     override var isCancelled: Boolean = true,
 ) : SlotClickEvent(menu, index, player), Event.Cancellable
 
@@ -51,13 +49,11 @@ class SlotTakeEvent(
  *
  * @param index 放入的目标菜单槽位
  * @param item 待放入物品的副本（shift/拖拽多目标分发时为该槽对应的量；光标放置时为整个光标堆叠）
- * @param sourceSlot 物品来源的真实背包槽位（best-effort）；仅 shift-入菜单可得，其余路径为 -1
  */
 class SlotPlaceEvent(
     menu: Menu,
     index: Int,
     player: Player,
     val item: ItemStack,
-    val sourceSlot: Int,
     override var isCancelled: Boolean = true,
 ) : SlotClickEvent(menu, index, player), Event.Cancellable

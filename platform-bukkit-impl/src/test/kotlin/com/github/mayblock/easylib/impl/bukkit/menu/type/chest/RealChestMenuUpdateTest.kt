@@ -7,11 +7,12 @@ import com.github.mayblock.easylib.api.util.Priority
 import com.github.mayblock.easylib.impl.bukkit.menu.slot.SlotSpec
 import com.github.mayblock.easylib.impl.bukkit.menu.slot.builder.SlotBuilder
 import com.github.mayblock.easylib.impl.bukkit.scheduler.BukkitAsyncExecutor
-import com.github.mayblock.easylib.impl.bukkit.util.item
+import com.github.mayblock.easylib.impl.bukkit.util.stack
 import com.github.mayblock.easylib.packetevents.PacketManager
 import io.mockk.mockk
 import net.kyori.adventure.text.Component
 import org.bukkit.Material
+import org.bukkit.inventory.ItemStack
 import org.mockbukkit.mockbukkit.MockBukkit
 import kotlin.test.AfterTest
 import kotlin.test.BeforeTest
@@ -68,9 +69,11 @@ class RealChestMenuUpdateTest {
         val scheduler = AsyncTrackingScheduler()
         val spec = SlotBuilder(InventoryClickEvent::class.java).apply {
             onUpdate(trigger = TaskScheduler.Trigger.Interval(1.seconds)) {
-                item = item(Material.CLOCK, 5)
+                // 回调体内不可隐式调用外层 SlotScope 的 item()（@SlotDsl 屏蔽，防止误改槽声明），
+                // 构造物品用裸 ItemStack（或自备工厂）。
+                item = ItemStack(Material.CLOCK, 5)
             }
-        }.build(item(Material.AIR))
+        }.build()
         val m = menu(scheduler, mapOf(4 to spec))
         // 按需启停：首个观察者出现（handleOpen）才启动 → AsyncTrackingScheduler 立即执行一次 onTick
         m.handleOpen(server.addPlayer())
@@ -82,14 +85,15 @@ class RealChestMenuUpdateTest {
     @Test fun `同槽同 trigger 规则合并为一个任务，按 priority 串行且一次写入`() {
         val scheduler = AsyncTrackingScheduler()
         val spec = SlotBuilder(InventoryClickEvent::class.java).apply {
+            item(Material.PAPER)
             // 声明顺序故意与 priority 相反；两个 Interval 独立构造，靠值相等归组
             onUpdate(trigger = TaskScheduler.Trigger.Interval(1.seconds), priority = Priority(20)) {
                 item.amount += 1 // 低优先级后执行：应看到高优先级的结果并在其上累加
             }
             onUpdate(trigger = TaskScheduler.Trigger.Interval(1.seconds), priority = Priority(1)) {
-                item = item(Material.CLOCK, 1) // 高优先级（小值）先执行
+                item = ItemStack(Material.CLOCK, 1) // 高优先级（小值）先执行
             }
-        }.build(item(Material.PAPER))
+        }.build()
         val m = menu(scheduler, mapOf(4 to spec))
         m.handleOpen(server.addPlayer())
         assertEquals(Material.CLOCK, m.inventory.getItem(4)!!.type)
@@ -101,10 +105,11 @@ class RealChestMenuUpdateTest {
         val scheduler = AsyncTrackingScheduler()
         val seen = mutableListOf<Material>()
         val spec = SlotBuilder(InventoryClickEvent::class.java).apply {
+            item(Material.PAPER)
             onUpdate(trigger = TaskScheduler.Trigger.Interval(1.seconds)) { seen += item.type }
-        }.build(item(Material.PAPER))
+        }.build()
         val m = menu(scheduler, mapOf(4 to spec))
-        m.setItem(4, item(Material.DIAMOND)) // 声明后、tick 前，容器被直接改写
+        m.setItem(4, stack(Material.DIAMOND)) // 声明后、tick 前，容器被直接改写
         m.handleOpen(server.addPlayer())
         assertEquals(listOf(Material.DIAMOND), seen) // 读容器当前值，不是声明期的 PAPER
     }
@@ -115,7 +120,7 @@ class RealChestMenuUpdateTest {
         val scheduler = RecordingScheduler()
         val spec = SlotBuilder(InventoryClickEvent::class.java).apply {
             onUpdate(trigger = TaskScheduler.Trigger.Once) { }
-        }.build(item(Material.AIR))
+        }.build()
         val m = menu(scheduler, mapOf(0 to spec))
 
         // ① 构造后（有 update 规则）不调度任何任务

@@ -18,7 +18,7 @@ import com.github.mayblock.easylib.impl.bukkit.menu.slot.SlotSpec
 import com.github.mayblock.easylib.impl.bukkit.menu.slot.SlotUpdateLoop
 import com.github.mayblock.easylib.impl.bukkit.util.ViewerRegistry
 import com.github.mayblock.easylib.impl.bukkit.util.isEmptyStack
-import com.github.mayblock.easylib.impl.bukkit.util.item
+import com.github.mayblock.easylib.impl.bukkit.util.stack
 import com.github.mayblock.easylib.packetevents.PacketManager
 import net.kyori.adventure.text.Component
 import org.bukkit.Material
@@ -120,15 +120,14 @@ internal class RealChestMenu(
         }
         val decision = ChestSlotGate.decide(isTop, rawSlot, e.action, declared, hidePlayerInventory)
         when (decision) {
-            is SlotDecision.Deny -> e.isCancelled = true
-            is SlotDecision.AllowNative -> {}
+            SlotDecision.Deny -> e.isCancelled = true
+            SlotDecision.AllowNative -> {}
             is SlotDecision.FireTake -> {
                 val ev = SlotTakeEvent(
                     this,
                     decision.slot,
                     player,
-                    (e.currentItem ?: item(Material.AIR)).clone(),
-                    targetSlot = -1
+                    (e.currentItem ?: stack(Material.AIR)).clone()
                 )
                 dispatcher.publish(ev)
                 if (ev.isCancelled) e.isCancelled = true
@@ -138,8 +137,7 @@ internal class RealChestMenu(
                     this,
                     decision.slot,
                     player,
-                    (e.cursor ?: item(Material.AIR)).clone(),
-                    sourceSlot = -1
+                    (e.cursor ?: stack(Material.AIR)).clone()
                 )
                 dispatcher.publish(ev)
                 if (ev.isCancelled) e.isCancelled = true
@@ -151,8 +149,7 @@ internal class RealChestMenu(
                     this,
                     decision.slot,
                     player,
-                    (e.currentItem ?: item(Material.AIR)).clone(),
-                    targetSlot = -1
+                    (e.currentItem ?: stack(Material.AIR)).clone()
                 )
                 dispatcher.publish(take)
                 if (take.isCancelled) { e.isCancelled = true; return }
@@ -160,13 +157,12 @@ internal class RealChestMenu(
                     this,
                     decision.slot,
                     player,
-                    (e.cursor ?: item(Material.AIR)).clone(),
-                    sourceSlot = -1
+                    (e.cursor ?: stack(Material.AIR)).clone()
                 )
                 dispatcher.publish(place)
                 if (place.isCancelled) e.isCancelled = true
             }
-            is SlotDecision.ShiftIntoMenu -> {
+            SlotDecision.ShiftIntoMenu -> {
                 e.isCancelled = true
                 handleShiftIntoMenu(player, e)
             }
@@ -183,7 +179,7 @@ internal class RealChestMenu(
         var placedTotal = 0
         for (p in plan) {
             val placing = source.clone().apply { amount = p.amount }
-            val ev = SlotPlaceEvent(this, p.slot, player, placing.clone(), sourceSlot = e.slot)
+            val ev = SlotPlaceEvent(this, p.slot, player, placing.clone())
             dispatcher.publish(ev)
             if (ev.isCancelled) continue
             // 写入前复核容量：onPlace 订阅者可能在本轮循环中通过 setItem 等方式改动了容器状态，
@@ -219,7 +215,7 @@ internal class RealChestMenu(
         if (topRaw.any { !specs.containsKey(it) }) { e.isCancelled = true; return } // 触及未声明的顶部槽
         for (slot in topRaw) {
             val newItem = e.newItems[slot] ?: continue
-            val ev = SlotPlaceEvent(this, slot, player, newItem.clone(), sourceSlot = -1)
+            val ev = SlotPlaceEvent(this, slot, player, newItem.clone())
             dispatcher.publish(ev)
             if (ev.isCancelled) { e.isCancelled = true; return } // 原生拖拽只能整体取消
         }

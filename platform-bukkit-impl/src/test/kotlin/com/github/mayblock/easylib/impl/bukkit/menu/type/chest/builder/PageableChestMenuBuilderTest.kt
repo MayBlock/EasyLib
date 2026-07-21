@@ -2,7 +2,6 @@ package com.github.mayblock.easylib.impl.bukkit.menu.type.chest.builder
 
 import com.github.mayblock.easylib.packetevents.PacketManager
 import com.github.mayblock.easylib.api.bukkit.menu.type.chest.ChestMenuType
-import com.github.mayblock.easylib.api.bukkit.menu.type.chest.dsl.slot
 import com.github.mayblock.easylib.api.scheduler.TaskScheduler
 import com.github.mayblock.easylib.impl.bukkit.menu.MenuManager
 import com.github.mayblock.easylib.impl.bukkit.menu.type.chest.RealChestMenu
@@ -40,8 +39,8 @@ class PageableChestMenuBuilderTest {
     @Test fun `分页菜单第 2 页仍由 manager 管理 —— Open 事件被订阅、close 时被销毁`() {
         val mgr = manager()
         val page1 = mgr.createChestMenu(ChestMenuType.GENERIC_9X3, hidePlayerInventory = false) {
-            page(Component.text("p1")) { slot(0, Material.DIAMOND) }
-            page(Component.text("p2")) { slot(0, Material.EMERALD) }
+            page(Component.text("p1")) { slot(0) { item(Material.DIAMOND) } }
+            page(Component.text("p2")) { slot(0) { item(Material.EMERALD) } }
         } as RealChestMenu
 
         val p = server.addPlayer()

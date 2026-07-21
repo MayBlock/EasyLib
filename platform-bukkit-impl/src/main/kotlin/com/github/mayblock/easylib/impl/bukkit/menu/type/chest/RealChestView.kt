@@ -3,7 +3,7 @@ package com.github.mayblock.easylib.impl.bukkit.menu.type.chest
 import com.github.mayblock.easylib.api.bukkit.menu.type.chest.ChestMenuType
 import com.github.mayblock.easylib.api.util.Disposable
 import com.github.mayblock.easylib.impl.bukkit.util.isEmptyStack
-import com.github.mayblock.easylib.impl.bukkit.util.item
+import com.github.mayblock.easylib.impl.bukkit.util.stack
 import com.github.mayblock.easylib.packetevents.PacketManager
 import com.github.retrooper.packetevents.event.PacketListener
 import com.github.retrooper.packetevents.event.PacketSendEvent
@@ -52,7 +52,7 @@ internal class RealChestView(
 
     fun setItem(index: Int, item: ItemStack?) {
         require(index in 0 until topSize) { "slot $index out of range [0, $topSize)" }
-        inventory.setItem(index, item ?: item(Material.AIR))
+        inventory.setItem(index, item ?: stack(Material.AIR))
     }
 
     /**

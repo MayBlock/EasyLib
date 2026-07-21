@@ -13,8 +13,8 @@
 ```kotlin
 factory.createChestMenu(GENERIC_9X3) {
     page("标题") {
-        slot(13, Material.DIAMOND) { onClick { player.sendMessage("clicked $type") } }
-        slot(15, Material.CLOCK)   { onUpdate(trigger = Interval(1.seconds)) { item = ... } }
+        slot(13) { item(Material.DIAMOND); onClick { player.sendMessage("clicked $type") } }
+        slot(15) { item(Material.CLOCK); onUpdate(trigger = Interval(1.seconds)) { item = ... } }
     }
 }
 ```
@@ -282,13 +282,16 @@ val factory = EasyLibApi.api.bukkitApi().menuFactory
 
 val menu = factory.createChestMenu(ChestMenuType.GENERIC_9X3) {
     page(Component.text("我的菜单")) {
-        slot(0, Material.GRAY_STAINED_GLASS_PANE)
-        slot(13, Material.DIAMOND, metadata = { setDisplayName("§b点我") }) {
+        slot(0) { item(Material.GRAY_STAINED_GLASS_PANE) }
+        slot(13) {
+            item(Material.DIAMOND) { setDisplayName("§b点我") }              // metadata 尾随 lambda
             onClick { player.sendMessage("你用 $type 点了第 $index 格") }     // this: InventoryClickEvent
         }
-        slot(15, Material.CLOCK) {
+        slot(15) {
+            item(Material.CLOCK)
             onUpdate(trigger = Trigger.Interval(1.seconds)) {                 // this: SlotUpdateEvent
-              item = item(Material.CLOCK).apply { itemMeta = itemMeta?.apply { setDisplayName("§e$nowText") } }
+              // 回调体内 SlotScope.item() 被 @SlotDsl 屏蔽（防误改槽声明），构造物品用裸 ItemStack
+              item = ItemStack(Material.CLOCK).apply { itemMeta = itemMeta?.apply { setDisplayName("§e$nowText") } }
             }
         }
         closeButton(26)
@@ -307,24 +310,24 @@ DSL 写法与现状一致；唯一对调用方可见的变化是「多了 `menu.
 
 ### 8.1 交互式槽位与背包屏蔽（增量，spec 见 `superpowers/specs/2026-07-02-menu-interactive-slots-design.md`）
 
-菜单级 `hidePlayerInventory`（默认 `true`，保持屏蔽玩家背包的现状）；slot 级 `movable`（物品可被拿走）与 `placeable`（玩家可放入自己的物品）。引擎只维护虚拟层，**真实物品的给予/扣除由插件在 `onTake`/`onPlace` 回调中实现**（可取消）：
+> 注：该 spec 中的 `movable`/`placeable` 静态开关与「插件手动给予/扣除物品」契约已被后续的事件契约取代，本节与代码 KDoc（`SlotTakeEvent`/`SlotPlaceEvent`）为准。
+
+菜单级 `hidePlayerInventory`（默认 `true`，保持屏蔽玩家背包的现状）。取出/放入不再是 slot 级静态布尔，而是事件契约：`SlotTakeEvent`/`SlotPlaceEvent` **默认 `isCancelled = true`（拒绝）**，声明 `onTake`/`onPlace` 并显式 `isCancelled = false` 才放行，可按 player/物品等条件动态决定。物品移动由 Bukkit 原生完成（唯一例外是 shift-入菜单：引擎取消原生事件后自行向放行槽分发并扣减来源格），**回调只把关/观察，不要再手动给予/扣除物品**（会导致复制或丢失）：
 
 ```kotlin
 val trade = factory.createChestMenu(ChestMenuType.GENERIC_9X3, hidePlayerInventory = false) {
     page(Component.text("交易")) {
-        // 可被拿走的奖励：回调负责真实给予
-      slot(11, item(Material.DIAMOND), movable = true) {
-            onTake {                                        // this: SlotTakeEvent(item, targetSlot, ...)
-                if (player.inventory.addItem(item).isNotEmpty()) isCancelled = true  // 背包满 → 取消
+        // 可被拿走的奖励：物品移动由原生完成，回调只决定放行与否
+        slot(11) {
+            item(Material.DIAMOND)
+            onTake {                                        // this: SlotTakeEvent（默认 isCancelled = true）
+                if (player.hasPermission("trade.claim")) isCancelled = false  // 显式放行，无需手动给予
             }
         }
-        // 玩家可放入物品的投入口（初始为空）：回调负责真实扣除
-      slot(15, item(Material.AIR), placeable = true) {
-            onPlace {                                       // this: SlotPlaceEvent(item, sourceSlot, ...)
-                val src = player.inventory.getItem(sourceSlot)
-                if (src?.isSimilar(item) != true || src.amount < item.amount) { isCancelled = true; return@onPlace }
-                if (src.amount == item.amount) player.inventory.setItem(sourceSlot, null)
-                else src.amount -= item.amount              // 右键放置可能只放入部分数量
+        // 玩家可放入物品的投入口（不声明 item ⇒ 初始为空）：回调只把关，不要手动扣除
+        slot(15) {
+            onPlace {                                       // this: SlotPlaceEvent（默认 isCancelled = true）
+                if (item.type == Material.EMERALD) isCancelled = false        // 只收绿宝石
             }
         }
         closeButton(26)
@@ -336,7 +339,7 @@ val deposited: ItemStack? = trade.getItem(15)   // 读取玩家放入的物品�
 trade.setItem(15, null)                          // 清空并 repaint
 ```
 
-注意：`placeable` 要求 `hidePlayerInventory = false`（否则构建期报错）；shift-快移/数字键/双击/拖拽在 v1 一律安全回退（取消+重刷）。
+注意：声明了 `onPlace` 放行处理器的槽位所在菜单必须显式以 `hidePlayerInventory = false` 创建（否则构建期报错）。shift-入菜单由引擎按「先同类未满堆叠、后空槽」规划并逐槽派发 `SlotPlaceEvent`（被取消的槽跳过，其余照常放入）；原生拖拽逐槽派发、任一取消则整体取消；数字键/光标交换按「先 `SlotTakeEvent` 后 `SlotPlaceEvent`」把关；`COLLECT_TO_CURSOR`（双击聚堆）与 `CLONE_STACK` 一律拒绝。
 
 ## 9. 改动清单
 
