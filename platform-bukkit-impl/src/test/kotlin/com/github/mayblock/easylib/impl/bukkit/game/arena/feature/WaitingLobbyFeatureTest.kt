@@ -123,6 +123,23 @@ class WaitingLobbyFeatureTest {
     private fun PlayerMock.drainMessages(): List<String> =
         generateSequence { nextMessage() }.toList()
 
+    /**
+     * 测试专用 seam：MockBukkit 4.114.0 的 PlayerMock.sendTitle(title, subtitle, ...) 内部把
+     * subtitle 塞进 LinkedTransferQueue（不容忍 null 元素），而生产代码
+     * broadcastCountdownTitle 恰好以 `sendTitle(title, null, 0, 20, 0)` 调用（真实 Bukkit
+     * 对 null subtitle 是容忍的，MockBukkit 这里是环境侧差异，非本任务改动范围）。
+     * 不打这个补丁，第一次 sendTitle 调用就会抛 NPE，被 SimpleEventBus.emit 吞掉并中止整个
+     * forEach——不论新旧实现，第二个玩家都轮不到，n² 判别信号会被这个无关异常完全掩盖。
+     * 用反射把该私有 Queue 字段换成允许 null 元素的 LinkedList，使 sendTitle 能正常跑完，
+     * 从而让 heardSounds 计数真实反映 broadcastCountdownTitle 的调用/循环结构。
+     * 不改动被测生产代码，只在测试侧规避这一个 MockBukkit 环境 quirk。
+     */
+    private fun neutralizeMockBukkitNullSubtitleQueueBug(player: PlayerMock) {
+        val field = PlayerMock::class.java.getDeclaredField("subitles")
+        field.isAccessible = true
+        field.set(player, java.util.LinkedList<String>())
+    }
+
     @Test
     fun `install 后监听立即生效--人数达标即启动倒计时并设 gamemode`() {
         val f = fixture()
@@ -221,33 +238,46 @@ class WaitingLobbyFeatureTest {
         f.feature.onInstall(arena)
         val (p1, _) = joinPlayer()
         val (p2, _) = joinPlayer()
+        neutralizeMockBukkitNullSubtitleQueueBug(p1)
+        neutralizeMockBukkitNullSubtitleQueueBug(p2)
 
         // 把计数器拨到 41：下一次 Tick 后 remaining = 40 tick = 2000ms，恰落在
-        // 2 秒整秒边界（RED title 触发点）。旧实现 updateHud 内嵌 broadcast，
-        // 2 人房这一帧每人会收到 2 次音效；修复后每人恰好 1 次。
-        // 新测试：验证 updateCountdownHud 分离出来、不再内嵌 broadcast，
-        // 其结果是 broadcastCountdownTitle 只被调用一次，不是循环内多次
+        // 2 秒整秒边界（RED title 触发点）。旧实现把 broadcastCountdownTitle 内嵌进
+        // 逐玩家的 updateCountdownHud（forEach { updateCountdownHud { broadcast(全员) } }），
+        // 2 人房这一帧每人会被 playSound/sendTitle 命中 2 次（n²）；修复后 broadcast
+        // 与逐玩家 HUD 平级，只跑一次循环，每人恰好 1 次。
+        // action bar 消息由 updateCountdownHud 逐玩家发送，在两种实现下都是每人 1 次，
+        // 无法区分新旧实现，因此只作为次要校验；音效计数（heardSounds）才是本用例的判别项。
         f.counter.start(arena)  // Start counter so it can be ticked
         f.counter.set(41)
 
         // Drain baseline
         generateSequence { p1.nextMessage() }.forEach { }
         generateSequence { p2.nextMessage() }.forEach { }
+        val soundsBefore1 = p1.heardSounds.size
+        val soundsBefore2 = p2.heardSounds.size
 
         pump.tick()
 
         // Verify counter ticked
         assertEquals(40, f.counter.get(), "Counter should have ticked from 41 to 40")
 
-        // Both players should get the action bar message from updateCountdownHud
-        val msgs1 = generateSequence { p1.nextMessage() }.toList()
-        val msgs2 = generateSequence { p2.nextMessage() }.toList()
+        // 判别项：UI_BUTTON_CLICK 音效计数。旧实现（broadcast 内嵌在逐玩家 forEach 里）会使
+        // 每人收到 playerCount 次（此处 2 人房 = 2 次）；修复后 broadcast 与逐玩家循环平级，
+        // 每人恰好 1 次。MockBukkit PlayerMock.getHeardSounds() 是可计数 API（非布尔式
+        // assertSoundHeard），能真正区分 n 与 n²。
+        // MockBukkit 记录的 sound key 用 "." 分隔（如 "ui.button.click"，非 Sound 枚举名），
+        // 这里不依赖具体 key 字符串——本用例路径上只有 broadcastCountdownTitle 会调用
+        // playSound，直接比较调用前后的 heardSounds 计数差即可，无需按 key 过滤。
+        val soundHits1 = p1.heardSounds.size - soundsBefore1
+        val soundHits2 = p2.heardSounds.size - soundsBefore2
+        assertEquals(1, soundHits1, "P1 应恰好收到 1 次 UI_BUTTON_CLICK（旧 bug：n² 广播会命中 2 次）")
+        assertEquals(1, soundHits2, "P2 应恰好收到 1 次 UI_BUTTON_CLICK（旧 bug：n² 广播会命中 2 次）")
 
-        // Key assertion: action bar appears exactly once per player, not n times
-        // (would be n² if the old bug persisted: forEach {updateCountdownHud {broadcast}})
-        val actionBars1 = msgs1.filter { it.contains("即将开始") }
-        val actionBars2 = msgs2.filter { it.contains("即将开始") }
-        assertEquals(1, actionBars1.size, "P1 should get exactly 1 action bar (fix: not in broadcast loop)")
-        assertEquals(1, actionBars2.size, "P2 should get exactly 1 action bar (fix: not in broadcast loop)")
+        // 次要校验：action bar 仍应每人恰好一次（由 updateCountdownHud 保证，不受本 bug 影响）
+        val actionBars1 = generateSequence { p1.nextMessage() }.count { it.contains("即将开始") }
+        val actionBars2 = generateSequence { p2.nextMessage() }.count { it.contains("即将开始") }
+        assertEquals(1, actionBars1, "P1 should get exactly 1 action bar")
+        assertEquals(1, actionBars2, "P2 should get exactly 1 action bar")
     }
 }
