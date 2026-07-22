@@ -28,8 +28,13 @@ class WaitingLobbyFeature<T>(
     private val playerCount: () -> Int,
     private val isActive: () -> Boolean,
     private val startCountdown: Duration,
-    onComplete: () -> Unit,
-    private val counter: Counter = Counter(1.ticks, startCountdown.toTicks(), -1),
+    private val onComplete: () -> Unit,
+    private val counter: Counter = Counter(
+        interval = 1.ticks,
+        initialValue = startCountdown.toTicks(),
+        step = -1,
+        stopTarget = 0,
+    ),
 ) : Feature<T> where T : BukkitArena<out BukkitArenaPlayer, out BukkitArenaEntity>, T : TaskScheduler {
 
     companion object Key : FeatureKey<WaitingLobbyFeature<*>>("WaitingLobbyFeature")
@@ -37,23 +42,40 @@ class WaitingLobbyFeature<T>(
     private lateinit var arena: T
     private val onlinePlayers get() = arena.players.mapNotNull { it.bukkitPlayer }
     private val playerStatus get() = "${playerCount()}/$maxPlayers"
-    private var offListeners: Disposable? = null
+    private var disposer: Disposable? = null
 
     init {
-        counter.addListener { n ->
-            if (n == 0L) {
-                onComplete(onComplete)
-                counter.stop()
-                counter.reset()
-                return@addListener
+        counter.on {
+            on<Counter.Event.Started> {
+                onlinePlayers.sendMessage("游戏即将开始！")
             }
-            onCountdown(n)
+            on<Counter.Event.Tick> {
+                if (value == 0L) return@on   // 终点帧交给 Completed 收尾，不再刷 HUD
+                val remaining = value.ticks
+                onlinePlayers.forEach { it.updateCountdownHud(remaining) }
+                broadcastCountdownTitle(remaining)   // 广播与 per-player 平级，只发一份
+            }
+            // 复位策略集中在两个终态处理器：Leave 只负责"决定停"，善后统一在这里。
+            on<Counter.Event.Completed> {
+                counter.reset()
+                completeCountdown()
+            }
+            on<Counter.Event.Stopped> {
+                counter.reset()
+                val msg = if (playerCount() < minPlayers) {
+                    "当前人数不足，需要等待更多玩家！"
+                } else "倒计时终止"
+                onlinePlayers.sendMessage(msg) {
+                    it.resetCountdownHud()
+                }
+            }
         }
     }
 
     override fun onInstall(context: T) {
         arena = context
-        offListeners = context.on {
+        // 立即订阅（旧 bug：订阅曾被误包进 Disposable lambda，整个生命周期从未注册）。
+        val subscription = context.on {
             on<BridgeEvent.EntityDamageEvent> {
                 if (!isActive()) return@on
                 isCancelled = true
@@ -61,42 +83,45 @@ class WaitingLobbyFeature<T>(
             on<ArenaJoinedEvent> {
                 if (!isActive()) return@on
                 (player as BukkitArenaPlayer).bukkitPlayer?.gameMode = GameMode.ADVENTURE
-                if (!counter.isRunning && playerCount() >= minPlayers) {
-                    counter.start(context)
-                }
+                tryStartCountdown()
             }
             on<ArenaLeaveEvent> {
-                (player as BukkitArenaPlayer).bukkitPlayer?.let { player ->
-                    player.gameMode = player.previousGameMode ?: GameMode.SURVIVAL
+                if (!isActive()) return@on
+                (player as BukkitArenaPlayer).bukkitPlayer?.let { p ->
+                    p.gameMode = p.previousGameMode ?: GameMode.SURVIVAL
                 }
-                if (counter.isRunning && playerCount() < minPlayers) {
-                    onlinePlayers.sendMessage("当前人数不足，需要等待更多玩家！") {
-                        it.resetCountdownHud()
-                    }
-                    counter.stop()
-                }
+                // ArenaLeaveEvent 在移除之后发出，playerCount() 已不含离开者，直接比较无差一。
+                if (counter.isRunning && playerCount() < minPlayers) counter.stop()
             }
+        }
+        val checker = context.scheduleTask(TaskScheduler.Trigger.Interval(1.seconds)) {
+            if (!isActive() || counter.isRunning) return@scheduleTask
+            tryStartCountdown()   // 兜底：玩家先于安装到齐（或 join 早于 install）时补启动
+            if (!counter.isRunning) onlinePlayers.sendActionBar("等待中 ($playerStatus)")
+        }
+        disposer = Disposable {
+            subscription.dispose()
+            context.cancelTask(checker)
         }
     }
 
     override fun onUninstall(context: T) {
-        offListeners?.dispose()
+        disposer?.dispose()
+        disposer = null
+        counter.stop()   // 旧 bug：卸载不停 counter，幽灵任务继续跑
     }
 
-    private fun onComplete(onComplete: () -> Unit) {
+    /** 启动条件的唯一出处：join 事件（即时）与 checker（兜底）共用。 */
+    private fun tryStartCountdown() {
+        if (!counter.isRunning && playerCount() >= minPlayers) counter.start(arena)
+    }
+
+    private fun completeCountdown() {
         onlinePlayers.forEach { player ->
             player.gameMode = player.previousGameMode ?: GameMode.SURVIVAL
             player.resetCountdownHud()
         }
         onComplete()
-    }
-
-    private fun onCountdown(n: Long) {
-        if (counter.isRunning) {
-            onlinePlayers.forEach { it.updateReadyHud(n.ticks) }
-        } else {
-            onlinePlayers.sendActionBar("等待中 ($playerStatus)")
-        }
     }
 
     // 倒计时用 level/exp 借位显示进度条；完成或中止时必须复位，否则玩家的经验条/等级 HUD 会残留倒计时数字。
@@ -108,7 +133,7 @@ class WaitingLobbyFeature<T>(
         }
     }
 
-    private fun Player.updateReadyHud(remaining: Duration) {
+    private fun Player.updateCountdownHud(remaining: Duration) {
         val remainingSeconds = ceil(remaining.toDouble(DurationUnit.SECONDS)).toInt()
         this.sendPackets {
             forPlayer {
@@ -116,17 +141,17 @@ class WaitingLobbyFeature<T>(
             }
         }
         this.sendActionBar("${remainingSeconds}s 即将开始！ ($playerStatus)")
-        broadcastCountdownTitle(remaining)
     }
 
     private fun broadcastCountdownTitle(remaining: Duration) {
-        val color = when (remaining) {
-            30.seconds, 20.seconds, 10.seconds -> ChatColor.GREEN
-            5.seconds, 4.seconds, 3.seconds -> ChatColor.YELLOW
-            2.seconds, 1.seconds -> ChatColor.RED
+        if (remaining.inWholeMilliseconds % 1000L != 0L) return   // 只在整秒边界触发
+        val color = when (remaining.inWholeSeconds) {
+            30L, 20L, 10L -> ChatColor.GREEN
+            in 3L..5L -> ChatColor.YELLOW
+            1L, 2L -> ChatColor.RED
             else -> return
         }
-        val title = "${color}${ChatColor.BOLD}${remaining.toInt(DurationUnit.SECONDS)}"
+        val title = "$color${ChatColor.BOLD}${remaining.inWholeSeconds}"
         onlinePlayers.forEach { player ->
             player.playSound(player.location, Sound.UI_BUTTON_CLICK, 1f, 1f)
             player.sendTitle(title, null, 0, 20, 0)
