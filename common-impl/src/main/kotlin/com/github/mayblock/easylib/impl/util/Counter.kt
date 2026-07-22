@@ -20,7 +20,11 @@ import kotlin.time.Duration
  * - [Event.Stopped]：仅由外部 [stop] 中止时发出；未运行时 stop() 静默、不发事件。
  *
  * 线程安全：start / stop / 自动完成经内部锁互斥，可从任意线程调用。
- * 注意：[Event.Started] 在锁内发出，Started 处理器内不得回调本对象的 start/stop。
+ * 注意：[Event.Started] 在锁内发出，Started 处理器内不得回调本对象的 start/stop——
+ * 锁为 monitor 可重入，违反不会死锁，但此时 stop() 会因运行句柄尚未赋值而被静默吞掉、
+ * [isRunning] 亦读到 false，表现为"停不下来"而非报错。
+ * 并发调度器下 stop() 无法打断已在执行中的那一次 tick，[Event.Stopped] 之后可能残留一个迟到
+ * [Event.Tick]；主线程型调度器（Bukkit）不受影响。
  */
 class Counter(
     private val interval: Duration,

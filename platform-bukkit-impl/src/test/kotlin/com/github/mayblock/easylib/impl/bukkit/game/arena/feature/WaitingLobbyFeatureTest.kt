@@ -67,14 +67,21 @@ class WaitingLobbyFeatureTest {
         arena = TestArena(plugin, pump)
         arena.isArenaEnabled = true
         // sendPackets 走 EasyLibApi.api 单例；注入 relaxed mock 使 HUD 包发送成为无害 no-op。
+        previousApi = try { EasyLibApi.api } catch (_: UninitializedPropertyAccessException) { null }
         EasyLibApi.api = mockk<BukkitEasyLib>(relaxed = true)
     }
 
     @AfterTest
     fun tearDown() {
         arena.isArenaEnabled = false
+        // 尽量恢复全局单例，避免 mock 泄漏到同 JVM 的后续测试类；
+        // lateinit 无法退回未初始化态，若此前未初始化则 mock 残留（后续误触 sendPackets
+        // 会静默 no-op 而非快速失败）——已知取舍，见终审 Minor #2。
+        previousApi?.let { EasyLibApi.api = it }
         MockBukkit.unmock()
     }
+
+    private var previousApi: EasyLibApi? = null
 
     internal class TestPlayer(
         bukkitPlayer: Player,
@@ -248,7 +255,7 @@ class WaitingLobbyFeatureTest {
         // 与逐玩家 HUD 平级，只跑一次循环，每人恰好 1 次。
         // action bar 消息由 updateCountdownHud 逐玩家发送，在两种实现下都是每人 1 次，
         // 无法区分新旧实现，因此只作为次要校验；音效计数（heardSounds）才是本用例的判别项。
-        f.counter.start(arena)  // Start counter so it can be ticked
+        // counter 已由第二次 join 经 tryStartCountdown() 启动，无需手动 start。
         f.counter.set(41)
 
         // Drain baseline
