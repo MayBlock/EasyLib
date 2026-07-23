@@ -45,7 +45,6 @@ class CounterTest {
             on<Counter.Event.Started> { events += this }
             on<Counter.Event.Tick> { events += this }
             on<Counter.Event.Stopped> { events += this }
-            on<Counter.Event.Completed> { events += this }
         }
         return events
     }
@@ -77,9 +76,12 @@ class CounterTest {
     }
 
     @Test
-    fun `到达 stopTarget 自动停止并发 Completed 而非 Stopped`() {
-        val counter = Counter(50.milliseconds, initialValue = 2, step = -1, stopTarget = 0)
+    fun `调用方可在 Tick 处理器内 stop--停止条件由调用方决定`() {
+        val counter = Counter(50.milliseconds, initialValue = 2, step = -1)
         val events = recordEvents(counter)
+        counter.on {
+            on<Counter.Event.Tick> { if (value == 0L) counter.stop() }
+        }
         counter.start(scheduler)
         scheduler.tick()
         scheduler.tick()
@@ -88,13 +90,13 @@ class CounterTest {
                 Counter.Event.Started(2),
                 Counter.Event.Tick(1),
                 Counter.Event.Tick(0),
-                Counter.Event.Completed(0),
+                Counter.Event.Stopped(0),
             ), events
         )
         assertFalse(counter.isRunning)
-        assertEquals(0, scheduler.activeCount, "自动完成必须取消调度任务")
+        assertEquals(0, scheduler.activeCount, "Tick 处理器内 stop 必须取消调度任务")
         scheduler.tick()
-        assertEquals(4, events.size, "完成后不得再有任何事件")
+        assertEquals(4, events.size, "停止后不得再有任何事件")
     }
 
     @Test

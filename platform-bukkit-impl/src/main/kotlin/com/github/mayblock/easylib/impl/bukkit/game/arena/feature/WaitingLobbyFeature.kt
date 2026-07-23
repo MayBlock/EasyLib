@@ -33,7 +33,6 @@ class WaitingLobbyFeature<T>(
         interval = 1.ticks,
         initialValue = startCountdown.toTicks(),
         step = -1,
-        stopTarget = 0,
     ),
 ) : Feature<T> where T : BukkitArena<out BukkitArenaPlayer, out BukkitArenaEntity>, T : TaskScheduler {
 
@@ -44,24 +43,36 @@ class WaitingLobbyFeature<T>(
     private val playerStatus get() = "${playerCount()}/$maxPlayers"
     private var disposer: Disposable? = null
 
+    /**
+     * 完成/中止分流标志：Tick 数到 0 时置位后再 stop()，Stopped 处理器据此区分
+     * 「正常完成」与「外部中止」。Counter 是通用节拍器，停止条件由本 Feature 决定；
+     * 若无此标志，正常开赛也会走中止分支误发"倒计时终止"（即修复前的 bug #2）。
+     */
+    private var completing = false
+
     init {
         counter.on {
             on<Counter.Event.Started> {
                 onlinePlayers.sendMessage("游戏即将开始！")
             }
             on<Counter.Event.Tick> {
-                if (value == 0L) return@on   // 终点帧交给 Completed 收尾，不再刷 HUD
+                if (value == 0L) {
+                    completing = true   // 到 0 属正常完成：置位后停表，善后交给 Stopped 处理器分流
+                    counter.stop()
+                    return@on
+                }
                 val remaining = value.ticks
                 onlinePlayers.forEach { it.updateCountdownHud(remaining) }
                 broadcastCountdownTitle(remaining)   // 广播与 per-player 平级，只发一份
             }
-            // 复位策略集中在两个终态处理器：Leave 只负责"决定停"，善后统一在这里。
-            on<Counter.Event.Completed> {
-                counter.reset()
-                completeCountdown()
-            }
+            // 复位与善后集中在唯一终态处理器：Leave/uninstall 只负责"决定停"。
             on<Counter.Event.Stopped> {
                 counter.reset()
+                if (completing) {
+                    completing = false
+                    completeCountdown()
+                    return@on
+                }
                 val msg = if (playerCount() < minPlayers) {
                     "当前人数不足，需要等待更多玩家！"
                 } else "倒计时终止"
@@ -74,7 +85,6 @@ class WaitingLobbyFeature<T>(
 
     override fun onInstall(context: T) {
         arena = context
-        // 立即订阅（旧 bug：订阅曾被误包进 Disposable lambda，整个生命周期从未注册）。
         val subscription = context.on {
             on<BridgeEvent.EntityDamageEvent> {
                 if (!isActive()) return@on
@@ -108,7 +118,7 @@ class WaitingLobbyFeature<T>(
     override fun onUninstall(context: T) {
         disposer?.dispose()
         disposer = null
-        counter.stop()   // 旧 bug：卸载不停 counter，幽灵任务继续跑
+        counter.stop()
     }
 
     /** 启动条件的唯一出处：join 事件（即时）与 checker（兜底）共用。 */

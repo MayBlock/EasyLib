@@ -105,7 +105,6 @@ class WaitingLobbyFeatureTest {
             interval = 50.milliseconds,
             initialValue = 3,
             step = -1,
-            stopTarget = 0,
         )
         val feature = WaitingLobbyFeature<TestArena>(
             minPlayers = 2,
