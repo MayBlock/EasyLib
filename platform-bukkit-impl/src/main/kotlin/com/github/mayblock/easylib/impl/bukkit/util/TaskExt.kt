@@ -1,5 +1,9 @@
 package com.github.mayblock.easylib.impl.bukkit.util
 
+import com.github.mayblock.easylib.api.EasyLibApi
+import com.github.mayblock.easylib.api.bukkit.bukkitApi
+import com.github.mayblock.easylib.api.scheduler.TaskExecutor
+import com.github.mayblock.easylib.api.scheduler.TaskScheduler
 import kotlin.time.Duration
 import kotlin.time.DurationUnit
 import kotlin.time.toDuration
@@ -15,3 +19,21 @@ val Long.ticks
     get() = (this * 50)
         .toDuration(DurationUnit.MILLISECONDS)
 val Int.ticks get() = this.toLong().ticks
+
+fun TaskScheduler.scheduleSyncTask(
+    trigger: TaskScheduler.Trigger = TaskScheduler.Trigger.Once,
+    block: TaskScheduler.TaskScope.() -> Unit
+): Int = object : TaskScheduler.Task {
+    override val trigger: TaskScheduler.Trigger = trigger
+    override val executor: TaskExecutor = EasyLibApi.api.bukkitApi().taskExecutors.sync
+    override val onTick: TaskScheduler.TaskScope.() -> Unit = block
+}.let(::scheduleTask)
+
+fun TaskScheduler.scheduleAsyncTask(
+    trigger: TaskScheduler.Trigger = TaskScheduler.Trigger.Once,
+    block: TaskScheduler.TaskScope.() -> Unit
+): Int = object : TaskScheduler.Task {
+    override val trigger: TaskScheduler.Trigger = trigger
+    override val executor: TaskExecutor = EasyLibApi.api.bukkitApi().taskExecutors.async
+    override val onTick: TaskScheduler.TaskScope.() -> Unit = block
+}.let(::scheduleTask)

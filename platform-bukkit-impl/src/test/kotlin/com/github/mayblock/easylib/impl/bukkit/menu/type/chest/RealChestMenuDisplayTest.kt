@@ -32,7 +32,13 @@ private class DisplayPumpScheduler : TaskScheduler {
     override fun scheduleTask(task: TaskScheduler.Task): Int { queue += task; return nextId++ }
     override fun cancelTask(taskId: Int): Boolean = true
     override fun cancelAllTasks() {}
-    fun pump() { val round = queue.toList(); queue.clear(); round.forEach { it.onTick() } }
+    fun pump() {
+        val round = queue.toList()
+        queue.clear()
+        round.forEach {
+            it.onTick(mockk<TaskScheduler.TaskScope>(relaxed = true))
+        }
+    }
 }
 
 class RealChestMenuDisplayTest {

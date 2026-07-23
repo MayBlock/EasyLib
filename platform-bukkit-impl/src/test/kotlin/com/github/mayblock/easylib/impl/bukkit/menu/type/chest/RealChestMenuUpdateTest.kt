@@ -6,7 +6,7 @@ import com.github.mayblock.easylib.api.scheduler.TaskScheduler
 import com.github.mayblock.easylib.api.util.Priority
 import com.github.mayblock.easylib.impl.bukkit.menu.slot.SlotSpec
 import com.github.mayblock.easylib.impl.bukkit.menu.slot.builder.SlotBuilder
-import com.github.mayblock.easylib.impl.bukkit.scheduler.BukkitAsyncExecutor
+import com.github.mayblock.easylib.impl.bukkit.scheduler.BukkitTaskExecutorsImpl
 import com.github.mayblock.easylib.packetevents.PacketManager
 import io.mockk.mockk
 import net.kyori.adventure.text.Component
@@ -26,7 +26,9 @@ private class AsyncTrackingScheduler(
     val asyncFlags: MutableList<Boolean> = mutableListOf()
 ) : TaskScheduler {
     override fun scheduleTask(task: TaskScheduler.Task): Int {
-        asyncFlags += task.executor is BukkitAsyncExecutor; task.onTick(); return 0
+        asyncFlags += task.executor is BukkitTaskExecutorsImpl.AsyncExecutor; task.onTick(
+            mockk<TaskScheduler.TaskScope>(relaxed = true)
+        ); return 0
     }
     override fun cancelTask(taskId: Int): Boolean = true
     override fun cancelAllTasks() {}
@@ -38,7 +40,9 @@ private class RecordingScheduler : TaskScheduler {
     val scheduledIds = mutableListOf<Int>()
     val cancelledIds = mutableListOf<Int>()
     override fun scheduleTask(task: TaskScheduler.Task): Int {
-        val id = nextId++; scheduledIds += id; task.onTick(); return id
+        val id = nextId++; scheduledIds += id; task.onTick(
+            mockk<TaskScheduler.TaskScope>(relaxed = true)
+        ); return id
     }
     override fun cancelTask(taskId: Int): Boolean { cancelledIds += taskId; return true }
     override fun cancelAllTasks() {}
@@ -51,7 +55,9 @@ private class PumpScheduler : TaskScheduler {
     override fun scheduleTask(task: TaskScheduler.Task): Int { queue += task; return nextId++ }
     override fun cancelTask(taskId: Int): Boolean = true
     override fun cancelAllTasks() {}
-    fun pump() { val round = queue.toList(); queue.clear(); round.forEach { it.onTick() } }
+    fun pump() { val round = queue.toList(); queue.clear(); round.forEach { it.onTick(
+        mockk<TaskScheduler.TaskScope>(relaxed = true)
+    ) } }
 }
 
 class RealChestMenuUpdateTest {

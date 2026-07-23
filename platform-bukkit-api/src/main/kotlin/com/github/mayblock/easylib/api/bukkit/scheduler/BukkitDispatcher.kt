@@ -1,4 +1,4 @@
-package com.github.mayblock.easylib.api.bukkit
+package com.github.mayblock.easylib.api.bukkit.scheduler
 
 import kotlinx.coroutines.CoroutineDispatcher
 

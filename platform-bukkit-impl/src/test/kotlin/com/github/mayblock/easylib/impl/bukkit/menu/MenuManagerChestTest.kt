@@ -3,11 +3,10 @@ package com.github.mayblock.easylib.impl.bukkit.menu
 import com.github.mayblock.easylib.api.bukkit.menu.MenuCloseEvent
 import com.github.mayblock.easylib.api.bukkit.menu.MenuDestroyEvent
 import com.github.mayblock.easylib.api.bukkit.menu.type.chest.ChestMenuType
-import com.github.mayblock.easylib.api.bukkit.menu.type.chest.dsl.slot
 import com.github.mayblock.easylib.api.event.on
+import com.github.mayblock.easylib.api.scheduler.TaskScheduler
 import com.github.mayblock.easylib.impl.bukkit.menu.listener.MenuInteractionListener
 import com.github.mayblock.easylib.impl.bukkit.menu.type.chest.RealChestMenu
-import com.github.mayblock.easylib.impl.bukkit.scheduler.BukkitTaskScheduler
 import com.github.mayblock.easylib.packetevents.PacketManager
 import io.mockk.mockk
 import net.kyori.adventure.text.Component
@@ -25,7 +24,7 @@ class MenuManagerChestTest {
     @AfterTest fun tearDown() { MockBukkit.unmock() }
 
     private fun manager() = MenuManager(
-        mockk<BukkitTaskScheduler>(relaxed = true),
+        mockk<TaskScheduler>(relaxed = true),
         mockk<PacketManager<*>>(relaxed = true),
         MockBukkit.createMockPlugin()
     )

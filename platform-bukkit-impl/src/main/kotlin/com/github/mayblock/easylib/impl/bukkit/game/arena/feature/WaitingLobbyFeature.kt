@@ -9,6 +9,7 @@ import com.github.mayblock.easylib.api.feature.FeatureKey
 import com.github.mayblock.easylib.api.game.arena.event.ArenaJoinedEvent
 import com.github.mayblock.easylib.api.game.arena.event.ArenaLeaveEvent
 import com.github.mayblock.easylib.api.scheduler.TaskScheduler
+import com.github.mayblock.easylib.api.scheduler.scheduleTask
 import com.github.mayblock.easylib.api.util.Disposable
 import com.github.mayblock.easylib.impl.bukkit.game.arena.bridge.BridgeEvent
 import com.github.mayblock.easylib.impl.bukkit.util.*

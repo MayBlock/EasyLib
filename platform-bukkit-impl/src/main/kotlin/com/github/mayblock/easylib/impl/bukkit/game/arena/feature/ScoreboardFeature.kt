@@ -6,6 +6,7 @@ import com.github.mayblock.easylib.api.bukkit.game.arena.BukkitArenaPlayer
 import com.github.mayblock.easylib.api.feature.Feature
 import com.github.mayblock.easylib.api.feature.FeatureKey
 import com.github.mayblock.easylib.api.scheduler.TaskScheduler
+import com.github.mayblock.easylib.impl.bukkit.util.scheduleAsyncTask
 import fr.mrmicky.fastboard.FastBoard
 import net.md_5.bungee.api.ChatColor
 
@@ -29,7 +30,7 @@ class ScoreboardFeature<A, Player : BukkitArenaPlayer> private constructor(
     private val fastboardCache = mutableMapOf<BukkitArenaPlayer, FastBoard>()
 
     override fun onInstall(context: A) {
-        taskId = context.scheduleTask {
+        taskId = context.scheduleAsyncTask {
             refresh(context)
         }
     }

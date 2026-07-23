@@ -5,12 +5,12 @@ import com.github.mayblock.easylib.api.bukkit.menu.slot.event.SlotPlaceEvent
 import com.github.mayblock.easylib.api.bukkit.menu.slot.event.SlotTakeEvent
 import com.github.mayblock.easylib.api.bukkit.menu.type.chest.ChestMenuType
 import com.github.mayblock.easylib.api.event.on
+import com.github.mayblock.easylib.api.scheduler.TaskScheduler
 import com.github.mayblock.easylib.api.util.Priority
 import com.github.mayblock.easylib.impl.bukkit.menu.MenuManager
 import com.github.mayblock.easylib.impl.bukkit.menu.listener.MenuInteractionListener
 import com.github.mayblock.easylib.impl.bukkit.menu.slot.SlotSpec
 import com.github.mayblock.easylib.impl.bukkit.menu.slot.builder.SlotBuilder
-import com.github.mayblock.easylib.impl.bukkit.scheduler.BukkitTaskScheduler
 import com.github.mayblock.easylib.impl.bukkit.util.stack
 import com.github.mayblock.easylib.packetevents.PacketManager
 import io.mockk.mockk
@@ -44,7 +44,7 @@ class RealChestMenuClickTest {
 
     private fun menu(specs: Map<Int, SlotSpec>): RealChestMenu =
         RealChestMenu(
-            mockk<BukkitTaskScheduler>(relaxed = true),
+            mockk<TaskScheduler>(relaxed = true),
             mockk<PacketManager<*>>(relaxed = true),
             Component.text("t"),
             ChestMenuType.GENERIC_9X3,
@@ -238,7 +238,7 @@ class RealChestMenuClickTest {
         // 监听器路由前会校验菜单归属（防止多 MenuManager 实例重复处理），
         // 因此这里显式把 m 挂到一个 manager 名下，再用同一 manager 构造监听器。
         val mgr = MenuManager(
-            mockk<BukkitTaskScheduler>(relaxed = true),
+            mockk<TaskScheduler>(relaxed = true),
             mockk<PacketManager<*>>(relaxed = true),
             MockBukkit.createMockPlugin()
         )

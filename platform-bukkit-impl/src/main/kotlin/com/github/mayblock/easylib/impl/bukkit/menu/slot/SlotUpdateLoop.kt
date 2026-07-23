@@ -2,7 +2,9 @@ package com.github.mayblock.easylib.impl.bukkit.menu.slot
 
 import com.github.mayblock.easylib.api.bukkit.menu.slot.event.SlotUpdateEvent
 import com.github.mayblock.easylib.api.scheduler.TaskScheduler
+import com.github.mayblock.easylib.api.scheduler.scheduleTask
 import com.github.mayblock.easylib.impl.bukkit.menu.BukkitMenu
+import com.github.mayblock.easylib.impl.bukkit.util.scheduleSyncTask
 import com.github.mayblock.easylib.impl.bukkit.util.stack
 import org.bukkit.Material
 import org.bukkit.entity.Player
@@ -49,7 +51,7 @@ internal class SlotUpdateLoop(
         fired.clear()
         groupsBySlot.forEach { (index, groups) ->
             groups.forEach { (trigger, ordered) ->
-                taskIds += taskScheduler.scheduleTask(trigger) { // 主线程（默认执行器）
+                taskIds += taskScheduler.scheduleSyncTask(trigger) { // 主线程（默认执行器）
                     fired += GroupKey(index, trigger)
                     viewers().forEach { player ->
                         if (compute(index, ordered, player)) markDirty(player.uniqueId)

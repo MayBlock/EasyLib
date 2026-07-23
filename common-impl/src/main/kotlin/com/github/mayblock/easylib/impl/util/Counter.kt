@@ -4,6 +4,7 @@ import com.github.mayblock.easylib.api.event.EventBus
 import com.github.mayblock.easylib.api.event.EventSource
 import com.github.mayblock.easylib.api.scheduler.TaskExecutor
 import com.github.mayblock.easylib.api.scheduler.TaskScheduler
+import com.github.mayblock.easylib.api.scheduler.scheduleTask
 import com.github.mayblock.easylib.api.util.Disposable
 import com.github.mayblock.easylib.impl.event.SimpleEventBus
 import com.github.mayblock.easylib.impl.util.Counter.Event

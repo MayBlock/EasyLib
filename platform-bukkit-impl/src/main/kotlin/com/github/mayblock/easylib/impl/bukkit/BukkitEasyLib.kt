@@ -9,6 +9,8 @@ import com.github.mayblock.easylib.impl.bukkit.menu.MenuManager
 import com.github.mayblock.easylib.impl.bukkit.overlay.OverlayManager
 import com.github.mayblock.easylib.impl.bukkit.packet.BukkitPacketManager
 import com.github.mayblock.easylib.impl.bukkit.prompt.PromptApiImpl
+import com.github.mayblock.easylib.impl.bukkit.scheduler.BukkitDispatcherImpl
+import com.github.mayblock.easylib.impl.bukkit.scheduler.BukkitTaskExecutorsImpl
 import com.github.mayblock.easylib.impl.bukkit.scheduler.BukkitTaskScheduler
 import com.github.mayblock.easylib.packetevents.PacketManager
 import org.bukkit.Bukkit
@@ -25,6 +27,7 @@ class BukkitEasyLib(
     }
 
     val packetManager: PacketManager<Player> = BukkitPacketManager
+    override val taskExecutors = BukkitTaskExecutorsImpl(plugin)
     override val taskScheduler = BukkitTaskScheduler(plugin)
     override val dispatcher = BukkitDispatcherImpl(plugin)
     // 注册其断线清理监听（onQuit）；shutdown() 时经 HandlerList.unregisterAll(this) 注销。

@@ -5,9 +5,12 @@ import com.github.mayblock.easylib.api.bukkit.extension.ItemExtensionApi
 import com.github.mayblock.easylib.api.bukkit.menu.MenuFactory
 import com.github.mayblock.easylib.api.bukkit.overlay.PlayerOverlayFactory
 import com.github.mayblock.easylib.api.bukkit.prompt.PromptApi
+import com.github.mayblock.easylib.api.bukkit.scheduler.BukkitDispatcher
+import com.github.mayblock.easylib.api.bukkit.scheduler.BukkitTaskExecutors
 import java.io.Closeable
 
 interface BukkitEasyLibApi : EasyLibApi, Closeable {
+    val taskExecutors: BukkitTaskExecutors
     val dispatcher: BukkitDispatcher
     val promptApi: PromptApi
     val itemExtensionApi: ItemExtensionApi

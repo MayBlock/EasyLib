@@ -30,15 +30,22 @@ class BukkitTaskScheduler(
         override fun cancel() {}
     }
 
+    private inner class BukkitTaskScope(private val taskId: Int): TaskScheduler.TaskScope {
+        override fun cancel() {
+            cancelTask(taskId)
+        }
+    }
+
     override fun scheduleTask(task: TaskScheduler.Task): Int {
         val id = idGenerator.getAndIncrement()
         val trigger = task.trigger
+        val taskScope = BukkitTaskScope(id)
         val isOneShot = trigger is TaskScheduler.Trigger.Once || trigger is TaskScheduler.Trigger.Delay
         val repeatingRunnable = Runnable {
-            task.onTick()
+            task.onTick(taskScope)
         }
         val oneShotRunnable = Runnable {
-            task.onTick()
+            task.onTick(taskScope)
             // 自删而非 cancelTask(id)：任务已经跑完，没有底层 BukkitTask 需要再 cancel()，
             // 直接把 map 里的记录（占位或真实引用）摘掉即可。
             tasks.remove(id)

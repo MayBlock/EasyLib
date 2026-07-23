@@ -5,7 +5,6 @@ import com.github.mayblock.easylib.api.bukkit.overlay.OverlayHideEvent
 import com.github.mayblock.easylib.api.bukkit.overlay.slot.dsl.onAction
 import com.github.mayblock.easylib.api.bukkit.overlay.slot.event.OverlaySlotActionEvent
 import com.github.mayblock.easylib.api.event.on
-import com.github.mayblock.easylib.api.scheduler.TaskExecutor
 import com.github.mayblock.easylib.api.scheduler.TaskScheduler
 import com.github.mayblock.easylib.api.util.Disposable
 import com.github.mayblock.easylib.impl.bukkit.overlay.builder.OverlaySlotBuilder
@@ -53,7 +52,11 @@ private class RecordingScheduler : TaskScheduler {
     override fun scheduleTask(task: TaskScheduler.Task): Int {
         val id = nextId++
         scheduledIds += id
-        task.onTick()
+        task.onTick(object : TaskScheduler.TaskScope {
+            override fun cancel() {
+                cancelTask(id)
+            }
+        })
         return id
     }
 
@@ -80,11 +83,10 @@ class PlayerOverlayImplTest {
     private fun build(
         specs: Map<Int, OverlaySlotSpec>,
         scheduler: TaskScheduler = RecordingScheduler(),
-        executor: TaskExecutor = TaskExecutor.Direct,
         transport: FakeTransport = FakeTransport(),
     ): Triple<PlayerOverlayImpl, FakeTransport, TaskScheduler> {
         val map = SlotMap(specs)
-        val overlay = PlayerOverlayImpl(specs, map, scheduler, executor, transport)
+        val overlay = PlayerOverlayImpl(specs, map, scheduler, transport)
         return Triple(overlay, transport, scheduler)
     }
 

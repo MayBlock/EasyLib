@@ -3,7 +3,6 @@ package com.github.mayblock.easylib.impl.bukkit.overlay
 import com.github.mayblock.easylib.api.bukkit.overlay.*
 import com.github.mayblock.easylib.api.bukkit.overlay.slot.event.OverlaySlotActionEvent
 import com.github.mayblock.easylib.api.event.EventSource
-import com.github.mayblock.easylib.api.scheduler.TaskExecutor
 import com.github.mayblock.easylib.api.scheduler.TaskScheduler
 import com.github.mayblock.easylib.api.util.Disposable
 import com.github.mayblock.easylib.impl.bukkit.overlay.slot.OverlaySlotSpec
@@ -31,13 +30,12 @@ internal class PlayerOverlayImpl(
     specs: Map<Int, OverlaySlotSpec>,
     private val map: SlotMap,
     scheduler: TaskScheduler,
-    executor: TaskExecutor,
     private val transport: OverlayTransport,
     private val dispatcher: OverlayEventDispatcher = OverlayEventDispatcher(scheduler),
 ) : PlayerOverlay, EventSource<OverlayEvent> by dispatcher {
 
     private val viewers = ViewerRegistry()
-    private val updateLoop = SlotUpdateLoop(map, scheduler, executor, ::repaint)
+    private val updateLoop = SlotUpdateLoop(map, scheduler, ::repaint)
     private var transportSub: Disposable? = null
 
     override var isDestroyed: Boolean = false

@@ -11,7 +11,6 @@ import com.github.mayblock.easylib.impl.bukkit.overlay.builder.PlayerOverlayBuil
 import com.github.mayblock.easylib.impl.bukkit.overlay.listener.OverlayQuitListener
 import com.github.mayblock.easylib.impl.bukkit.overlay.slot.SlotMap
 import com.github.mayblock.easylib.impl.bukkit.overlay.transport.PacketOverlayTransport
-import com.github.mayblock.easylib.impl.bukkit.scheduler.BukkitAsyncExecutor
 import org.bukkit.Bukkit
 import org.bukkit.event.HandlerList
 import org.bukkit.plugin.Plugin
@@ -36,7 +35,7 @@ class OverlayManager(
     override fun create(block: PlayerOverlayScope.() -> Unit): PlayerOverlay =
         PlayerOverlayBuilder { slots ->
             val map = SlotMap(slots)
-            PlayerOverlayImpl(slots, map, taskScheduler, BukkitAsyncExecutor(plugin), PacketOverlayTransport(map))
+            PlayerOverlayImpl(slots, map, taskScheduler, PacketOverlayTransport(map))
         }
             .apply(block)
             .build()

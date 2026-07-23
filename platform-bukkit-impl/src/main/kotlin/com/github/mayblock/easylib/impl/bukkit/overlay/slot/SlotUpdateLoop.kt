@@ -1,8 +1,8 @@
 package com.github.mayblock.easylib.impl.bukkit.overlay.slot
 
 import com.github.mayblock.easylib.api.bukkit.overlay.slot.dsl.OverlayUpdateScope
-import com.github.mayblock.easylib.api.scheduler.TaskExecutor
 import com.github.mayblock.easylib.api.scheduler.TaskScheduler
+import com.github.mayblock.easylib.impl.bukkit.util.scheduleAsyncTask
 import org.bukkit.inventory.ItemStack
 
 /**
@@ -17,7 +17,6 @@ import org.bukkit.inventory.ItemStack
 internal class SlotUpdateLoop(
     private val map: SlotMap,
     private val scheduler: TaskScheduler,
-    private val executor: TaskExecutor,
     private val repaint: (index: Int) -> Unit,
 ) {
     private val taskIds = mutableListOf<Int>()
@@ -36,7 +35,7 @@ internal class SlotUpdateLoop(
                 // 与事件总线同约定：priority 小值先执行。同 trigger 规则共享同一事务上下文
                 // 串行执行（后序规则可见前序修改），块全部结束后统一提交一次。
                 val ordered = rules.sortedBy { it.priority }
-                taskIds += scheduler.scheduleTask(ruleTrigger, executor) {
+                taskIds += scheduler.scheduleAsyncTask(ruleTrigger) {
                     val before = slot.item
                     val scope = UpdateScope(index, before.clone())
                     ordered.forEach { rule -> rule.block(scope) }
