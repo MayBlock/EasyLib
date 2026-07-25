@@ -6,7 +6,7 @@ import com.github.retrooper.packetevents.protocol.entity.data.EntityDataType
 import com.github.retrooper.packetevents.protocol.entity.data.EntityMetadataProvider
 
 @DslMarker
-annotation class EntityMetadataDsl
+private annotation class EntityMetadataDsl
 
 inline fun PacketScope.EntityPacketScope.metadata(block: EntityMetadataBuilder.() -> Unit) =
     this.metadata(EntityMetadataBuilder().apply(block).build())

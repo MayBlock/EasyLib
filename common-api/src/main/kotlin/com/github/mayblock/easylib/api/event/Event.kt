@@ -36,7 +36,7 @@ interface EventBus<E : Event> : EventSource<E> {
 }
 
 @DslMarker
-annotation class EventDsl
+private annotation class EventDsl
 
 @EventDsl
 class EventScope<E : Event>(val group: String?, val bus: EventSource<in E>) : Disposable {

@@ -6,7 +6,7 @@ import org.bukkit.inventory.ItemStack
 import org.bukkit.inventory.meta.ItemMeta
 
 @DslMarker
-annotation class PlayerOverlayDsl
+internal annotation class PlayerOverlayDsl
 
 /**
  * 覆盖层整体 DSL：按 index/range 声明覆盖槽位。

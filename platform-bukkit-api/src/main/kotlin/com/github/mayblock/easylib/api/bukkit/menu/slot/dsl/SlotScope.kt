@@ -11,7 +11,7 @@ import org.bukkit.inventory.ItemStack
 import org.bukkit.inventory.meta.ItemMeta
 
 @DslMarker
-annotation class SlotDsl
+internal annotation class SlotDsl
 
 @SlotDsl
 interface SlotScope<out C : SlotClickEvent> {

@@ -53,7 +53,7 @@ internal open class AutoSaveConfiguration(
 }
 
 @DslMarker
-annotation class AutoSaveDsl
+private annotation class AutoSaveDsl
 
 @AutoSaveDsl
 class AutoSaveConfigurationBuilder internal constructor(private val file: File) {

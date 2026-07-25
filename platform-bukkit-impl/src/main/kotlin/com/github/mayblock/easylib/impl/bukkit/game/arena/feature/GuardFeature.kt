@@ -98,7 +98,7 @@ class GuardFeature<T>(
 }
 
 @DslMarker
-annotation class WorldGuardDsl
+private annotation class WorldGuardDsl
 
 @WorldGuardDsl
 class WorldGuardScope internal constructor() {
