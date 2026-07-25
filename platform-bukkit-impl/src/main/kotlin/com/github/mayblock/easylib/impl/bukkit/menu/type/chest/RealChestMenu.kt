@@ -14,9 +14,9 @@ import com.github.mayblock.easylib.api.scheduler.TaskScheduler
 import com.github.mayblock.easylib.api.util.Disposable
 import com.github.mayblock.easylib.impl.bukkit.menu.BukkitMenu
 import com.github.mayblock.easylib.impl.bukkit.menu.MenuEventDispatcher
-import com.github.mayblock.easylib.impl.bukkit.menu.slot.SlotDisplayMap
 import com.github.mayblock.easylib.impl.bukkit.menu.slot.SlotSpec
 import com.github.mayblock.easylib.impl.bukkit.menu.slot.SlotUpdateLoop
+import com.github.mayblock.easylib.impl.bukkit.util.SlotDisplayMap
 import com.github.mayblock.easylib.impl.bukkit.util.ViewerRegistry
 import com.github.mayblock.easylib.impl.bukkit.util.isEmptyStack
 import com.github.mayblock.easylib.impl.bukkit.util.stack

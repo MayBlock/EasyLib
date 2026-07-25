@@ -1,6 +1,5 @@
-package com.github.mayblock.easylib.impl.bukkit.menu.slot
+package com.github.mayblock.easylib.impl.bukkit.util
 
-import com.github.mayblock.easylib.impl.bukkit.util.stack
 import org.bukkit.Material
 import org.mockbukkit.mockbukkit.MockBukkit
 import java.util.UUID

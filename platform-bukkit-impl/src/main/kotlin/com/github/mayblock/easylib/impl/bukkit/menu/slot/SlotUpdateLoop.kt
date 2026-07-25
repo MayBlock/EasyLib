@@ -4,6 +4,7 @@ import com.github.mayblock.easylib.api.bukkit.menu.slot.event.SlotUpdateEvent
 import com.github.mayblock.easylib.api.scheduler.TaskScheduler
 import com.github.mayblock.easylib.api.scheduler.scheduleTask
 import com.github.mayblock.easylib.impl.bukkit.menu.BukkitMenu
+import com.github.mayblock.easylib.impl.bukkit.util.SlotDisplayMap
 import com.github.mayblock.easylib.impl.bukkit.util.scheduleSyncTask
 import com.github.mayblock.easylib.impl.bukkit.util.stack
 import org.bukkit.Material

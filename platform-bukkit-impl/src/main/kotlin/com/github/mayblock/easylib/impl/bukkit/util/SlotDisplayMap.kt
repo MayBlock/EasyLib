@@ -1,6 +1,5 @@
-package com.github.mayblock.easylib.impl.bukkit.menu.slot
+package com.github.mayblock.easylib.impl.bukkit.util
 
-import com.github.mayblock.easylib.impl.bukkit.util.fromBukkit
 import org.bukkit.inventory.ItemStack
 import java.util.UUID
 import java.util.concurrent.ConcurrentHashMap
@@ -8,6 +7,7 @@ import java.util.concurrent.ConcurrentHashMap
 /**
  * 显示层缓存：按 (viewer, slot) 存假显示物品（spec §7）。主线程写（计算/提交），
  * netty 线程只读（出站改写查表），故用并发容器；条目不可变、整体替换。
+ * menu 与 overlay 共用（与 [ViewerRegistry] 同定位）。
  *
  * 条目缺失 ⇒ 改写层透传真实物品。[commit] 在结果与真实基底相同时主动清条目，
  * 保证「规则不改 ⇒ 显示真实」与「假→真也要重绘」两个语义。
