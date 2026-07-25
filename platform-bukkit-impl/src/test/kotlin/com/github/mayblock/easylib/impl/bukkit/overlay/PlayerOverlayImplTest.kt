@@ -1,10 +1,14 @@
 package com.github.mayblock.easylib.impl.bukkit.overlay
 
+import com.github.mayblock.easylib.api.EasyLibApi
+import com.github.mayblock.easylib.api.bukkit.BukkitEasyLibApi
 import com.github.mayblock.easylib.api.bukkit.overlay.OverlayDestroyEvent
 import com.github.mayblock.easylib.api.bukkit.overlay.OverlayHideEvent
+import com.github.mayblock.easylib.api.bukkit.scheduler.BukkitTaskExecutors
 import com.github.mayblock.easylib.api.bukkit.overlay.slot.dsl.onAction
 import com.github.mayblock.easylib.api.bukkit.overlay.slot.event.OverlaySlotActionEvent
 import com.github.mayblock.easylib.api.event.on
+import com.github.mayblock.easylib.api.scheduler.TaskExecutor
 import com.github.mayblock.easylib.api.scheduler.TaskScheduler
 import com.github.mayblock.easylib.api.util.Disposable
 import com.github.mayblock.easylib.impl.bukkit.overlay.builder.OverlaySlotBuilder
@@ -71,8 +75,30 @@ private class RecordingScheduler : TaskScheduler {
 
 class PlayerOverlayImplTest {
 
-    @BeforeTest fun setUp() { MockBukkit.mock() }
-    @AfterTest fun tearDown() { MockBukkit.unmock() }
+    private var previousApi: EasyLibApi? = null
+
+    @BeforeTest
+    fun setUp() {
+        MockBukkit.mock()
+        // TaskExt 的 scheduleSyncTask/scheduleAsyncTask 排程时会读全局单例取 executor；
+        // 本类的 RecordingScheduler 直接内联调用 task.onTick(...)，从不咨询 executor，
+        // 所以这里只需保证读取不抛异常即可，executor 的具体行为对断言无关。
+        // 非 relaxed mock：除 taskExecutors 外的任何触碰都会快速失败，测试不静默依赖全局状态。
+        previousApi = try { EasyLibApi.api } catch (_: UninitializedPropertyAccessException) { null }
+        EasyLibApi.api = mockk<BukkitEasyLibApi> {
+            every { taskExecutors } returns object : BukkitTaskExecutors {
+                override val sync: TaskExecutor = TaskExecutor { it() }
+                override val async: TaskExecutor = TaskExecutor { it() }
+            }
+        }
+    }
+
+    @AfterTest
+    fun tearDown() {
+        // 尽量恢复全局单例，避免 mock 泄漏到同 JVM 的后续测试类（lateinit 无法退回未初始化态）。
+        previousApi?.let { EasyLibApi.api = it }
+        MockBukkit.unmock()
+    }
 
     private fun specOf(item: ItemStack, block: OverlaySlotBuilder.() -> Unit = {}): OverlaySlotSpec =
         OverlaySlotBuilder().apply(block).build(item)
