@@ -9,7 +9,9 @@ import java.util.concurrent.ConcurrentHashMap
  * netty 线程只读（出站改写查表），故用并发容器；条目不可变、整体替换。
  * menu 与 overlay 共用（与 [ViewerRegistry] 同定位）。
  *
- * 条目缺失 ⇒ 改写层透传真实物品。[commit] 在结果与真实基底相同时主动清条目，
+ * 条目缺失时的回落目标因调用方而异：菜单侧透传真实容器物品；覆盖层侧必须回落到共享基底
+ * （绝不能透传玩家真实背包，否则遮罩当场穿帮）——具体回落逻辑由各自的改写层持有基底后实现，
+ * 本类只负责按 (viewer, slot) 存/查显示条目本身。[commit] 在结果与真实基底相同时主动清条目，
  * 保证「规则不改 ⇒ 显示真实」与「假→真也要重绘」两个语义。
  */
 internal class SlotDisplayMap {

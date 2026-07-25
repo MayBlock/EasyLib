@@ -9,6 +9,7 @@ import com.github.mayblock.easylib.impl.bukkit.overlay.slot.OverlaySlotSpec
 import com.github.mayblock.easylib.impl.bukkit.overlay.slot.SlotMap
 import com.github.mayblock.easylib.impl.bukkit.overlay.slot.SlotUpdateLoop
 import com.github.mayblock.easylib.impl.bukkit.overlay.transport.OverlayTransport
+import com.github.mayblock.easylib.impl.bukkit.util.SlotDisplayMap
 import com.github.mayblock.easylib.impl.bukkit.util.ViewerRegistry
 import com.github.mayblock.easylib.impl.bukkit.util.isEmptyStack
 import com.github.mayblock.easylib.impl.bukkit.util.stack
@@ -29,6 +30,7 @@ import org.bukkit.inventory.ItemStack
 internal class PlayerOverlayImpl(
     specs: Map<Int, OverlaySlotSpec>,
     private val map: SlotMap,
+    private val display: SlotDisplayMap,
     scheduler: TaskScheduler,
     private val transport: OverlayTransport,
     private val dispatcher: OverlayEventDispatcher = OverlayEventDispatcher(scheduler),
@@ -84,6 +86,7 @@ internal class PlayerOverlayImpl(
 
     private fun removeViewer(player: Player): Boolean {
         if (!viewers.remove(player)) return false
+        display.remove(player.uniqueId) // 防显示层随玩家泄漏
         if (viewers.isEmpty) updateLoop.stop()
         dispatcher.publish(OverlayHideEvent(this, player))
         return true

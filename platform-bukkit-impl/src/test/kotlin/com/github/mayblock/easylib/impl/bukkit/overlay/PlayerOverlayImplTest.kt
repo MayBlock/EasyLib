@@ -11,6 +11,7 @@ import com.github.mayblock.easylib.impl.bukkit.overlay.builder.OverlaySlotBuilde
 import com.github.mayblock.easylib.impl.bukkit.overlay.slot.OverlaySlotSpec
 import com.github.mayblock.easylib.impl.bukkit.overlay.slot.SlotMap
 import com.github.mayblock.easylib.impl.bukkit.overlay.transport.OverlayTransport
+import com.github.mayblock.easylib.impl.bukkit.util.SlotDisplayMap
 import com.github.mayblock.easylib.impl.bukkit.util.stack
 import io.mockk.every
 import io.mockk.mockk
@@ -84,9 +85,10 @@ class PlayerOverlayImplTest {
         specs: Map<Int, OverlaySlotSpec>,
         scheduler: TaskScheduler = RecordingScheduler(),
         transport: FakeTransport = FakeTransport(),
+        display: SlotDisplayMap = SlotDisplayMap(),
     ): Triple<PlayerOverlayImpl, FakeTransport, TaskScheduler> {
         val map = SlotMap(specs)
-        val overlay = PlayerOverlayImpl(specs, map, scheduler, transport)
+        val overlay = PlayerOverlayImpl(specs, map, display, scheduler, transport)
         return Triple(overlay, transport, scheduler)
     }
 
