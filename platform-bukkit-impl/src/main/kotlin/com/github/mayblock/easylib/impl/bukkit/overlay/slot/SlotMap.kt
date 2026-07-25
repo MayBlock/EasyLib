@@ -9,9 +9,6 @@ internal class SlotMap(specs: Map<Int, OverlaySlotSpec>)
     /** 某槽 packet 物品；未定义返回 [ItemStack.EMPTY]。 */
     fun packetItem(index: Int): ItemStack = this[index]?.packetItem() ?: ItemStack.EMPTY
 
-    /** `[0, size)` 全量 packet 物品，未定义处为 null（用于 WindowItems/ContainerItems）。 */
-    fun packetItems(size: Int): List<ItemStack?> = List(size) { this[it]?.packetItem() }
-
     fun forEachUpdatable(action: (index: Int, slot: LiveSlot) -> Unit) =
         this.forEach { (index, slot) -> if (slot.updateRules.isNotEmpty()) action(index, slot) }
 }
