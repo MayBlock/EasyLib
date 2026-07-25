@@ -137,7 +137,7 @@ class SlotUpdateLoopTest {
         val b = player()
         val spec = OverlaySlotBuilder().apply {
             onUpdate(TaskScheduler.Trigger.Interval(1.seconds)) {
-                item = if (player.uniqueId == a.uniqueId) stack(Material.DIAMOND) else stack(Material.EMERALD)
+                item = if (viewer.uniqueId == a.uniqueId) stack(Material.DIAMOND) else stack(Material.EMERALD)
             }
         }.build(stack(Material.PAPER))
         val map = SlotMap(mapOf(4 to spec))
@@ -154,7 +154,7 @@ class SlotUpdateLoopTest {
         val a = player()
         val seen = mutableListOf<Pair<Int, Player>>()
         val spec = OverlaySlotBuilder().apply {
-            onUpdate(TaskScheduler.Trigger.Interval(1.seconds)) { seen += index to player }
+            onUpdate(TaskScheduler.Trigger.Interval(1.seconds)) { seen += index to viewer }
         }.build(stack(Material.PAPER))
         SlotUpdateLoop(SlotMap(mapOf(4 to spec)), scheduler, { listOf(a) }, SlotDisplayMap()) { _, _ -> }.start()
 

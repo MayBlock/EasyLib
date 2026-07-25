@@ -34,7 +34,7 @@ internal class SlotUpdateLoop(
     /** [OverlayUpdateScope] 的运行期载体：纯数据、不暴露 overlay。 */
     private class UpdateScope(
         override val index: Int,
-        override val player: Player,
+        override val viewer: Player,
         override var item: ItemStack,
     ) : OverlayUpdateScope
 

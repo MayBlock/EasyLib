@@ -50,7 +50,7 @@ inline fun <reified T: OverlaySlotActionEvent> OverlaySlotScope.onAction(
 /**
  * [OverlaySlotScope.onUpdate] 的事务上下文（非事件、不上总线）——**显示层契约**：
  *
- * [item] 初值 = 该槽共享基底物品的克隆；对它的修改是**纯视觉**的——只影响 [player] 看到的样子
+ * [item] 初值 = 该槽共享基底物品的克隆；对它的修改是**纯视觉**的——只影响 [viewer] 看到的样子
  * （经数据包改写呈现），**不改动共享基底**。其他观察者看到的仍是各自规则算出的结果。
  *
  * 每次触发都从基底重算（`item.amount += 1` 不会跨周期累积，需自存状态）。
@@ -60,7 +60,7 @@ inline fun <reified T: OverlaySlotActionEvent> OverlaySlotScope.onAction(
  * 需要**全体生效**的真实变更请显式调用 `overlay.setItem`。刻意不暴露 overlay：更新本槽的显示
  * 只有 [item] 一条通道，避免出现与提交协议冲突的第二种写法。
  *
- * 回调在**主线程**执行，块内可安全读写 [player] 的 Bukkit 状态。
+ * 回调在**主线程**执行，块内可安全读写 [viewer] 的 Bukkit 状态。
  */
 @PlayerOverlayDsl
 interface OverlayUpdateScope {
@@ -68,8 +68,8 @@ interface OverlayUpdateScope {
     val index: Int
 
     /** 本次计算面向的观察者：规则按 trigger 周期**对每个观察者各触发一次**。 */
-    val player: Player
+    val viewer: Player
 
-    /** 该槽面向 [player] 的下一帧物品：以基底物品的副本为初值，可原地改或整体替换。 */
+    /** 该槽面向 [viewer] 的下一帧物品：以基底物品的副本为初值，可原地改或整体替换。 */
     var item: ItemStack
 }

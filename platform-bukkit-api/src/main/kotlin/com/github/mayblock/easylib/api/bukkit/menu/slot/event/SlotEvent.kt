@@ -27,7 +27,7 @@ open class SlotClickEvent(
 /**
  * 槽位显示更新事件（**显示层契约**，spec 2026-07-21）：
  *
- * [displayItem] 初值 = 容器真实物品的克隆；对它的修改是**纯视觉**的——只影响 [player]
+ * [displayItem] 初值 = 容器真实物品的克隆；对它的修改是**纯视觉**的——只影响 [viewer]
  * 看到的样子（经数据包改写呈现），**不改动真实容器物品**。取出放行时玩家拿到的是真实物品；
  * 放入放行后下一轮以新的真实物品为基底重新计算。
  *
@@ -42,6 +42,6 @@ open class SlotClickEvent(
 open class SlotUpdateEvent(
     final override val menu: Menu,
     final override val index: Int,
-    val player: Player,
+    val viewer: Player,
     var displayItem: ItemStack
 ): SlotEvent

@@ -96,7 +96,7 @@ class RealChestMenuUpdateTest {
         val s = spec {
             item(Material.PAPER)
             onUpdate(trigger = TaskScheduler.Trigger.Interval(1.seconds)) {
-                displayItem = ItemStack(Material.PAPER).also { it.itemMeta = it.itemMeta?.apply { setDisplayName(player.name) } }
+                displayItem = ItemStack(Material.PAPER).also { it.itemMeta = it.itemMeta?.apply { setDisplayName(viewer.name) } }
             }
         }
         val m = menu(scheduler, mapOf(4 to s))
