@@ -37,7 +37,7 @@ internal class PlayerOverlayImpl(
 ) : PlayerOverlay, EventSource<OverlayEvent> by dispatcher {
 
     private val viewers = ViewerRegistry()
-    private val updateLoop = SlotUpdateLoop(map, scheduler, ::repaint)
+    private val updateLoop = SlotUpdateLoop(map, scheduler, viewers::snapshot, display, ::repaint)
     private var transportSub: Disposable? = null
 
     override var isDestroyed: Boolean = false
@@ -92,9 +92,11 @@ internal class PlayerOverlayImpl(
         return true
     }
 
-    private fun repaint(index: Int) = viewers.snapshot().forEach { player ->
-        // 遍历前先快照一份 viewers；循环体内再复查一次——
-        // 若在快照之后、发包之前该玩家已被 hide/quit 移除，避免向已不再观察的玩家补发鬼影包。
+    /**
+     * 向单个观察者重绘某槽。发包前复查在册与在线：若在调用方取快照之后、发包之前该玩家已被
+     * hide/quit 移除，避免向已不再观察的玩家补发鬼影包。
+     */
+    private fun repaint(player: Player, index: Int) {
         if (player.isOnline && player in viewers) transport.paint(player, index)
     }
 
@@ -106,7 +108,7 @@ internal class PlayerOverlayImpl(
     override fun setItem(index: Int, item: ItemStack?) {
         val slot = requireNotNull(map[index]) { "slot $index is not declared on this overlay" }
         slot.item = item ?: stack(Material.AIR)
-        repaint(index)
+        viewers.snapshot().forEach { repaint(it, index) }
     }
 
     /**
