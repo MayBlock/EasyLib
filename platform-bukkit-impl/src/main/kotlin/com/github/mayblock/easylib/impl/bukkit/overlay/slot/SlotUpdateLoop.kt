@@ -35,7 +35,7 @@ internal class SlotUpdateLoop(
     private class UpdateScope(
         override val index: Int,
         override val viewer: Player,
-        override var item: ItemStack,
+        override var displayItem: ItemStack,
     ) : OverlayUpdateScope
 
     /** 声明序稳定（groupBy 保序）：种子/重算按此序执行，last-wins 与运行期一致。 */
@@ -110,6 +110,6 @@ internal class SlotUpdateLoop(
         val base = map[index]?.item ?: return false
         val scope = UpdateScope(index, player, base.clone())
         ordered.forEach { rule -> rule.block(scope) }
-        return display.commit(player.uniqueId, index, base, scope.item)
+        return display.commit(player.uniqueId, index, base, scope.displayItem)
     }
 }

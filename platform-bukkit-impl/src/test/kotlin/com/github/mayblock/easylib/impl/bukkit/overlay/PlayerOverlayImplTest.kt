@@ -381,7 +381,7 @@ class PlayerOverlayImplTest {
     fun `show 先种子再全量渲染，paintAll 发生时显示层已含该玩家的种子条目`() {
         val display = SlotDisplayMap()
         val spec = specOf(stack(Material.PAPER)) {
-            onUpdate(TaskScheduler.Trigger.Interval(1.seconds)) { item = stack(Material.CLOCK) }
+            onUpdate(TaskScheduler.Trigger.Interval(1.seconds)) { displayItem = stack(Material.CLOCK) }
         }
         // NeverRunScheduler：只排程不执行，确保条目只可能来自 seed 而非定时任务
         // watchSlot=4：FakeTransport 在 paintAll 调用的那一刻拍下显示层快照，而非事后查——
@@ -423,7 +423,7 @@ class PlayerOverlayImplTest {
         // 规则依赖基底（amount+1）：显示条目在 setItem 前后必须跟着新基底变化，
         // 否则会出现「显示层缓存的是旧基底算出的假值，重绘又无条件发生」的鬼影。
         val spec = specOf(stack(Material.PAPER, 1)) {
-            onUpdate(TaskScheduler.Trigger.Interval(1.seconds)) { item.amount += 1 }
+            onUpdate(TaskScheduler.Trigger.Interval(1.seconds)) { displayItem.amount += 1 }
         }
         val (o, _, _) = build(mapOf(4 to spec), scheduler = NeverRunScheduler(), display = display)
         val p = mockPlayer()
@@ -444,7 +444,7 @@ class PlayerOverlayImplTest {
     fun `hide 清除该玩家的显示条目，不影响其他观察者`() {
         val display = SlotDisplayMap()
         val spec = specOf(stack(Material.PAPER)) {
-            onUpdate(TaskScheduler.Trigger.Interval(1.seconds)) { item = stack(Material.CLOCK) }
+            onUpdate(TaskScheduler.Trigger.Interval(1.seconds)) { displayItem = stack(Material.CLOCK) }
         }
         val (o, _, _) = build(mapOf(4 to spec), scheduler = NeverRunScheduler(), display = display)
         val a = mockPlayer()
@@ -462,7 +462,7 @@ class PlayerOverlayImplTest {
     fun `玩家断线同样清除其显示条目`() {
         val display = SlotDisplayMap()
         val spec = specOf(stack(Material.PAPER)) {
-            onUpdate(TaskScheduler.Trigger.Interval(1.seconds)) { item = stack(Material.CLOCK) }
+            onUpdate(TaskScheduler.Trigger.Interval(1.seconds)) { displayItem = stack(Material.CLOCK) }
         }
         val (o, _, _) = build(mapOf(4 to spec), scheduler = NeverRunScheduler(), display = display)
         val bystander = mockPlayer()

@@ -87,5 +87,5 @@ interface OverlayUpdateScope {
     val viewer: Player
 
     /** 该槽面向 [viewer] 的下一帧物品：以基底物品的副本为初值，可原地改或整体替换。 */
-    var item: ItemStack
+    var displayItem: ItemStack
 }

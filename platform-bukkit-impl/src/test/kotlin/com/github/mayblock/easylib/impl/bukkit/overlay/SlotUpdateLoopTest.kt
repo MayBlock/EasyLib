@@ -108,7 +108,7 @@ class SlotUpdateLoopTest {
         val scheduler = InlineScheduler()
         val spec = OverlaySlotBuilder().apply {
             item(Material.PAPER)
-            onUpdate(TaskScheduler.Trigger.Interval(1.seconds)) { item = stack(Material.CLOCK, 5) }
+            onUpdate(TaskScheduler.Trigger.Interval(1.seconds)) { displayItem = stack(Material.CLOCK, 5) }
         }.build()
         val map = SlotMap(mapOf(4 to spec))
         val display = SlotDisplayMap()
@@ -136,7 +136,7 @@ class SlotUpdateLoopTest {
         val spec = OverlaySlotBuilder().apply {
             item(Material.PAPER)
             onUpdate(TaskScheduler.Trigger.Interval(1.seconds)) {
-                item = if (viewer.uniqueId == a.uniqueId) stack(Material.DIAMOND) else stack(Material.EMERALD)
+                displayItem = if (viewer.uniqueId == a.uniqueId) stack(Material.DIAMOND) else stack(Material.EMERALD)
             }
         }.build()
         val map = SlotMap(mapOf(4 to spec))
@@ -168,10 +168,10 @@ class SlotUpdateLoopTest {
             item(Material.PAPER)
             // 声明顺序故意与 priority 相反；两个 Interval 独立构造，靠值相等归组
             onUpdate(TaskScheduler.Trigger.Interval(1.seconds), priority = Priority(20)) {
-                item.amount += 1 // 低优先级后执行：应看到高优先级的结果并在其上累加
+                displayItem.amount += 1 // 低优先级后执行：应看到高优先级的结果并在其上累加
             }
             onUpdate(TaskScheduler.Trigger.Interval(1.seconds), priority = Priority(1)) {
-                item = stack(Material.CLOCK, 1) // 高优先级（小值）先执行
+                displayItem = stack(Material.CLOCK, 1) // 高优先级（小值）先执行
             }
         }.build()
         val display = SlotDisplayMap()
@@ -209,7 +209,7 @@ class SlotUpdateLoopTest {
         val scheduler = InlineScheduler()
         val spec = OverlaySlotBuilder().apply {
             item(Material.PAPER)
-            onUpdate(TaskScheduler.Trigger.Interval(1.seconds)) { item = stack(Material.CLOCK) }
+            onUpdate(TaskScheduler.Trigger.Interval(1.seconds)) { displayItem = stack(Material.CLOCK) }
         }.build()
         val display = SlotDisplayMap()
         val late = player()
@@ -231,7 +231,7 @@ class SlotUpdateLoopTest {
         val trigger = TaskScheduler.Trigger.Delay(1.seconds)
         val spec = OverlaySlotBuilder().apply {
             item(Material.PAPER)
-            onUpdate(trigger) { item = stack(Material.CLOCK) }
+            onUpdate(trigger) { displayItem = stack(Material.CLOCK) }
         }.build()
         val display = SlotDisplayMap()
         val late = player()
@@ -255,7 +255,7 @@ class SlotUpdateLoopTest {
         val spec = OverlaySlotBuilder().apply {
             item(Material.PAPER)
             // 显示 = 基底类型 + 数量翻倍，便于观察基底变更是否被吸收
-            onUpdate(TaskScheduler.Trigger.Interval(1.seconds)) { item.amount = item.amount * 2 }
+            onUpdate(TaskScheduler.Trigger.Interval(1.seconds)) { displayItem.amount = displayItem.amount * 2 }
         }.build()
         val map = SlotMap(mapOf(4 to spec))
         val display = SlotDisplayMap()
