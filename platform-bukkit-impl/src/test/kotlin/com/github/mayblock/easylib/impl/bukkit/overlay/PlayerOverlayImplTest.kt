@@ -4,9 +4,9 @@ import com.github.mayblock.easylib.api.EasyLibApi
 import com.github.mayblock.easylib.api.bukkit.BukkitEasyLibApi
 import com.github.mayblock.easylib.api.bukkit.overlay.OverlayDestroyEvent
 import com.github.mayblock.easylib.api.bukkit.overlay.OverlayHideEvent
-import com.github.mayblock.easylib.api.bukkit.scheduler.BukkitTaskExecutors
 import com.github.mayblock.easylib.api.bukkit.overlay.slot.dsl.onAction
 import com.github.mayblock.easylib.api.bukkit.overlay.slot.event.OverlaySlotActionEvent
+import com.github.mayblock.easylib.api.bukkit.scheduler.BukkitTaskExecutors
 import com.github.mayblock.easylib.api.event.on
 import com.github.mayblock.easylib.api.scheduler.TaskExecutor
 import com.github.mayblock.easylib.api.scheduler.TaskScheduler
@@ -24,7 +24,7 @@ import org.bukkit.entity.Player
 import org.bukkit.event.inventory.ClickType
 import org.bukkit.inventory.ItemStack
 import org.mockbukkit.mockbukkit.MockBukkit
-import java.util.UUID
+import java.util.*
 import kotlin.test.*
 import kotlin.time.Duration.Companion.seconds
 
@@ -120,7 +120,9 @@ class PlayerOverlayImplTest {
     }
 
     private fun specOf(item: ItemStack, block: OverlaySlotBuilder.() -> Unit = {}): OverlaySlotSpec =
-        OverlaySlotBuilder().apply(block).build(item)
+        OverlaySlotBuilder().apply {
+            item(item)
+        }.apply(block).build()
 
     private fun mockPlayer(): Player = mockk<Player>(relaxed = true).also {
         every { it.isOnline } returns true

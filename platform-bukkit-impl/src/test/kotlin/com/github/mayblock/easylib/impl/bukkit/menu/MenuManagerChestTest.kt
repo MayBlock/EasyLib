@@ -2,6 +2,7 @@ package com.github.mayblock.easylib.impl.bukkit.menu
 
 import com.github.mayblock.easylib.api.bukkit.menu.MenuCloseEvent
 import com.github.mayblock.easylib.api.bukkit.menu.MenuDestroyEvent
+import com.github.mayblock.easylib.api.bukkit.menu.slot.dsl.item
 import com.github.mayblock.easylib.api.bukkit.menu.type.chest.ChestMenuType
 import com.github.mayblock.easylib.api.event.on
 import com.github.mayblock.easylib.api.scheduler.TaskScheduler

@@ -1,11 +1,13 @@
 package com.github.mayblock.easylib.api.bukkit.overlay.slot.dsl
 
-import com.github.mayblock.easylib.api.bukkit.overlay.slot.event.OverlaySlotActionEvent
 import com.github.mayblock.easylib.api.bukkit.overlay.dsl.PlayerOverlayDsl
+import com.github.mayblock.easylib.api.bukkit.overlay.slot.event.OverlaySlotActionEvent
 import com.github.mayblock.easylib.api.scheduler.TaskScheduler
 import com.github.mayblock.easylib.api.util.Priority
+import org.bukkit.Material
 import org.bukkit.entity.Player
 import org.bukkit.inventory.ItemStack
+import org.bukkit.inventory.meta.ItemMeta
 
 /**
  * 覆盖层单槽 DSL：仅展示 + 交互，**无取出/放入的转移语义，无 take/place**。
@@ -14,6 +16,9 @@ import org.bukkit.inventory.ItemStack
  */
 @PlayerOverlayDsl
 interface OverlaySlotScope {
+
+    fun item(item: ItemStack)
+
     /**
      * 玩家操作的统一入口。块内用 `when (this)` 区分来源（密封类，可穷尽）：
      * [OverlaySlotActionEvent.Click] = 背包窗口内点击（带 Bukkit ClickType）；
@@ -30,6 +35,17 @@ interface OverlaySlotScope {
      * 后序规则可见前序修改；块全部结束后统一提交并重绘一次。回调在主线程执行。
      */
     fun onUpdate(trigger: TaskScheduler.Trigger, priority: Priority = Priority.DEFAULT, block: OverlayUpdateScope.() -> Unit)
+}
+
+inline fun OverlaySlotScope.item(item: ItemStack, metadata: ItemMeta.() -> Unit) = item.clone().also {
+    it.itemMeta = it.itemMeta?.also(metadata)
+}.let(::item)
+
+fun OverlaySlotScope.item(type: Material, amount: Int = 1) = this.item(ItemStack(type, amount))
+inline fun OverlaySlotScope.item(type: Material, amount: Int = 1, metadata: ItemMeta.() -> Unit) {
+    ItemStack(type, amount).also {
+        it.itemMeta = it.itemMeta?.also(metadata)
+    }.let(::item)
 }
 
 fun OverlaySlotScope.onAction(

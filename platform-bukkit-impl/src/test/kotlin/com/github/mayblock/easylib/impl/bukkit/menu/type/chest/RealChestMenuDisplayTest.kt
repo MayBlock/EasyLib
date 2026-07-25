@@ -1,5 +1,6 @@
 package com.github.mayblock.easylib.impl.bukkit.menu.type.chest
 
+import com.github.mayblock.easylib.api.bukkit.menu.slot.dsl.item
 import com.github.mayblock.easylib.api.bukkit.menu.slot.event.InventoryClickEvent
 import com.github.mayblock.easylib.api.bukkit.menu.type.chest.ChestMenuType
 import com.github.mayblock.easylib.api.scheduler.TaskScheduler

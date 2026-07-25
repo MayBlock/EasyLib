@@ -1,6 +1,7 @@
 package com.github.mayblock.easylib.api.bukkit.menu.type.chest.dsl
 
 import com.github.mayblock.easylib.api.bukkit.menu.slot.dsl.SlotScope
+import com.github.mayblock.easylib.api.bukkit.menu.slot.dsl.item
 import com.github.mayblock.easylib.api.bukkit.menu.slot.event.InventoryClickEvent
 import com.github.mayblock.easylib.api.bukkit.menu.slot.event.SlotPlaceEvent
 import com.github.mayblock.easylib.api.bukkit.menu.slot.event.SlotTakeEvent

@@ -1,5 +1,6 @@
 package com.github.mayblock.easylib.impl.bukkit.menu.type.chest
 
+import com.github.mayblock.easylib.api.bukkit.menu.slot.dsl.item
 import com.github.mayblock.easylib.api.bukkit.menu.slot.event.InventoryClickEvent
 import com.github.mayblock.easylib.api.bukkit.menu.type.chest.ChestMenuType
 import com.github.mayblock.easylib.api.scheduler.TaskScheduler
@@ -13,12 +14,7 @@ import net.kyori.adventure.text.Component
 import org.bukkit.Material
 import org.bukkit.inventory.ItemStack
 import org.mockbukkit.mockbukkit.MockBukkit
-import kotlin.test.AfterTest
-import kotlin.test.BeforeTest
-import kotlin.test.Test
-import kotlin.test.assertEquals
-import kotlin.test.assertNotEquals
-import kotlin.test.assertNull
+import kotlin.test.*
 import kotlin.time.Duration.Companion.seconds
 
 /** 立即同步执行每个被排的任务一次的假调度器（断言 isAsync=false）。 */

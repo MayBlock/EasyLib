@@ -2,6 +2,7 @@ package com.github.mayblock.easylib.impl.bukkit.overlay
 
 import com.github.mayblock.easylib.api.EasyLibApi
 import com.github.mayblock.easylib.api.bukkit.BukkitEasyLibApi
+import com.github.mayblock.easylib.api.bukkit.overlay.slot.dsl.item
 import com.github.mayblock.easylib.api.bukkit.scheduler.BukkitTaskExecutors
 import com.github.mayblock.easylib.api.scheduler.TaskExecutor
 import com.github.mayblock.easylib.api.scheduler.TaskScheduler
@@ -16,12 +17,8 @@ import io.mockk.mockk
 import org.bukkit.Material
 import org.bukkit.entity.Player
 import org.mockbukkit.mockbukkit.MockBukkit
-import java.util.UUID
-import kotlin.test.AfterTest
-import kotlin.test.BeforeTest
-import kotlin.test.Test
-import kotlin.test.assertEquals
-import kotlin.test.assertNull
+import java.util.*
+import kotlin.test.*
 import kotlin.time.Duration.Companion.seconds
 
 /** 无操作 TaskScope：测试内联执行任务块时的运行期载体。 */
@@ -110,8 +107,9 @@ class SlotUpdateLoopTest {
     fun `update 规则经 scheduleSyncTask 排程，对每个 viewer 各跑一次并提交显示层`() {
         val scheduler = InlineScheduler()
         val spec = OverlaySlotBuilder().apply {
+            item(Material.PAPER)
             onUpdate(TaskScheduler.Trigger.Interval(1.seconds)) { item = stack(Material.CLOCK, 5) }
-        }.build(stack(Material.PAPER))
+        }.build()
         val map = SlotMap(mapOf(4 to spec))
         val display = SlotDisplayMap()
         val a = player()
@@ -136,10 +134,11 @@ class SlotUpdateLoopTest {
         val a = player()
         val b = player()
         val spec = OverlaySlotBuilder().apply {
+            item(Material.PAPER)
             onUpdate(TaskScheduler.Trigger.Interval(1.seconds)) {
                 item = if (viewer.uniqueId == a.uniqueId) stack(Material.DIAMOND) else stack(Material.EMERALD)
             }
-        }.build(stack(Material.PAPER))
+        }.build()
         val map = SlotMap(mapOf(4 to spec))
         val display = SlotDisplayMap()
         SlotUpdateLoop(map, scheduler, { listOf(a, b) }, display) { _, _ -> }.start()
@@ -154,8 +153,9 @@ class SlotUpdateLoopTest {
         val a = player()
         val seen = mutableListOf<Pair<Int, Player>>()
         val spec = OverlaySlotBuilder().apply {
+            item(Material.PAPER)
             onUpdate(TaskScheduler.Trigger.Interval(1.seconds)) { seen += index to viewer }
-        }.build(stack(Material.PAPER))
+        }.build()
         SlotUpdateLoop(SlotMap(mapOf(4 to spec)), scheduler, { listOf(a) }, SlotDisplayMap()) { _, _ -> }.start()
 
         assertEquals(listOf(4 to a), seen)
@@ -165,6 +165,7 @@ class SlotUpdateLoopTest {
     fun `同槽同 trigger 规则合并为一个任务，按 priority 串行且一次提交`() {
         val scheduler = InlineScheduler()
         val spec = OverlaySlotBuilder().apply {
+            item(Material.PAPER)
             // 声明顺序故意与 priority 相反；两个 Interval 独立构造，靠值相等归组
             onUpdate(TaskScheduler.Trigger.Interval(1.seconds), priority = Priority(20)) {
                 item.amount += 1 // 低优先级后执行：应看到高优先级的结果并在其上累加
@@ -172,7 +173,7 @@ class SlotUpdateLoopTest {
             onUpdate(TaskScheduler.Trigger.Interval(1.seconds), priority = Priority(1)) {
                 item = stack(Material.CLOCK, 1) // 高优先级（小值）先执行
             }
-        }.build(stack(Material.PAPER, 1))
+        }.build()
         val display = SlotDisplayMap()
         val a = player()
         val repaints = mutableListOf<Pair<Player, Int>>()
@@ -190,8 +191,9 @@ class SlotUpdateLoopTest {
     fun `规则不改物品则不提交条目、不重绘`() {
         val scheduler = InlineScheduler()
         val spec = OverlaySlotBuilder().apply {
+            item(Material.PAPER)
             onUpdate(TaskScheduler.Trigger.Interval(1.seconds)) { /* 什么都不改 */ }
-        }.build(stack(Material.PAPER))
+        }.build()
         val display = SlotDisplayMap()
         val a = player()
         val repaints = mutableListOf<Pair<Player, Int>>()
@@ -206,8 +208,9 @@ class SlotUpdateLoopTest {
     fun `seed 为迟到观察者补齐条目但不重绘`() {
         val scheduler = InlineScheduler()
         val spec = OverlaySlotBuilder().apply {
+            item(Material.PAPER)
             onUpdate(TaskScheduler.Trigger.Interval(1.seconds)) { item = stack(Material.CLOCK) }
-        }.build(stack(Material.PAPER))
+        }.build()
         val display = SlotDisplayMap()
         val late = player()
         val repaints = mutableListOf<Pair<Player, Int>>()
@@ -227,8 +230,9 @@ class SlotUpdateLoopTest {
     fun `Delay 组未到期时 seed 不执行，已触发过则补齐`() {
         val trigger = TaskScheduler.Trigger.Delay(1.seconds)
         val spec = OverlaySlotBuilder().apply {
+            item(Material.PAPER)
             onUpdate(trigger) { item = stack(Material.CLOCK) }
-        }.build(stack(Material.PAPER))
+        }.build()
         val display = SlotDisplayMap()
         val late = player()
 
@@ -249,9 +253,10 @@ class SlotUpdateLoopTest {
     fun `recomputeSlot 以新基底重算全 viewer 但不重绘`() {
         val scheduler = InlineScheduler()
         val spec = OverlaySlotBuilder().apply {
+            item(Material.PAPER)
             // 显示 = 基底类型 + 数量翻倍，便于观察基底变更是否被吸收
             onUpdate(TaskScheduler.Trigger.Interval(1.seconds)) { item.amount = item.amount * 2 }
-        }.build(stack(Material.PAPER, 1))
+        }.build()
         val map = SlotMap(mapOf(4 to spec))
         val display = SlotDisplayMap()
         val a = player()
@@ -272,8 +277,9 @@ class SlotUpdateLoopTest {
     fun `start 幂等，重复调用不重复调度任务`() {
         val scheduler = CountingScheduler()
         val spec = OverlaySlotBuilder().apply {
+            item(Material.AIR)
             onUpdate(TaskScheduler.Trigger.Interval(1.seconds)) { }
-        }.build(stack(Material.AIR))
+        }.build()
         val loop = SlotUpdateLoop(SlotMap(mapOf(4 to spec)), scheduler, { emptyList() }, SlotDisplayMap()) { _, _ -> }
 
         loop.start()
@@ -287,8 +293,9 @@ class SlotUpdateLoopTest {
     fun `stop 后可重新 start，且 stop 清空显示层`() {
         val scheduler = CountingScheduler()
         val spec = OverlaySlotBuilder().apply {
+            item(Material.AIR)
             onUpdate(TaskScheduler.Trigger.Interval(1.seconds)) { }
-        }.build(stack(Material.AIR))
+        }.build()
         val display = SlotDisplayMap()
         val a = player()
         display.commit(a.uniqueId, 4, stack(Material.AIR), stack(Material.CLOCK))

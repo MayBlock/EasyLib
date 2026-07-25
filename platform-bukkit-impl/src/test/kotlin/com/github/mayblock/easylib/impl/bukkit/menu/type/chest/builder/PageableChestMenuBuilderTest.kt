@@ -1,10 +1,11 @@
 package com.github.mayblock.easylib.impl.bukkit.menu.type.chest.builder
 
-import com.github.mayblock.easylib.packetevents.PacketManager
+import com.github.mayblock.easylib.api.bukkit.menu.slot.dsl.item
 import com.github.mayblock.easylib.api.bukkit.menu.type.chest.ChestMenuType
 import com.github.mayblock.easylib.api.scheduler.TaskScheduler
 import com.github.mayblock.easylib.impl.bukkit.menu.MenuManager
 import com.github.mayblock.easylib.impl.bukkit.menu.type.chest.RealChestMenu
+import com.github.mayblock.easylib.packetevents.PacketManager
 import io.mockk.mockk
 import net.kyori.adventure.text.Component
 import org.bukkit.Material
@@ -13,11 +14,7 @@ import org.bukkit.event.inventory.InventoryAction
 import org.bukkit.event.inventory.InventoryType
 import org.bukkit.inventory.InventoryView
 import org.mockbukkit.mockbukkit.MockBukkit
-import kotlin.test.AfterTest
-import kotlin.test.BeforeTest
-import kotlin.test.Test
-import kotlin.test.assertNotSame
-import kotlin.test.assertTrue
+import kotlin.test.*
 import org.bukkit.event.inventory.InventoryClickEvent as BukkitInventoryClickEvent
 
 /**

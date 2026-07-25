@@ -17,7 +17,6 @@ internal annotation class SlotDsl
 interface SlotScope<out C : SlotClickEvent> {
 
     fun item(item: ItemStack)
-    fun item(type: Material, amount: Int = 1, metadata: (ItemMeta.() -> Unit)? = null)
 
     fun onClick(priority: Priority = Priority.DEFAULT, block: C.() -> Unit)
 
@@ -41,4 +40,15 @@ interface SlotScope<out C : SlotClickEvent> {
      * 可按条件动态决定。目前仅箱子菜单使用本 DSL 并派发该事件。
      */
     fun onPlace(priority: Priority = Priority.DEFAULT, block: SlotPlaceEvent.() -> Unit)
+}
+
+inline fun SlotScope<*>.item(item: ItemStack, metadata: ItemMeta.() -> Unit) = item.clone().also {
+    it.itemMeta = it.itemMeta?.also(metadata)
+}.let(::item)
+
+fun SlotScope<*>.item(type: Material, amount: Int = 1) = this.item(ItemStack(type, amount))
+inline fun SlotScope<*>.item(type: Material, amount: Int = 1, metadata: ItemMeta.() -> Unit) {
+    ItemStack(type, amount).also {
+        it.itemMeta = it.itemMeta?.also(metadata)
+    }.let(::item)
 }
