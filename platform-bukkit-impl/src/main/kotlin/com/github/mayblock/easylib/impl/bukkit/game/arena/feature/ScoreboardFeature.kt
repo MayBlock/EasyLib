@@ -6,23 +6,28 @@ import com.github.mayblock.easylib.api.bukkit.game.arena.BukkitArenaPlayer
 import com.github.mayblock.easylib.api.feature.Feature
 import com.github.mayblock.easylib.api.feature.FeatureKey
 import com.github.mayblock.easylib.api.scheduler.TaskScheduler
+import com.github.mayblock.easylib.api.util.Priority
 import com.github.mayblock.easylib.impl.bukkit.util.scheduleAsyncTask
 import fr.mrmicky.fastboard.FastBoard
 import net.md_5.bungee.api.ChatColor
+import kotlin.time.Duration
+import kotlin.time.Duration.Companion.seconds
 
 interface ScoreboardProvider<Player : BukkitArenaPlayer> {
 
     fun accepts(context: Player): Boolean
     fun title(context: Player): String
     fun lines(context: Player): List<String>
-    val priority: Int get() = 0
+    val priority: Priority
 }
 
 class ScoreboardFeature<A, Player : BukkitArenaPlayer> private constructor(
+    private val period: Duration,
     private val providers: List<ScoreboardProvider<Player>>
 ) : Feature<A> where A : BukkitArena<Player, out BukkitArenaEntity>, A : TaskScheduler {
 
-    constructor(block: Builder<Player>.() -> Unit) : this(Builder<Player>().apply(block).toList())
+    constructor(period: Duration = 1.seconds, block: Builder<Player>.() -> Unit)
+            : this(period, Builder<Player>().apply(block).toList())
 
     companion object Key : FeatureKey<ScoreboardFeature<*, *>>("ScoreboardFeature")
 
@@ -30,7 +35,7 @@ class ScoreboardFeature<A, Player : BukkitArenaPlayer> private constructor(
     private val fastboardCache = mutableMapOf<BukkitArenaPlayer, FastBoard>()
 
     override fun onInstall(context: A) {
-        taskId = context.scheduleAsyncTask {
+        taskId = context.scheduleAsyncTask(TaskScheduler.Trigger.Interval(period)) {
             refresh(context)
         }
     }
@@ -62,24 +67,20 @@ class ScoreboardFeature<A, Player : BukkitArenaPlayer> private constructor(
     }
 
     @DslMarker
-    annotation class FeatureBuilder
+    private annotation class FeatureBuilder
 
     @FeatureBuilder
-    class Builder<Player : BukkitArenaPlayer> internal constructor() : Collection<ScoreboardProvider<Player>> {
+    class Builder<Player : BukkitArenaPlayer> internal constructor() : Iterable<ScoreboardProvider<Player>> {
         private val providers = mutableListOf<ScoreboardProvider<Player>>()
 
-        override fun contains(element: ScoreboardProvider<Player>) = providers.contains(element)
-        override fun containsAll(elements: Collection<ScoreboardProvider<Player>>) = providers.containsAll(elements)
-        override fun isEmpty() = providers.isEmpty()
         override fun iterator() = providers.iterator()
-        override val size: Int get() = providers.size
 
         fun provider(provider: ScoreboardProvider<Player>) {
             providers.add(provider)
         }
 
-        fun onView(block: ViewBuilder.() -> Unit) {
-            ViewBuilder().apply(block).build().also(providers::add)
+        fun onView(priority: Priority = Priority.DEFAULT, block: ViewBuilder.() -> Unit) {
+            ViewBuilder().apply(block).build(priority).also(providers::add)
         }
 
         @FeatureBuilder
@@ -88,7 +89,6 @@ class ScoreboardFeature<A, Player : BukkitArenaPlayer> private constructor(
             private var accepts: (Player.() -> Boolean)? = null
             private var title: (Player.() -> String)? = null
             private var lines: (Player.() -> List<String>)? = null
-            private var priority: Int = 0
 
             fun accepts(block: Player.() -> Boolean) {
                 this.accepts = block
@@ -102,17 +102,13 @@ class ScoreboardFeature<A, Player : BukkitArenaPlayer> private constructor(
                 this.lines = block
             }
 
-            fun priority(priority: Int) {
-                this.priority = priority
-            }
-
-            internal fun build(): ScoreboardProvider<Player> {
+            internal fun build(priority: Priority): ScoreboardProvider<Player> {
                 require(lines != null) { "lines is required" }
                 return object : ScoreboardProvider<Player> {
                     override fun accepts(context: Player) = accepts?.invoke(context) ?: true
                     override fun title(context: Player) = title?.invoke(context) ?: ""
                     override fun lines(context: Player) = lines!!.invoke(context)
-                    override val priority: Int = this@ViewBuilder.priority
+                    override val priority: Priority = priority
                 }
             }
         }
