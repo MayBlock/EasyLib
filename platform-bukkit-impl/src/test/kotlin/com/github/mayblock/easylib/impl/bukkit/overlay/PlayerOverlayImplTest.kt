@@ -32,8 +32,14 @@ import kotlin.time.Duration.Companion.seconds
  * 记录调用、暴露 attach 时收到的 [com.github.mayblock.easylib.impl.bukkit.overlay.transport.OverlayTransport.Callbacks] 的假通道，
  * 替代旧继承切分测试里的假子类。
  */
-private class FakeTransport : OverlayTransport {
+private class FakeTransport(
+    // 可选：让 paintAll 在记录调用的同时，拍下显示层此刻对 watchSlot 的可见内容——
+    // 用于钉「seed 必须先于 paintAll」这类时序契约（不传则退化为原有的纯记录行为）。
+    private val display: SlotDisplayMap? = null,
+    private val watchSlot: Int? = null,
+) : OverlayTransport {
     val paintAllCalls = mutableListOf<Player>()
+    val paintAllSnapshots = mutableListOf<Material?>()
     val paintCalls = mutableListOf<Pair<Player, Int>>()
     val restoreCalls = mutableListOf<Player>()
     var callbacks: OverlayTransport.Callbacks? = null
@@ -41,7 +47,10 @@ private class FakeTransport : OverlayTransport {
     var disposed = false
         private set
 
-    override fun paintAll(player: Player) { paintAllCalls += player }
+    override fun paintAll(player: Player) {
+        paintAllCalls += player
+        paintAllSnapshots += watchSlot?.let { display?.lookup(player.uniqueId, it)?.bukkitItem?.type }
+    }
     override fun paint(player: Player, slot: Int) { paintCalls += player to slot }
     override fun restore(player: Player) { restoreCalls += player }
     override fun attach(callbacks: OverlayTransport.Callbacks): Disposable {
@@ -367,25 +376,30 @@ class PlayerOverlayImplTest {
     // ---- per-viewer 显示层：时序与清理 ----
 
     @Test
-    fun `show 先种子再全量渲染，首帧即带该玩家的显示条目`() {
+    fun `show 先种子再全量渲染，paintAll 发生时显示层已含该玩家的种子条目`() {
         val display = SlotDisplayMap()
         val spec = specOf(stack(Material.PAPER)) {
             onUpdate(TaskScheduler.Trigger.Interval(1.seconds)) { item = stack(Material.CLOCK) }
         }
         // NeverRunScheduler：只排程不执行，确保条目只可能来自 seed 而非定时任务
-        val (o, t, _) = build(mapOf(4 to spec), scheduler = NeverRunScheduler(), display = display)
+        // watchSlot=4：FakeTransport 在 paintAll 调用的那一刻拍下显示层快照，而非事后查——
+        // 若把 show() 里 seed/paintAll 两行调换顺序，这里会拍到 null 而不是 CLOCK。
+        val transport = FakeTransport(display, watchSlot = 4)
+        val (o, t, _) = build(mapOf(4 to spec), scheduler = NeverRunScheduler(), transport = transport, display = display)
         val p = mockPlayer()
 
         o.show(p)
 
-        assertEquals(Material.CLOCK, display.lookup(p.uniqueId, 4)!!.bukkitItem.type)
-        assertEquals(listOf(p), t.paintAllCalls) // 且 paintAll 确实被调用（顺序由 seed 先行保证）
+        assertEquals(Material.CLOCK, assertNotNull(display.lookup(p.uniqueId, 4)).bukkitItem.type)
+        assertEquals(listOf(p), t.paintAllCalls)
+        assertEquals(listOf<Material?>(Material.CLOCK), t.paintAllSnapshots) // paintAll 时刻，显示层已可见种子条目
     }
 
     @Test
-    fun `setItem 重算显示层并无条件重绘全体观察者`() {
+    fun `setItem 无条件重绘全体观察者，即便显示层因规则不改物品而无条目`() {
         val display = SlotDisplayMap()
-        // 规则完全不改物品 ⇒ commit 恒返回 false；基底变更仍必须重绘（菜单侧不存在的坑）
+        // 规则完全不改物品 ⇒ commit 恒返回 false（前后都无显示条目）；基底变更仍必须重绘
+        // （菜单侧不存在的坑）。本测试钉的是「重绘不依赖显示层是否有条目」这一条契约。
         val spec = specOf(stack(Material.PAPER, 1)) {
             onUpdate(TaskScheduler.Trigger.Interval(1.seconds)) { }
         }
@@ -398,6 +412,30 @@ class PlayerOverlayImplTest {
 
         assertEquals(listOf(p to 4), t.paintCalls)
         assertEquals(Material.DIAMOND, o.getItem(4)!!.type) // 基底确实变了
+        assertNull(display.lookup(p.uniqueId, 4)) // 显示层确无条目：证明重绘并非由「显示层有变化」触发
+    }
+
+    @Test
+    fun `setItem 重算显示层，显示条目基于新基底重新计算`() {
+        val display = SlotDisplayMap()
+        // 规则依赖基底（amount+1）：显示条目在 setItem 前后必须跟着新基底变化，
+        // 否则会出现「显示层缓存的是旧基底算出的假值，重绘又无条件发生」的鬼影。
+        val spec = specOf(stack(Material.PAPER, 1)) {
+            onUpdate(TaskScheduler.Trigger.Interval(1.seconds)) { item.amount += 1 }
+        }
+        val (o, _, _) = build(mapOf(4 to spec), scheduler = NeverRunScheduler(), display = display)
+        val p = mockPlayer()
+        o.show(p)
+
+        val seeded = assertNotNull(display.lookup(p.uniqueId, 4))
+        assertEquals(Material.PAPER, seeded.bukkitItem.type)
+        assertEquals(2, seeded.bukkitItem.amount)
+
+        o.setItem(4, stack(Material.DIAMOND, 3))
+
+        val recomputed = assertNotNull(display.lookup(p.uniqueId, 4))
+        assertEquals(Material.DIAMOND, recomputed.bukkitItem.type)
+        assertEquals(4, recomputed.bukkitItem.amount)
     }
 
     @Test
@@ -425,11 +463,17 @@ class PlayerOverlayImplTest {
             onUpdate(TaskScheduler.Trigger.Interval(1.seconds)) { item = stack(Material.CLOCK) }
         }
         val (o, _, _) = build(mapOf(4 to spec), scheduler = NeverRunScheduler(), display = display)
+        val bystander = mockPlayer()
         val p = mockPlayer()
+        // 先让 bystander 在场：若唯一 viewer 是 p，removeViewer 会触发 updateLoop.stop()
+        // 的 display.clear() 兜底清理，断言即便 display.remove(playerId) 被误删也照样通过——
+        // 本测试要钉的是 per-viewer remove，不是 stop() 的清空。
+        o.show(bystander)
         o.show(p)
 
         o.onPlayerQuit(p)
 
         assertNull(display.lookup(p.uniqueId, 4))
+        assertNotNull(display.lookup(bystander.uniqueId, 4)) // 佐证：清理是按 viewer 定点做的
     }
 }

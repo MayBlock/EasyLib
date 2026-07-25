@@ -46,7 +46,7 @@ internal class PlayerOverlayImpl(
     init {
         dispatcher.wireSlotHandlers(specs)
         transportSub = transport.attach(TransportCallbacks())
-        // 注意：不在这里启动 updateLoop —— 按需启停（见 addViewer/removeViewer），
+        // 注意：不在这里启动 updateLoop —— 按需启停（见 show/removeViewer），
         // 无观察者时不空转 update 规则。
     }
 
