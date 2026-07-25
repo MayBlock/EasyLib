@@ -35,6 +35,10 @@ private object NoopScope : TaskScheduler.TaskScope {
  * 盖进 [TaskScheduler.Task.executor]；把哨兵注入全局单例后，断言
  * `task.executor === SyncMarker` 即证明 loop 确实经 scheduleSyncTask 排程——
  * 若它绕道裸 scheduleTask（默认 Direct）或误走 async 路径，身份断言当场失败。
+ *
+ * 注意这只钉住**排程路径**，不代表**线程落地**：生产环境唯一的 `TaskScheduler` 实现
+ * （`BukkitTaskSchedulerImpl`）从不读 `Task.executor`，scheduleSyncTask/scheduleAsyncTask 派发的任务
+ * 最终都经 `Bukkit.getScheduler().runTask` 系列落地，实际执行线程由那一层决定，与本断言无关。
  */
 private val SyncMarker = TaskExecutor { it() }
 private val AsyncMarker = TaskExecutor { it() }
@@ -121,7 +125,8 @@ class SlotUpdateLoopTest {
         assertEquals(Material.CLOCK, display.lookup(a.uniqueId, 4)!!.bukkitItem.type)
         assertEquals(Material.CLOCK, display.lookup(b.uniqueId, 4)!!.bukkitItem.type)
         assertEquals(listOf(a to 4, b to 4), repaints)
-        // 「overlay 更新走主线程」是本类自身的契约：任务的 executor 必须是全局 sync 哨兵。
+        // 本类的契约是「overlay 更新走 scheduleSyncTask 排程路径」：executor 必须命中全局 sync 哨兵。
+        // 这证明的是排程路径而非线程落地——生产 scheduler 忽略 Task.executor（见上方 SyncMarker KDoc）。
         assertEquals(listOf(SyncMarker), scheduler.tasks.map { it.executor })
     }
 
