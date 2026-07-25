@@ -24,7 +24,9 @@ import org.bukkit.entity.Player
 import org.bukkit.event.inventory.ClickType
 import org.bukkit.inventory.ItemStack
 import org.mockbukkit.mockbukkit.MockBukkit
+import java.util.UUID
 import kotlin.test.*
+import kotlin.time.Duration.Companion.seconds
 
 /**
  * 记录调用、暴露 attach 时收到的 [com.github.mayblock.easylib.impl.bukkit.overlay.transport.OverlayTransport.Callbacks] 的假通道，
@@ -73,6 +75,14 @@ private class RecordingScheduler : TaskScheduler {
     override fun cancelAllTasks() {}
 }
 
+/** 只登记不执行：用于把「条目从何而来」限定为 seed / recomputeSlot 而非定时任务。 */
+private class NeverRunScheduler : TaskScheduler {
+    private var nextId = 0
+    override fun scheduleTask(task: TaskScheduler.Task): Int = nextId++
+    override fun cancelTask(taskId: Int): Boolean = true
+    override fun cancelAllTasks() {}
+}
+
 class PlayerOverlayImplTest {
 
     private var previousApi: EasyLibApi? = null
@@ -105,6 +115,7 @@ class PlayerOverlayImplTest {
 
     private fun mockPlayer(): Player = mockk<Player>(relaxed = true).also {
         every { it.isOnline } returns true
+        every { it.uniqueId } returns UUID.randomUUID() // 显示层按 uuid 索引，必须稳定且唯一
     }
 
     private fun build(
@@ -351,5 +362,74 @@ class PlayerOverlayImplTest {
         // ⑥ destroy -> 取消
         o.destroy()
         assertEquals(2, scheduler.cancelledIds.size)
+    }
+
+    // ---- per-viewer 显示层：时序与清理 ----
+
+    @Test
+    fun `show 先种子再全量渲染，首帧即带该玩家的显示条目`() {
+        val display = SlotDisplayMap()
+        val spec = specOf(stack(Material.PAPER)) {
+            onUpdate(TaskScheduler.Trigger.Interval(1.seconds)) { item = stack(Material.CLOCK) }
+        }
+        // NeverRunScheduler：只排程不执行，确保条目只可能来自 seed 而非定时任务
+        val (o, t, _) = build(mapOf(4 to spec), scheduler = NeverRunScheduler(), display = display)
+        val p = mockPlayer()
+
+        o.show(p)
+
+        assertEquals(Material.CLOCK, display.lookup(p.uniqueId, 4)!!.bukkitItem.type)
+        assertEquals(listOf(p), t.paintAllCalls) // 且 paintAll 确实被调用（顺序由 seed 先行保证）
+    }
+
+    @Test
+    fun `setItem 重算显示层并无条件重绘全体观察者`() {
+        val display = SlotDisplayMap()
+        // 规则完全不改物品 ⇒ commit 恒返回 false；基底变更仍必须重绘（菜单侧不存在的坑）
+        val spec = specOf(stack(Material.PAPER, 1)) {
+            onUpdate(TaskScheduler.Trigger.Interval(1.seconds)) { }
+        }
+        val (o, t, _) = build(mapOf(4 to spec), scheduler = NeverRunScheduler(), display = display)
+        val p = mockPlayer()
+        o.show(p)
+        t.paintCalls.clear()
+
+        o.setItem(4, stack(Material.DIAMOND, 3))
+
+        assertEquals(listOf(p to 4), t.paintCalls)
+        assertEquals(Material.DIAMOND, o.getItem(4)!!.type) // 基底确实变了
+    }
+
+    @Test
+    fun `hide 清除该玩家的显示条目，不影响其他观察者`() {
+        val display = SlotDisplayMap()
+        val spec = specOf(stack(Material.PAPER)) {
+            onUpdate(TaskScheduler.Trigger.Interval(1.seconds)) { item = stack(Material.CLOCK) }
+        }
+        val (o, _, _) = build(mapOf(4 to spec), scheduler = NeverRunScheduler(), display = display)
+        val a = mockPlayer()
+        val b = mockPlayer()
+        o.show(a)
+        o.show(b)
+
+        o.hide(a)
+
+        assertNull(display.lookup(a.uniqueId, 4))
+        assertNotNull(display.lookup(b.uniqueId, 4))
+    }
+
+    @Test
+    fun `玩家断线同样清除其显示条目`() {
+        val display = SlotDisplayMap()
+        val spec = specOf(stack(Material.PAPER)) {
+            onUpdate(TaskScheduler.Trigger.Interval(1.seconds)) { item = stack(Material.CLOCK) }
+        }
+        val (o, _, _) = build(mapOf(4 to spec), scheduler = NeverRunScheduler(), display = display)
+        val p = mockPlayer()
+        o.show(p)
+
+        o.onPlayerQuit(p)
+
+        assertNull(display.lookup(p.uniqueId, 4))
     }
 }

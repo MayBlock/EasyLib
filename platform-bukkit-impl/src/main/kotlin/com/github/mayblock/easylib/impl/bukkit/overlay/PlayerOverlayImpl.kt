@@ -52,6 +52,10 @@ internal class PlayerOverlayImpl(
 
     override fun show(player: Player) {
         check(!isDestroyed) { "this overlay is destroyed!" }
+        // 顺序契约：先 start（幂等，建立 fired 记账）→ 再 seed（算出该玩家的显示条目，不发包）
+        // → 再 paintAll（此时查显示层已有条目，首帧即正确）→ 最后登记观察者并派发 ShowEvent。
+        updateLoop.start()
+        updateLoop.seed(player)
         transport.paintAll(player)
         addViewer(player)
     }
@@ -77,10 +81,9 @@ internal class PlayerOverlayImpl(
         if (removeViewer(player)) transport.restore(player)
     }
 
-    /** 观察者增减是 update loop 的唯一开关：0→1 启动、→0 停止（无人观看时不空转 update 规则）。 */
+    /** 观察者增减是 update loop 的唯一开关：start 由 show 负责，→0 时在此 stop（无人观看时不空转）。 */
     private fun addViewer(player: Player) {
         if (!viewers.add(player)) return
-        updateLoop.start() // 幂等
         dispatcher.publish(OverlayShowEvent(this, player))
     }
 
@@ -105,9 +108,15 @@ internal class PlayerOverlayImpl(
     override fun getItem(index: Int): ItemStack? =
         map[index]?.item?.takeUnless { it.isEmptyStack() }?.clone()
 
+    /**
+     * 基底变更 ⇒ **必须无条件重绘**：菜单侧 setItem 写真实容器、Bukkit 自会发包，overlay 没人代劳。
+     * 若只在显示层提交返回 true 时重绘，则「规则不改物品、前后都无显示条目」时提交返回 false，
+     * 而基底已变，客户端仍显示旧值。故重算只刷缓存，发包在此统一做。
+     */
     override fun setItem(index: Int, item: ItemStack?) {
         val slot = requireNotNull(map[index]) { "slot $index is not declared on this overlay" }
         slot.item = item ?: stack(Material.AIR)
+        updateLoop.recomputeSlot(index)
         viewers.snapshot().forEach { repaint(it, index) }
     }
 
