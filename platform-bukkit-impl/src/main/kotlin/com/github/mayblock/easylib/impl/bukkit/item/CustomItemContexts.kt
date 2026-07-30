@@ -2,17 +2,32 @@ package com.github.mayblock.easylib.impl.bukkit.item
 
 import com.github.mayblock.easylib.api.bukkit.item.CustomItem
 import com.github.mayblock.easylib.api.bukkit.item.CustomItemClick
+import com.github.mayblock.easylib.api.bukkit.item.CustomItemContext
 import com.github.mayblock.easylib.api.bukkit.item.CustomItemInteraction
 import org.bukkit.GameMode
 import org.bukkit.entity.Player
+import org.bukkit.event.Cancellable
+import org.bukkit.event.Event
 import org.bukkit.event.inventory.InventoryClickEvent
 import org.bukkit.event.player.PlayerInteractEvent
 import org.bukkit.inventory.EquipmentSlot
 
+/**
+ * 上下文公共骨架：持有事件与物品，统一实现 [cancel]。
+ * 注意可见性必须是 internal（internal 子类不得暴露更受限的父类型，EXPOSED_SUPER_CLASS）。
+ */
+internal abstract class BaseContext<out E>(
+    final override val event: E,
+    final override val item: CustomItem,
+) : CustomItemContext<E> where E : Event, E : Cancellable {
+
+    final override fun cancel() { event.isCancelled = true }
+}
+
 internal class InteractionContext(
-    override val event: PlayerInteractEvent,
-    override val item: CustomItem,
-) : CustomItemInteraction {
+    event: PlayerInteractEvent,
+    item: CustomItem,
+) : BaseContext<PlayerInteractEvent>(event, item), CustomItemInteraction {
 
     override val player: Player get() = event.player
 
@@ -24,14 +39,12 @@ internal class InteractionContext(
         if (remaining > 0) player.inventory.setItem(hand, stack.clone().apply { this.amount = remaining })
         else player.inventory.setItem(hand, null)   // 扣到 0：清空触发手槽位，不留幽灵物品
     }
-
-    override fun cancel() { event.isCancelled = true }
 }
 
 internal class ClickContext(
-    override val event: InventoryClickEvent,
-    override val item: CustomItem,
-) : CustomItemClick {
+    event: InventoryClickEvent,
+    item: CustomItem,
+) : BaseContext<InventoryClickEvent>(event, item), CustomItemClick {
 
     override val player: Player get() = event.whoClicked as Player
 
@@ -43,6 +56,4 @@ internal class ClickContext(
         else event.currentItem = null
         cancel()   // 已消耗被点击的物品栈：取消底层点击，避免原版点击逻辑二次生效
     }
-
-    override fun cancel() { event.isCancelled = true }
 }

@@ -19,7 +19,7 @@ import org.bukkit.plugin.Plugin
 import java.util.concurrent.ConcurrentHashMap
 
 class CustomItemRegistryImpl(
-    private val plugin: Plugin,
+    plugin: Plugin,
 ) : CustomItemRegistry, Listener {
 
     /** 库自有的固定 PDC 键；值为物品自身的 key 字符串，跨重启稳定。 */
@@ -37,7 +37,7 @@ class CustomItemRegistryImpl(
         block: CustomItemScope.() -> Unit,
     ): CustomItem {
         val scope = CustomItemScopeImpl().apply(block)
-        val item = CustomItemImpl(key, type, idKey, scope.metadata, scope.interactHandler, scope.clickHandler)
+        val item = CustomItemImpl(key, type, idKey, scope.metadata, scope.handlers())
         // 先建后注册：失败路径（重复 key）不产生任何副作用。
         require(items.putIfAbsent(key.toString(), item) == null) { "Custom item already defined: $key" }
         return item
@@ -61,7 +61,7 @@ class CustomItemRegistryImpl(
     private fun onInteract(e: PlayerInteractEvent) {
         if (e.useItemInHand() == Event.Result.DENY) return
         val item = lookup(e.item) ?: return
-        val handler = item.interactHandler ?: return
+        val handler = item.handlers.interact ?: return
         InteractionContext(e, item).handler()
     }
 
@@ -69,7 +69,7 @@ class CustomItemRegistryImpl(
     private fun onInventoryClick(e: InventoryClickEvent) {
         if (e.whoClicked !is Player) return
         val item = lookup(e.currentItem) ?: return
-        val handler = item.clickHandler ?: return
+        val handler = item.handlers.click ?: return
         ClickContext(e, item).handler()
     }
 

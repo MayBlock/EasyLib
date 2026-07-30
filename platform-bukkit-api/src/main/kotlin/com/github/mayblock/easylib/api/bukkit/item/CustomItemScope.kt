@@ -1,7 +1,10 @@
 package com.github.mayblock.easylib.api.bukkit.item
 
 import org.bukkit.entity.Player
+import org.bukkit.event.Event
+import org.bukkit.event.block.BlockPlaceEvent
 import org.bukkit.event.inventory.InventoryClickEvent
+import org.bukkit.event.player.PlayerDropItemEvent
 import org.bukkit.event.player.PlayerInteractEvent
 import org.bukkit.inventory.meta.ItemMeta
 
@@ -25,28 +28,43 @@ interface CustomItemScope {
 
     /** 背包/容器中点击本物品（[InventoryClickEvent]）时回调。 */
     fun onInventoryClick(block: CustomItemClick.() -> Unit)
+
+    /** 玩家丢弃本物品（[PlayerDropItemEvent]）时回调。未注册时默认允许丢弃。 */
+    fun onDrop(block: CustomItemDrop.() -> Unit)
+
+    /**
+     * 玩家将本物品作为方块放置（[BlockPlaceEvent]）时回调。
+     * 未注册时默认取消放置——防止可放置材质的自定义物品被放置后丢失 PDC 身份；
+     * 注册即接管：handler 不调用 [CustomItemContext.cancel] 即允许放置。
+     * 注意：放置方块时 [PlayerInteractEvent]（RIGHT_CLICK_BLOCK）先于 [BlockPlaceEvent] 触发，
+     * [onInteract] 中不取消不影响本默认规则生效。
+     */
+    fun onBlockPlace(block: CustomItemBlockPlace.() -> Unit)
 }
 
-/** [CustomItemScope.onInteract] 回调作用域。消耗/取消均为可选动作，需要才调用。 */
+/**
+ * 自定义物品事件回调作用域的公共基面：底层事件、触发玩家、所属自定义物品与取消能力。
+ * 各子作用域按语义追加自己的能力（如 consume）。
+ */
 @CustomItemDsl
-interface CustomItemInteraction {
-    val event: PlayerInteractEvent
+interface CustomItemContext<out E : Event> {
+    val event: E
     val player: Player
     val item: CustomItem
-
-    /** 从触发手对应的槽位扣除 [amount] 个；创造模式下不消耗，直接跳过；扣到 0 清空槽位。 */
-    fun consume(amount: Int = 1)
 
     /** 取消底层事件。 */
     fun cancel()
 }
 
+/** [CustomItemScope.onInteract] 回调作用域。消耗/取消均为可选动作，需要才调用。 */
+interface CustomItemInteraction : CustomItemContext<PlayerInteractEvent> {
+
+    /** 从触发手对应的槽位扣除 [amount] 个；创造模式下不消耗，直接跳过；扣到 0 清空槽位。 */
+    fun consume(amount: Int = 1)
+}
+
 /** [CustomItemScope.onInventoryClick] 回调作用域。 */
-@CustomItemDsl
-interface CustomItemClick {
-    val event: InventoryClickEvent
-    val player: Player
-    val item: CustomItem
+interface CustomItemClick : CustomItemContext<InventoryClickEvent> {
 
     /**
      * 从被点击槽位扣除 [amount] 个；创造模式下不消耗，直接跳过；扣到 0 清空槽位。
@@ -54,7 +72,10 @@ interface CustomItemClick {
      * 避免原版点击结算（挪动/拆分物品栈等）与本次消耗产生冲突或双重生效。
      */
     fun consume(amount: Int = 1)
-
-    /** 取消底层事件。 */
-    fun cancel()
 }
+
+/** [CustomItemScope.onDrop] 回调作用域。无 consume：物品已离开背包；[cancel] 使物品回到背包。 */
+interface CustomItemDrop : CustomItemContext<PlayerDropItemEvent>
+
+/** [CustomItemScope.onBlockPlace] 回调作用域。无 consume：原版放置成功自会扣减；[cancel] 保留手中物品。 */
+interface CustomItemBlockPlace : CustomItemContext<BlockPlaceEvent>

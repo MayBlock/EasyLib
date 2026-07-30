@@ -1,8 +1,6 @@
 package com.github.mayblock.easylib.impl.bukkit.item
 
 import com.github.mayblock.easylib.api.bukkit.item.CustomItem
-import com.github.mayblock.easylib.api.bukkit.item.CustomItemClick
-import com.github.mayblock.easylib.api.bukkit.item.CustomItemInteraction
 import com.github.mayblock.easylib.impl.bukkit.util.stack
 import org.bukkit.Material
 import org.bukkit.NamespacedKey
@@ -16,8 +14,7 @@ internal class CustomItemImpl(
     override val type: Material,
     private val idKey: NamespacedKey,
     metadata: List<ItemMeta.() -> Unit>,
-    internal val interactHandler: (CustomItemInteraction.() -> Unit)?,
-    internal val clickHandler: (CustomItemClick.() -> Unit)?,
+    internal val handlers: CustomItemHandlers,
 ) : CustomItem {
 
     // 身份写在用户 meta 之后，保证不会被 scope 里的定制覆盖掉。
