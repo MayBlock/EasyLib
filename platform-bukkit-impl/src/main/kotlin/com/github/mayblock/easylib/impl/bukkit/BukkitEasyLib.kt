@@ -4,7 +4,7 @@ import com.github.mayblock.easylib.api.EasyLibApi
 import com.github.mayblock.easylib.api.bukkit.BukkitEasyLibApi
 import com.github.mayblock.easylib.api.bukkit.bukkitApi
 import com.github.mayblock.easylib.impl.bukkit.command.BukkitCommandRegistry
-import com.github.mayblock.easylib.impl.bukkit.extension.ItemExtensionApiImpl
+import com.github.mayblock.easylib.impl.bukkit.item.CustomItemRegistryImpl
 import com.github.mayblock.easylib.impl.bukkit.menu.MenuManager
 import com.github.mayblock.easylib.impl.bukkit.overlay.OverlayManager
 import com.github.mayblock.easylib.impl.bukkit.packet.BukkitPacketManager
@@ -34,7 +34,7 @@ class BukkitEasyLib(
     override val promptApi = PromptApiImpl(packetManager).also {
         Bukkit.getPluginManager().registerEvents(it, plugin)
     }
-    override val itemExtensionApi = ItemExtensionApiImpl(plugin)
+    override val customItemRegistry = CustomItemRegistryImpl(plugin)
     override val menuFactory = MenuManager(taskScheduler, packetManager, plugin)
     override val overlayFactory = OverlayManager(taskScheduler, plugin)
     override val commandRegistry = BukkitCommandRegistry(plugin)
@@ -43,7 +43,7 @@ class BukkitEasyLib(
         taskScheduler.cancelAllTasks()
         menuFactory.close()
         overlayFactory.close()
-        HandlerList.unregisterAll(itemExtensionApi)
+        customItemRegistry.shutdown()
         promptApi.shutdown()
     }
 
