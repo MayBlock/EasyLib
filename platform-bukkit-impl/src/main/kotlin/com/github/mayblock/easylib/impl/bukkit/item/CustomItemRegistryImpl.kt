@@ -6,8 +6,11 @@ import com.github.mayblock.easylib.api.bukkit.item.CustomItemScope
 import org.bukkit.Bukkit
 import org.bukkit.Material
 import org.bukkit.NamespacedKey
+import org.bukkit.event.EventHandler
 import org.bukkit.event.HandlerList
 import org.bukkit.event.Listener
+import org.bukkit.event.inventory.InventoryClickEvent
+import org.bukkit.event.player.PlayerInteractEvent
 import org.bukkit.inventory.ItemStack
 import org.bukkit.persistence.PersistentDataType
 import org.bukkit.plugin.Plugin
@@ -51,6 +54,20 @@ class CustomItemRegistryImpl(
     override fun unregister(key: NamespacedKey): Boolean = items.remove(key.toString()) != null
 
     override fun unregisterAll() = items.clear()
+
+    @EventHandler
+    fun onInteract(e: PlayerInteractEvent) {
+        val item = lookup(e.item) ?: return
+        val handler = item.interactHandler ?: return
+        InteractionContext(e, item).handler()
+    }
+
+    @EventHandler
+    fun onInventoryClick(e: InventoryClickEvent) {
+        val item = lookup(e.currentItem) ?: return
+        val handler = item.clickHandler ?: return
+        ClickContext(e, item).handler()
+    }
 
     /** 关停：清空注册并注销 Bukkit 监听器。仅供 BukkitEasyLib.close() 调用。 */
     internal fun shutdown() {
