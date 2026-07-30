@@ -11,7 +11,9 @@ import org.bukkit.event.Event
 import org.bukkit.event.EventHandler
 import org.bukkit.event.HandlerList
 import org.bukkit.event.Listener
+import org.bukkit.event.block.BlockPlaceEvent
 import org.bukkit.event.inventory.InventoryClickEvent
+import org.bukkit.event.player.PlayerDropItemEvent
 import org.bukkit.event.player.PlayerInteractEvent
 import org.bukkit.inventory.ItemStack
 import org.bukkit.persistence.PersistentDataType
@@ -71,6 +73,21 @@ class CustomItemRegistryImpl(
         val item = lookup(e.currentItem) ?: return
         val handler = item.handlers.click ?: return
         ClickContext(e, item).handler()
+    }
+
+    @EventHandler(ignoreCancelled = true)
+    private fun onDrop(e: PlayerDropItemEvent) {
+        val item = lookup(e.itemDrop.itemStack) ?: return
+        val handler = item.handlers.drop ?: return          // 未注册：默认允许丢弃
+        DropContext(e, item).handler()
+    }
+
+    @EventHandler(ignoreCancelled = true)
+    private fun onBlockPlace(e: BlockPlaceEvent) {
+        val item = lookup(e.itemInHand) ?: return
+        // 未注册：默认取消放置，防止可放置材质的自定义物品被放置后丢失 PDC 身份。
+        val handler = item.handlers.place ?: run { e.isCancelled = true; return }
+        PlaceContext(e, item).handler()
     }
 
     /** 关停：清空注册并注销 Bukkit 监听器。仅供 BukkitEasyLib.close() 调用。 */
