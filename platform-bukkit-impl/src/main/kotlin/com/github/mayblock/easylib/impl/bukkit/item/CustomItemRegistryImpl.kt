@@ -19,7 +19,7 @@ import org.bukkit.plugin.Plugin
 import java.util.concurrent.ConcurrentHashMap
 
 class CustomItemRegistryImpl(
-    plugin: Plugin,
+    private val plugin: Plugin,
 ) : CustomItemRegistry, Listener {
 
     /** 库自有的固定 PDC 键；值为物品自身的 key 字符串，跨重启稳定。 */
