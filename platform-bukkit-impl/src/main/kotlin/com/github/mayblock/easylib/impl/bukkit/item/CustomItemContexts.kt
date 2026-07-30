@@ -21,7 +21,7 @@ internal class InteractionContext(
         val stack = event.item ?: return
         val hand = event.hand ?: EquipmentSlot.HAND
         val remaining = stack.amount - amount
-        if (remaining > 0) stack.amount = remaining
+        if (remaining > 0) player.inventory.setItem(hand, stack.clone().apply { this.amount = remaining })
         else player.inventory.setItem(hand, null)   // 扣到 0：清空触发手槽位，不留幽灵物品
     }
 
@@ -39,8 +39,9 @@ internal class ClickContext(
         if (player.gameMode == GameMode.CREATIVE) return
         val stack = event.currentItem ?: return
         val remaining = stack.amount - amount
-        if (remaining > 0) stack.amount = remaining
+        if (remaining > 0) event.currentItem = stack.clone().apply { this.amount = remaining }
         else event.currentItem = null
+        cancel()   // 已消耗被点击的物品栈：取消底层点击，避免原版点击逻辑二次生效
     }
 
     override fun cancel() { event.isCancelled = true }

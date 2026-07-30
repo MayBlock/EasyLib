@@ -6,6 +6,8 @@ import com.github.mayblock.easylib.api.bukkit.item.CustomItemScope
 import org.bukkit.Bukkit
 import org.bukkit.Material
 import org.bukkit.NamespacedKey
+import org.bukkit.entity.Player
+import org.bukkit.event.Event
 import org.bukkit.event.EventHandler
 import org.bukkit.event.HandlerList
 import org.bukkit.event.Listener
@@ -56,14 +58,16 @@ class CustomItemRegistryImpl(
     override fun unregisterAll() = items.clear()
 
     @EventHandler
-    fun onInteract(e: PlayerInteractEvent) {
+    private fun onInteract(e: PlayerInteractEvent) {
+        if (e.useItemInHand() == Event.Result.DENY) return
         val item = lookup(e.item) ?: return
         val handler = item.interactHandler ?: return
         InteractionContext(e, item).handler()
     }
 
-    @EventHandler
-    fun onInventoryClick(e: InventoryClickEvent) {
+    @EventHandler(ignoreCancelled = true)
+    private fun onInventoryClick(e: InventoryClickEvent) {
+        if (e.whoClicked !is Player) return
         val item = lookup(e.currentItem) ?: return
         val handler = item.clickHandler ?: return
         ClickContext(e, item).handler()

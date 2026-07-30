@@ -24,6 +24,7 @@ interface CustomItem {
 
     /**
      * 从玩家背包扣除 [amount] 个本物品。
+     * 扫描范围覆盖玩家整个背包，包括盔甲槽位与副手槽位。
      * @return 足量并扣除成功返回 true；不足则**不做任何扣除**并返回 false。
      */
     fun take(player: Player, amount: Int = 1): Boolean

@@ -15,7 +15,6 @@ import com.github.mayblock.easylib.impl.bukkit.scheduler.BukkitTaskScheduler
 import com.github.mayblock.easylib.packetevents.PacketManager
 import org.bukkit.Bukkit
 import org.bukkit.entity.Player
-import org.bukkit.event.HandlerList
 import org.bukkit.plugin.Plugin
 
 class BukkitEasyLib(
