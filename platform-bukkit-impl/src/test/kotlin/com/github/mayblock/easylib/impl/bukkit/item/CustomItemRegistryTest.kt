@@ -73,4 +73,21 @@ class CustomItemRegistryTest {
         assertSame(redefined, rebooted.fromStack(survivedStack))
         rebooted.shutdown()
     }
+
+    @Test fun `take 非正数 amount 抛异常且不改动背包`() {
+        val item = registry.define(Material.STICK, key("wand"))
+        val p = server.addPlayer()
+        item.give(p, 2)
+        assertFailsWith<IllegalArgumentException> { item.take(p, 0) }
+        assertFailsWith<IllegalArgumentException> { item.take(p, -5) }
+        assertEquals(2, p.inventory.contents.filterNotNull().filter(item::matches).sumOf { it.amount })
+    }
+
+    @Test fun `take 部分扣减持久化到背包`() {
+        val item = registry.define(Material.STICK, key("wand"))
+        val p = server.addPlayer()
+        item.give(p, 5)
+        assertTrue(item.take(p, 2))
+        assertEquals(3, p.inventory.contents.filterNotNull().filter(item::matches).sumOf { it.amount })
+    }
 }
