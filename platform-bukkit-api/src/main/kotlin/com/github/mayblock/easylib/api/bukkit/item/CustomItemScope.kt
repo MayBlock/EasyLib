@@ -25,7 +25,8 @@ interface CustomItemScope {
      * 回调对所有交互动作（左键/右键、方块/空气）均会触发，调用方需自行按 [PlayerInteractEvent.getAction] 过滤。
      * 若事件的 useItemInHand() 结果为 DENY（例如事件已被取消），不回调。
      * 与 [onBlockPlace] 同时注册时，放置手势会先触发本回调、再触发放置回调；惯用法是在本回调开头
-     * `if (event.action == Action.RIGHT_CLICK_BLOCK) return` 把放置手势让位给 [onBlockPlace]。
+     * `if (event.action == Action.RIGHT_CLICK_BLOCK) return@onInteract` 把放置手势让位给 [onBlockPlace]
+     * （注意：右键箱子/门等可交互方块会被交互本身消费、不产生放置事件，混合用途物品需自行细分）。
      * 勿对放置手势调用 consume()：放行路径会被双重扣减（consume 一次 + 原版消耗一次），
      * 取消路径也会额外扣减；且在本回调内改写手部物品会使随后 BlockPlaceEvent 的物品快照失效。
      */
@@ -51,7 +52,7 @@ interface CustomItemScope {
      * [onInteract] 中不取消不影响本默认规则生效。
      * 已被取消的放置事件不回调（也不再重复取消）。
      * 即便 interact 阶段手部物品被改写导致放置事件的物品快照为空，本回调与默认禁仍会按
-     * 同 tick 的交互识别记录正常生效（库内兜底）。
+     * 同 tick 的交互识别记录正常生效（库内兜底；兜底路径下 event.itemInHand 可能为空，回调内请以 item 为身份依据）。
      */
     fun onBlockPlace(block: CustomItemBlockPlace.() -> Unit)
 }
