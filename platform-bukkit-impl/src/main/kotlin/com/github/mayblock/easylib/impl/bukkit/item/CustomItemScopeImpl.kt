@@ -1,21 +1,21 @@
 package com.github.mayblock.easylib.impl.bukkit.item
 
-import com.github.mayblock.easylib.api.bukkit.item.CustomItemBlockPlace
-import com.github.mayblock.easylib.api.bukkit.item.CustomItemClick
-import com.github.mayblock.easylib.api.bukkit.item.CustomItemDrop
-import com.github.mayblock.easylib.api.bukkit.item.CustomItemInteraction
-import com.github.mayblock.easylib.api.bukkit.item.CustomItemScope
+import com.github.mayblock.easylib.api.bukkit.item.*
 import org.bukkit.inventory.meta.ItemMeta
 
+internal data class MetaRule(val type: Class<out ItemMeta>, val block: ItemMeta.() -> Unit)
 internal class CustomItemScopeImpl : CustomItemScope {
 
-    val metadata = mutableListOf<ItemMeta.() -> Unit>()
+    val metadata = mutableListOf<MetaRule>()
     private var interactHandler: (CustomItemInteraction.() -> Unit)? = null
     private var clickHandler: (CustomItemClick.() -> Unit)? = null
     private var dropHandler: (CustomItemDrop.() -> Unit)? = null
     private var placeHandler: (CustomItemBlockPlace.() -> Unit)? = null
 
-    override fun meta(block: ItemMeta.() -> Unit) { metadata += block }
+    override fun <T : ItemMeta> meta(type: Class<out T>, block: T.() -> Unit) {
+        @Suppress("UNCHECKED_CAST")
+        metadata.add(MetaRule(type, block as ItemMeta.() -> Unit))
+    }
     override fun onInteract(block: CustomItemInteraction.() -> Unit) { interactHandler = block }
     override fun onInventoryClick(block: CustomItemClick.() -> Unit) { clickHandler = block }
     override fun onDrop(block: CustomItemDrop.() -> Unit) { dropHandler = block }

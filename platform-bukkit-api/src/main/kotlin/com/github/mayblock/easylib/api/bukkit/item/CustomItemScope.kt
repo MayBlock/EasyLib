@@ -18,7 +18,7 @@ internal annotation class CustomItemDsl
 interface CustomItemScope {
 
     /** 定制物品外观/元数据；可多次调用，按声明顺序应用。 */
-    fun meta(block: ItemMeta.() -> Unit)
+    fun <T : ItemMeta> meta(type: Class<out T>, block: T.() -> Unit)
 
     /**
      * 玩家手持本物品交互（[PlayerInteractEvent]）时回调。
@@ -49,6 +49,13 @@ interface CustomItemScope {
      */
     fun onBlockPlace(block: CustomItemBlockPlace.() -> Unit)
 }
+
+fun CustomItemScope.meta(block: ItemMeta.() -> Unit) = this.meta(ItemMeta::class.java, block)
+
+@JvmName("metaWithType")
+inline fun <reified T : ItemMeta> CustomItemScope.meta(noinline block: T.() -> Unit) =
+    this.meta(T::class.java, block)
+
 
 /**
  * 自定义物品事件回调作用域的公共基面：底层事件、触发玩家、所属自定义物品与取消能力。

@@ -1,17 +1,10 @@
 package com.github.mayblock.easylib.impl.bukkit.item
 
+import com.github.mayblock.easylib.api.bukkit.item.meta
 import org.bukkit.Material
 import org.bukkit.NamespacedKey
 import org.mockbukkit.mockbukkit.MockBukkit
-import kotlin.test.AfterTest
-import kotlin.test.BeforeTest
-import kotlin.test.Test
-import kotlin.test.assertEquals
-import kotlin.test.assertFailsWith
-import kotlin.test.assertFalse
-import kotlin.test.assertNull
-import kotlin.test.assertSame
-import kotlin.test.assertTrue
+import kotlin.test.*
 
 class CustomItemRegistryTest {
 
@@ -30,7 +23,9 @@ class CustomItemRegistryTest {
 
     @Test fun `define 返回可用的 CustomItem 且 get 与 fromStack 均可反查`() {
         val item = registry.define(Material.STICK, key("wand")) {
-            meta { setDisplayName("Wand") }
+            meta {
+                setDisplayName("Wand")
+            }
         }
         assertEquals(Material.STICK, item.type)
         assertSame(item, registry.get(key("wand")))

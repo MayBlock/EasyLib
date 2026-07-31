@@ -16,7 +16,7 @@ interface CustomItemRegistry {
      * 注意：可放置材质的自定义物品默认无法被放置为方块，详见 [CustomItemScope.onBlockPlace]。
      * @throws IllegalArgumentException 若 [key] 已注册。
      */
-    fun define(type: Material, key: NamespacedKey, block: CustomItemScope.() -> Unit = {}): CustomItem
+    fun define(type: Material, key: NamespacedKey, block: (CustomItemScope.() -> Unit)? = null): CustomItem
 
     fun get(key: NamespacedKey): CustomItem?
 
