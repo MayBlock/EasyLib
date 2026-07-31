@@ -2,8 +2,11 @@ package com.github.mayblock.easylib.impl.bukkit.item
 
 import org.bukkit.Material
 import org.bukkit.NamespacedKey
+import org.bukkit.block.BlockFace
+import org.bukkit.event.block.Action
 import org.bukkit.event.block.BlockPlaceEvent
 import org.bukkit.event.player.PlayerDropItemEvent
+import org.bukkit.event.player.PlayerInteractEvent
 import org.bukkit.inventory.EquipmentSlot
 import org.mockbukkit.mockbukkit.MockBukkit
 import kotlin.test.AfterTest
@@ -36,6 +39,12 @@ class CustomItemDropPlaceTest {
         val against = p.world.getBlockAt(0, 63, 0)
         return BlockPlaceEvent(placed, placed.state, against, stack, p, true, EquipmentSlot.HAND)
     }
+
+    private fun interactBlock(p: org.bukkit.entity.Player, stack: org.bukkit.inventory.ItemStack): PlayerInteractEvent =
+        PlayerInteractEvent(
+            p, Action.RIGHT_CLICK_BLOCK, stack,
+            p.world.getBlockAt(0, 63, 0), BlockFace.UP, EquipmentSlot.HAND
+        ).also { server.pluginManager.callEvent(it) }
 
     // ---- drop ----
 
@@ -126,5 +135,43 @@ class CustomItemDropPlaceTest {
         server.pluginManager.callEvent(e)
         assertEquals(0, fired)
         assertTrue(e.isCancelled)
+    }
+
+    // ---- 放置身份备忘（interact 阶段手部被改写导致空快照时的兜底识别）----
+
+    @Test fun `快照为空时凭同 tick 交互备忘执行默认禁`() {
+        val stone = registry.define(Material.STONE, key("magic_stone"))
+        val p = server.addPlayer()
+        interactBlock(p, stone.createStack())
+        val e = placeEvent(p, org.bukkit.inventory.ItemStack(Material.AIR))
+        server.pluginManager.callEvent(e)
+        assertTrue(e.isCancelled)
+    }
+
+    @Test fun `快照为空时凭备忘分发 onBlockPlace 且 item 正确`() {
+        var seenKey: NamespacedKey? = null
+        registry.define(Material.STONE, key("magic_stone")) { onBlockPlace { seenKey = item.key } }
+        val p = server.addPlayer()
+        interactBlock(p, registry.get(key("magic_stone"))!!.createStack())
+        val e = placeEvent(p, org.bukkit.inventory.ItemStack(Material.AIR))
+        server.pluginManager.callEvent(e)
+        assertEquals(key("magic_stone"), seenKey)
+        assertFalse(e.isCancelled)
+    }
+
+    @Test fun `空快照且无备忘或异玩家时不分发`() {
+        var fired = 0
+        registry.define(Material.STONE, key("magic_stone")) { onBlockPlace { fired++ } }
+        val a = server.addPlayer()
+        val b = server.addPlayer()
+        val e1 = placeEvent(a, org.bukkit.inventory.ItemStack(Material.AIR))
+        server.pluginManager.callEvent(e1)
+        assertEquals(0, fired)
+        assertFalse(e1.isCancelled)
+        interactBlock(a, registry.get(key("magic_stone"))!!.createStack())
+        val e2 = placeEvent(b, org.bukkit.inventory.ItemStack(Material.AIR))
+        server.pluginManager.callEvent(e2)
+        assertEquals(0, fired)
+        assertFalse(e2.isCancelled)
     }
 }
