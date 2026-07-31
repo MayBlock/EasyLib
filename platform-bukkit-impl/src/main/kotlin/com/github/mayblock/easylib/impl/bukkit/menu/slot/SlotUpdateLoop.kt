@@ -1,6 +1,6 @@
 package com.github.mayblock.easylib.impl.bukkit.menu.slot
 
-import com.github.mayblock.easylib.api.bukkit.menu.slot.event.SlotUpdateEvent
+import com.github.mayblock.easylib.api.bukkit.menu.slot.dsl.SlotUpdateScope
 import com.github.mayblock.easylib.api.scheduler.TaskScheduler
 import com.github.mayblock.easylib.api.scheduler.scheduleTask
 import com.github.mayblock.easylib.impl.bukkit.menu.BukkitMenu
@@ -9,6 +9,7 @@ import com.github.mayblock.easylib.impl.bukkit.util.scheduleSyncTask
 import com.github.mayblock.easylib.impl.bukkit.util.stack
 import org.bukkit.Material
 import org.bukkit.entity.Player
+import org.bukkit.inventory.ItemStack
 import java.util.UUID
 
 /**
@@ -33,6 +34,13 @@ internal class SlotUpdateLoop(
 ) {
 
     private data class GroupKey(val index: Int, val trigger: TaskScheduler.Trigger)
+
+    /** [SlotUpdateScope] 的运行期载体：纯数据、不暴露 menu。 */
+    private class UpdateScope(
+        override val index: Int,
+        override val viewer: Player,
+        override var displayItem: ItemStack,
+    ) : SlotUpdateScope
 
     /** 声明序稳定（groupBy 保序）：种子/重算按此序执行，last-wins 与运行期一致。 */
     private val groupsBySlot: Map<Int, List<Pair<TaskScheduler.Trigger, List<UpdateRule>>>> =
@@ -111,9 +119,9 @@ internal class SlotUpdateLoop(
     /** 跑一组规则并提交；返回该 viewer 视图是否变化。 */
     private fun compute(index: Int, ordered: List<UpdateRule>, player: Player): Boolean {
         val base = menu.getItem(index) ?: stack(Material.AIR)
-        val event = SlotUpdateEvent(menu, index, player, base.clone())
-        ordered.forEach { rule -> rule.block(event) }
-        return display.commit(player.uniqueId, index, base, event.displayItem)
+        val scope = UpdateScope(index, player, base.clone())
+        ordered.forEach { rule -> rule.block(scope) }
+        return display.commit(player.uniqueId, index, base, scope.displayItem)
     }
 
     private fun markDirty(viewerId: UUID) {

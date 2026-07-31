@@ -3,7 +3,7 @@ package com.github.mayblock.easylib.impl.bukkit.menu.slot
 import com.github.mayblock.easylib.api.bukkit.menu.slot.event.SlotClickEvent
 import com.github.mayblock.easylib.api.bukkit.menu.slot.event.SlotPlaceEvent
 import com.github.mayblock.easylib.api.bukkit.menu.slot.event.SlotTakeEvent
-import com.github.mayblock.easylib.api.bukkit.menu.slot.event.SlotUpdateEvent
+import com.github.mayblock.easylib.api.bukkit.menu.slot.dsl.SlotUpdateScope
 import com.github.mayblock.easylib.api.scheduler.TaskScheduler
 import com.github.mayblock.easylib.api.util.Priority
 import org.bukkit.inventory.ItemStack
@@ -34,5 +34,5 @@ internal class SlotHandler(
 internal class UpdateRule(
     val trigger: TaskScheduler.Trigger,
     val priority: Priority,
-    val block: SlotUpdateEvent.() -> Unit,
+    val block: SlotUpdateScope.() -> Unit,
 )

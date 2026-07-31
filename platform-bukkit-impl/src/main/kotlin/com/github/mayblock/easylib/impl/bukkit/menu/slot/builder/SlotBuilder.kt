@@ -4,7 +4,7 @@ import com.github.mayblock.easylib.api.bukkit.menu.slot.dsl.SlotScope
 import com.github.mayblock.easylib.api.bukkit.menu.slot.event.SlotClickEvent
 import com.github.mayblock.easylib.api.bukkit.menu.slot.event.SlotPlaceEvent
 import com.github.mayblock.easylib.api.bukkit.menu.slot.event.SlotTakeEvent
-import com.github.mayblock.easylib.api.bukkit.menu.slot.event.SlotUpdateEvent
+import com.github.mayblock.easylib.api.bukkit.menu.slot.dsl.SlotUpdateScope
 import com.github.mayblock.easylib.api.event.Event
 import com.github.mayblock.easylib.api.scheduler.TaskScheduler
 import com.github.mayblock.easylib.api.util.Priority
@@ -40,7 +40,7 @@ internal class SlotBuilder<out C : SlotClickEvent>(
         SlotHandler(priority, clickType, block as SlotClickEvent.() -> Unit).also(clicks::add)
     }
 
-    override fun onUpdate(trigger: TaskScheduler.Trigger, priority: Priority, block: SlotUpdateEvent.() -> Unit) {
+    override fun onUpdate(trigger: TaskScheduler.Trigger, priority: Priority, block: SlotUpdateScope.() -> Unit) {
         UpdateRule(trigger, priority, block).also(updates::add)
     }
 
