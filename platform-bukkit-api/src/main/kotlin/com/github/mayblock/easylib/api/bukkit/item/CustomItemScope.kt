@@ -24,6 +24,8 @@ interface CustomItemScope {
      * 玩家手持本物品交互（[PlayerInteractEvent]）时回调。
      * 回调对所有交互动作（左键/右键、方块/空气）均会触发，调用方需自行按 [PlayerInteractEvent.getAction] 过滤。
      * 若事件的 useItemInHand() 结果为 DENY（例如事件已被取消），不回调。
+     * （库对未注册 [onBlockPlace] 的可放置物品会在右键方块时自行置 DENY 以阻止原版放置；
+     * 该置位发生在本回调的分发判定之后，不影响本回调触发。）
      * 与 [onBlockPlace] 同时注册时，放置手势会先触发本回调、再触发放置回调；惯用法是在本回调开头
      * `if (event.action == Action.RIGHT_CLICK_BLOCK) return@onInteract` 把放置手势让位给 [onBlockPlace]
      * （注意：右键箱子/门等可交互方块会被交互本身消费、不产生放置事件，混合用途物品需自行细分）。
@@ -46,7 +48,9 @@ interface CustomItemScope {
 
     /**
      * 玩家将本物品作为方块放置（[BlockPlaceEvent]）时回调。
-     * 未注册时默认取消放置——防止可放置材质的自定义物品被放置后丢失 PDC 身份；
+     * 未注册时默认禁止放置——防止可放置材质的自定义物品被放置后丢失 PDC 身份。默认禁在交互阶段
+     * 执行（右键方块时库将 useItemInHand 置 DENY，原版放置不会启动、通常不产生 [BlockPlaceEvent]）；
+     * 若因第三方插件放行等原因仍产生放置事件，事件仍会被默认取消（纵深防御）。
      * 注册即接管：handler 不调用 [CustomItemContext.cancel] 即允许放置。
      * 注意：放置方块时 [PlayerInteractEvent]（RIGHT_CLICK_BLOCK）先于 [BlockPlaceEvent] 触发，
      * [onInteract] 中不取消不影响本默认规则生效。

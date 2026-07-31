@@ -3,6 +3,7 @@ package com.github.mayblock.easylib.impl.bukkit.item
 import org.bukkit.Material
 import org.bukkit.NamespacedKey
 import org.bukkit.block.BlockFace
+import org.bukkit.event.Event
 import org.bukkit.event.block.Action
 import org.bukkit.event.block.BlockPlaceEvent
 import org.bukkit.event.player.PlayerDropItemEvent
@@ -222,5 +223,24 @@ class CustomItemDropPlaceTest {
         val second = placeEvent(p, org.bukkit.inventory.ItemStack(Material.AIR))
         server.pluginManager.callEvent(second)
         assertFalse(second.isCancelled) // 二次：备忘已清，不再救援
+    }
+
+    // ---- 默认禁前移：interact 阶段拒绝物品使用 ----
+
+    @Test fun `未注册 onBlockPlace 时交互阶段即拒绝物品使用`() {
+        val stone = registry.define(Material.STONE, key("magic_stone"))
+        val p = server.addPlayer()
+        val e = interactBlock(p, stone.createStack())
+        assertEquals(Event.Result.DENY, e.useItemInHand())   // 原版放置不会启动
+    }
+
+    @Test fun `注册 onBlockPlace 或非方块材质时交互不拒绝物品使用`() {
+        registry.define(Material.STONE, key("handled_stone")) { onBlockPlace { } }
+        registry.define(Material.STICK, key("wand"))
+        val p = server.addPlayer()
+        val handled = interactBlock(p, registry.get(key("handled_stone"))!!.createStack())
+        assertEquals(Event.Result.DEFAULT, handled.useItemInHand())   // 注册即接管，交互阶段不拦
+        val nonBlock = interactBlock(p, registry.get(key("wand"))!!.createStack())
+        assertEquals(Event.Result.DEFAULT, nonBlock.useItemInHand())  // 非方块材质与放置无关，不拦
     }
 }

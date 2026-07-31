@@ -84,6 +84,12 @@ class CustomItemRegistryImpl(
         val item = lookup(e.item) ?: return
         // 放置手势的身份备忘必须先于 handler 判空：未注册 onInteract 的物品同样需要 place 兜底识别。
         if (e.action == Action.RIGHT_CLICK_BLOCK) {
+            // 默认禁前移：未注册 onBlockPlace 的可放置自定义物品，交互阶段即拒绝物品使用——
+            // 原版放置流程不会启动（也不产生 BlockPlaceEvent），身份保护不再依赖放置事件的物品快照。
+            // place 阶段的默认取消与备忘兜底保留为纵深防御（如第三方插件在更高优先级改回 ALLOW）。
+            if (item.handlers.place == null && item.type.isBlock) {
+                e.setUseItemInHand(Event.Result.DENY)
+            }
             // RIGHT_CLICK_BLOCK 下 e.hand 按 Bukkit 契约非空（仅 PHYSICAL 可空）；?: 仅为类型兜底。
             interactMemo = InteractMemo(
                 e.player.uniqueId, e.player.world.uid, item.key.toString(),
