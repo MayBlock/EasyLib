@@ -1,10 +1,10 @@
 package com.github.mayblock.easylib.impl.bukkit.menu.slot.builder
 
 import com.github.mayblock.easylib.api.bukkit.menu.slot.dsl.SlotScope
+import com.github.mayblock.easylib.api.bukkit.menu.slot.dsl.SlotUpdateScope
 import com.github.mayblock.easylib.api.bukkit.menu.slot.event.SlotClickEvent
 import com.github.mayblock.easylib.api.bukkit.menu.slot.event.SlotPlaceEvent
 import com.github.mayblock.easylib.api.bukkit.menu.slot.event.SlotTakeEvent
-import com.github.mayblock.easylib.api.bukkit.menu.slot.dsl.SlotUpdateScope
 import com.github.mayblock.easylib.api.event.Event
 import com.github.mayblock.easylib.api.scheduler.TaskScheduler
 import com.github.mayblock.easylib.api.util.Priority
