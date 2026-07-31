@@ -2,10 +2,18 @@ package com.github.mayblock.easylib.api.bukkit.overlay.slot.event
 
 import com.github.mayblock.easylib.api.bukkit.overlay.OverlayEvent
 import com.github.mayblock.easylib.api.bukkit.overlay.PlayerOverlay
+import com.github.mayblock.easylib.api.bukkit.overlay.dsl.PlayerOverlayDsl
 import org.bukkit.entity.Player
 import org.bukkit.event.inventory.ClickType
 
-/** 与某槽位相关的覆盖层事件。 */
+/**
+ * 与某槽位相关的覆盖层事件。
+ *
+ * 标记 [PlayerOverlayDsl]：槽位事件是 OverlaySlotScope DSL 各回调 lambda 的接收者。与 OverlaySlotScope
+ * 同标记后，回调体内对外层 builder 成员的隐式访问被禁止——如 `onAction { item(...) }` 不再编译通过
+ * （handler 于运行期执行，运行期调用构建期的声明函数会改写共享 spec，是必须堵住的误用）。
+ */
+@PlayerOverlayDsl
 interface OverlaySlotEvent : OverlayEvent {
     val index: Int
 }
