@@ -89,34 +89,14 @@ class CustomItemDropPlaceTest {
         assertEquals(0, fired)
     }
 
-    // ---- block place ----
+    // ---- block place：本库自定义物品不可被放置 ----
 
-    @Test fun `未注册 onBlockPlace 时放置被自动取消`() {
+    @Test fun `自定义物品的放置事件一律被取消（纵深防御）`() {
         val stone = registry.define(Material.STONE, key("magic_stone"))
         val p = server.addPlayer()
         val e = placeEvent(p, stone.createStack())
         server.pluginManager.callEvent(e)
         assertTrue(e.isCancelled)
-    }
-
-    @Test fun `注册 onBlockPlace 后接管：默认放行且 handler 可 cancel`() {
-        var seenKey: NamespacedKey? = null
-        registry.define(Material.STONE, key("magic_stone")) {
-            onBlockPlace { seenKey = item.key }
-        }
-        val p = server.addPlayer()
-        val allow = placeEvent(p, registry.get(key("magic_stone"))!!.createStack())
-        server.pluginManager.callEvent(allow)
-        assertEquals(key("magic_stone"), seenKey)
-        assertFalse(allow.isCancelled)
-
-        registry.unregister(key("magic_stone"))
-        registry.define(Material.STONE, key("deny_stone")) {
-            onBlockPlace { cancel() }
-        }
-        val deny = placeEvent(p, registry.get(key("deny_stone"))!!.createStack())
-        server.pluginManager.callEvent(deny)
-        assertTrue(deny.isCancelled)
     }
 
     @Test fun `非自定义物品放置不受影响`() {
@@ -127,120 +107,19 @@ class CustomItemDropPlaceTest {
         assertFalse(e.isCancelled)
     }
 
-    @Test fun `预先取消的放置不分发`() {
-        var fired = 0
-        registry.define(Material.STONE, key("magic_stone")) { onBlockPlace { fired++ } }
-        val p = server.addPlayer()
-        val e = placeEvent(p, registry.get(key("magic_stone"))!!.createStack())
-        e.isCancelled = true
-        server.pluginManager.callEvent(e)
-        assertEquals(0, fired)
-        assertTrue(e.isCancelled)
-    }
+    // ---- 放置禁止：interact 阶段拒绝物品使用 ----
 
-    // ---- 放置身份备忘（interact 阶段手部被改写导致空快照时的兜底识别）----
-
-    @Test fun `快照为空时凭同 tick 交互备忘执行默认禁`() {
-        val stone = registry.define(Material.STONE, key("magic_stone"))
-        val p = server.addPlayer()
-        interactBlock(p, stone.createStack())
-        val e = placeEvent(p, org.bukkit.inventory.ItemStack(Material.AIR))
-        server.pluginManager.callEvent(e)
-        assertTrue(e.isCancelled)
-    }
-
-    @Test fun `快照为空时凭备忘分发 onBlockPlace 且 item 正确`() {
-        var seenKey: NamespacedKey? = null
-        registry.define(Material.STONE, key("magic_stone")) { onBlockPlace { seenKey = item.key } }
-        val p = server.addPlayer()
-        interactBlock(p, registry.get(key("magic_stone"))!!.createStack())
-        val e = placeEvent(p, org.bukkit.inventory.ItemStack(Material.AIR))
-        server.pluginManager.callEvent(e)
-        assertEquals(key("magic_stone"), seenKey)
-        assertFalse(e.isCancelled)
-    }
-
-    @Test fun `空快照且无备忘或异玩家时不分发`() {
-        var fired = 0
-        registry.define(Material.STONE, key("magic_stone")) { onBlockPlace { fired++ } }
-        val a = server.addPlayer()
-        val b = server.addPlayer()
-        val e1 = placeEvent(a, org.bukkit.inventory.ItemStack(Material.AIR))
-        server.pluginManager.callEvent(e1)
-        assertEquals(0, fired)
-        assertFalse(e1.isCancelled)
-        interactBlock(a, registry.get(key("magic_stone"))!!.createStack())
-        val e2 = placeEvent(b, org.bukkit.inventory.ItemStack(Material.AIR))
-        server.pluginManager.callEvent(e2)
-        assertEquals(0, fired)
-        assertFalse(e2.isCancelled)
-    }
-
-    @Test fun `非放置手势的交互不记备忘`() {
-        var fired = 0
-        registry.define(Material.STONE, key("magic_stone")) { onBlockPlace { fired++ } }
-        val p = server.addPlayer()
-        // RIGHT_CLICK_AIR：不应记录放置备忘
-        PlayerInteractEvent(
-            p, Action.RIGHT_CLICK_AIR,
-            registry.get(key("magic_stone"))!!.createStack(), null, BlockFace.SELF, EquipmentSlot.HAND
-        ).also { server.pluginManager.callEvent(it) }
-        val e = placeEvent(p, org.bukkit.inventory.ItemStack(Material.AIR))
-        server.pluginManager.callEvent(e)
-        assertEquals(0, fired)
-        assertFalse(e.isCancelled)
-    }
-
-    @Test fun `备忘随 gameTime 前进而过期`() {
-        registry.define(Material.STONE, key("magic_stone"))
-        val p = server.addPlayer()
-        interactBlock(p, registry.get(key("magic_stone"))!!.createStack())
-        val world = p.world as org.mockbukkit.mockbukkit.world.WorldMock
-        world.setGameTime(world.gameTime + 1)
-        val e = placeEvent(p, org.bukkit.inventory.ItemStack(Material.AIR))
-        server.pluginManager.callEvent(e)
-        assertFalse(e.isCancelled)
-    }
-
-    @Test fun `非空快照不咨询备忘`() {
-        var fired = 0
-        registry.define(Material.STONE, key("magic_stone")) { onBlockPlace { fired++ } }
-        val p = server.addPlayer()
-        interactBlock(p, registry.get(key("magic_stone"))!!.createStack())
-        val e = placeEvent(p, org.bukkit.inventory.ItemStack(Material.DIRT))
-        server.pluginManager.callEvent(e)
-        assertEquals(0, fired)
-        assertFalse(e.isCancelled)
-    }
-
-    @Test fun `备忘命中即清（一次手势至多救援一次）`() {
-        registry.define(Material.STONE, key("magic_stone"))
-        val p = server.addPlayer()
-        interactBlock(p, registry.get(key("magic_stone"))!!.createStack())
-        val first = placeEvent(p, org.bukkit.inventory.ItemStack(Material.AIR))
-        server.pluginManager.callEvent(first)
-        assertTrue(first.isCancelled)   // 首次：备忘救援，默认禁生效
-        val second = placeEvent(p, org.bukkit.inventory.ItemStack(Material.AIR))
-        server.pluginManager.callEvent(second)
-        assertFalse(second.isCancelled) // 二次：备忘已清，不再救援
-    }
-
-    // ---- 默认禁前移：interact 阶段拒绝物品使用 ----
-
-    @Test fun `未注册 onBlockPlace 时交互阶段即拒绝物品使用`() {
+    @Test fun `可放置材质的自定义物品交互阶段即拒绝物品使用`() {
         val stone = registry.define(Material.STONE, key("magic_stone"))
         val p = server.addPlayer()
         val e = interactBlock(p, stone.createStack())
         assertEquals(Event.Result.DENY, e.useItemInHand())   // 原版放置不会启动
     }
 
-    @Test fun `注册 onBlockPlace 或非方块材质时交互不拒绝物品使用`() {
-        registry.define(Material.STONE, key("handled_stone")) { onBlockPlace { } }
+    @Test fun `非方块材质的自定义物品交互不拒绝物品使用`() {
         registry.define(Material.STICK, key("wand"))
         val p = server.addPlayer()
-        val handled = interactBlock(p, registry.get(key("handled_stone"))!!.createStack())
-        assertEquals(Event.Result.DEFAULT, handled.useItemInHand())   // 注册即接管，交互阶段不拦
-        val nonBlock = interactBlock(p, registry.get(key("wand"))!!.createStack())
-        assertEquals(Event.Result.DEFAULT, nonBlock.useItemInHand())  // 非方块材质与放置无关，不拦
+        val e = interactBlock(p, registry.get(key("wand"))!!.createStack())
+        assertEquals(Event.Result.DEFAULT, e.useItemInHand())   // 非方块材质与放置无关，不拦
     }
 }

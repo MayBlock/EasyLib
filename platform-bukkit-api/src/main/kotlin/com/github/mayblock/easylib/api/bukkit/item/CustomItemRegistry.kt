@@ -13,7 +13,8 @@ interface CustomItemRegistry {
     /**
      * 定义并注册一个自定义物品。
      *
-     * 注意：可放置材质的自定义物品默认无法被放置为方块，详见 [CustomItemScope.onBlockPlace]。
+     * 注意：可放置材质的自定义物品**无法被放置为方块**（库在交互阶段一律阻止原版放置，
+     * 详见 [CustomItemScope.onInteract]）；「放置类」交互需求可在 onInteract 中自行实现。
      * @throws IllegalArgumentException 若 [key] 已注册。
      */
     fun define(type: Material, key: NamespacedKey, block: (CustomItemScope.() -> Unit)? = null): CustomItem

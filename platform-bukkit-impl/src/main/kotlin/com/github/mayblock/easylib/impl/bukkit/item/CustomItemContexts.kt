@@ -1,7 +1,6 @@
 package com.github.mayblock.easylib.impl.bukkit.item
 
 import com.github.mayblock.easylib.api.bukkit.item.CustomItem
-import com.github.mayblock.easylib.api.bukkit.item.CustomItemBlockPlace
 import com.github.mayblock.easylib.api.bukkit.item.CustomItemClick
 import com.github.mayblock.easylib.api.bukkit.item.CustomItemContext
 import com.github.mayblock.easylib.api.bukkit.item.CustomItemDrop
@@ -10,7 +9,6 @@ import org.bukkit.GameMode
 import org.bukkit.entity.Player
 import org.bukkit.event.Cancellable
 import org.bukkit.event.Event
-import org.bukkit.event.block.BlockPlaceEvent
 import org.bukkit.event.inventory.InventoryClickEvent
 import org.bukkit.event.player.PlayerDropItemEvent
 import org.bukkit.event.player.PlayerInteractEvent
@@ -66,14 +64,6 @@ internal class DropContext(
     event: PlayerDropItemEvent,
     item: CustomItem,
 ) : BaseContext<PlayerDropItemEvent>(event, item), CustomItemDrop {
-
-    override val player: Player get() = event.player
-}
-
-internal class PlaceContext(
-    event: BlockPlaceEvent,
-    item: CustomItem,
-) : BaseContext<BlockPlaceEvent>(event, item), CustomItemBlockPlace {
 
     override val player: Player get() = event.player
 }
