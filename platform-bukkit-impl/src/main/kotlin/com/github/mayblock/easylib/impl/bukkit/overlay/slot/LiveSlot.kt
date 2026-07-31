@@ -1,8 +1,6 @@
 package com.github.mayblock.easylib.impl.bukkit.overlay.slot
 
 import com.github.benmanes.caffeine.cache.Caffeine
-import com.github.mayblock.easylib.impl.bukkit.overlay.slot.OverlaySlotSpec
-import com.github.mayblock.easylib.impl.bukkit.overlay.slot.OverlayUpdateRule
 import com.github.mayblock.easylib.impl.bukkit.util.fromBukkit
 import com.github.retrooper.packetevents.protocol.item.ItemStack
 
