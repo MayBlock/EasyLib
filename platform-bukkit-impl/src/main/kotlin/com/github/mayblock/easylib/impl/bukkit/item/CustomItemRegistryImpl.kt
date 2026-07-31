@@ -37,7 +37,7 @@ class CustomItemRegistryImpl(
      * 从本备忘恢复身份，保证 onBlockPlace 分发与未注册时的默认禁不被击穿。
      * 主线程单写单读；单字段覆盖写、按 tick 比对自然过期，无泄漏。
      */
-    private class InteractMemo(val player: UUID, val key: String, val hand: EquipmentSlot, val tick: Long)
+    private class InteractMemo(val player: UUID, val world: UUID, val key: String, val hand: EquipmentSlot, val tick: Long)
     private var interactMemo: InteractMemo? = null
 
     override fun define(
@@ -81,8 +81,9 @@ class CustomItemRegistryImpl(
         val item = lookup(e.item) ?: return
         // 放置手势的身份备忘必须先于 handler 判空：未注册 onInteract 的物品同样需要 place 兜底识别。
         if (e.action == Action.RIGHT_CLICK_BLOCK) {
+            // RIGHT_CLICK_BLOCK 下 e.hand 按 Bukkit 契约非空（仅 PHYSICAL 可空）；?: 仅为类型兜底。
             interactMemo = InteractMemo(
-                e.player.uniqueId, item.key.toString(),
+                e.player.uniqueId, e.player.world.uid, item.key.toString(),
                 e.hand ?: EquipmentSlot.HAND, e.player.world.fullTime,
             )
         }
@@ -117,6 +118,7 @@ class CustomItemRegistryImpl(
     private fun memoLookup(e: BlockPlaceEvent): CustomItemImpl? {
         val memo = interactMemo ?: return null
         if (memo.player != e.player.uniqueId) return null
+        if (memo.world != e.player.world.uid) return null   // 多世界 fullTime 齐步走，须校验同世界
         if (memo.hand != e.hand) return null
         if (memo.tick != e.player.world.fullTime) return null
         return items[memo.key]

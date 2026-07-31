@@ -174,4 +174,19 @@ class CustomItemDropPlaceTest {
         assertEquals(0, fired)
         assertFalse(e2.isCancelled)
     }
+
+    @Test fun `非放置手势的交互不记备忘`() {
+        var fired = 0
+        registry.define(Material.STONE, key("magic_stone")) { onBlockPlace { fired++ } }
+        val p = server.addPlayer()
+        // RIGHT_CLICK_AIR：不应记录放置备忘
+        PlayerInteractEvent(
+            p, Action.RIGHT_CLICK_AIR,
+            registry.get(key("magic_stone"))!!.createStack(), null, BlockFace.SELF, EquipmentSlot.HAND
+        ).also { server.pluginManager.callEvent(it) }
+        val e = placeEvent(p, org.bukkit.inventory.ItemStack(Material.AIR))
+        server.pluginManager.callEvent(e)
+        assertEquals(0, fired)
+        assertFalse(e.isCancelled)
+    }
 }
