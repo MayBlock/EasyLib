@@ -8,6 +8,7 @@ import org.bukkit.event.block.Action
 import org.bukkit.event.block.BlockPlaceEvent
 import org.bukkit.event.player.PlayerDropItemEvent
 import org.bukkit.event.player.PlayerInteractEvent
+import org.bukkit.event.player.PlayerItemConsumeEvent
 import org.bukkit.inventory.EquipmentSlot
 import org.mockbukkit.mockbukkit.MockBukkit
 import kotlin.test.AfterTest
@@ -121,5 +122,47 @@ class CustomItemDropPlaceTest {
         val p = server.addPlayer()
         val e = interactBlock(p, registry.get(key("wand"))!!.createStack())
         assertEquals(Event.Result.DEFAULT, e.useItemInHand())   // 非方块材质与放置无关，不拦
+    }
+
+    // ---- consume：食用/饮用完成 ----
+
+    @Test fun `未注册 onConsume 时食用默认允许`() {
+        val apple = registry.define(Material.APPLE, key("magic_apple"))
+        val p = server.addPlayer()
+        val e = PlayerItemConsumeEvent(p, apple.createStack(), EquipmentSlot.HAND)
+        server.pluginManager.callEvent(e)
+        assertFalse(e.isCancelled)
+    }
+
+    @Test fun `注册 onConsume 后分发且 cancel 生效`() {
+        var seenKey: NamespacedKey? = null
+        registry.define(Material.APPLE, key("magic_apple")) {
+            onConsume { seenKey = item.key; cancel() }
+        }
+        val p = server.addPlayer()
+        val e = PlayerItemConsumeEvent(p, registry.get(key("magic_apple"))!!.createStack(), EquipmentSlot.HAND)
+        server.pluginManager.callEvent(e)
+        assertEquals(key("magic_apple"), seenKey)
+        assertTrue(e.isCancelled)
+    }
+
+    @Test fun `非自定义物品食用不分发`() {
+        var fired = 0
+        registry.define(Material.APPLE, key("magic_apple")) { onConsume { fired++ } }
+        val p = server.addPlayer()
+        val e = PlayerItemConsumeEvent(p, org.bukkit.inventory.ItemStack(Material.APPLE), EquipmentSlot.HAND)
+        server.pluginManager.callEvent(e)
+        assertEquals(0, fired)
+        assertFalse(e.isCancelled)
+    }
+
+    @Test fun `预先取消的食用不分发`() {
+        var fired = 0
+        val apple = registry.define(Material.APPLE, key("magic_apple")) { onConsume { fired++ } }
+        val p = server.addPlayer()
+        val e = PlayerItemConsumeEvent(p, apple.createStack(), EquipmentSlot.HAND)
+        e.isCancelled = true
+        server.pluginManager.callEvent(e)
+        assertEquals(0, fired)
     }
 }

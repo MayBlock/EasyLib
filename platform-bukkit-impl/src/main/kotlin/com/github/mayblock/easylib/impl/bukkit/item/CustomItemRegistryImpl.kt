@@ -16,6 +16,7 @@ import org.bukkit.event.block.BlockPlaceEvent
 import org.bukkit.event.inventory.InventoryClickEvent
 import org.bukkit.event.player.PlayerDropItemEvent
 import org.bukkit.event.player.PlayerInteractEvent
+import org.bukkit.event.player.PlayerItemConsumeEvent
 import org.bukkit.inventory.ItemStack
 import org.bukkit.persistence.PersistentDataType
 import org.bukkit.plugin.Plugin
@@ -92,6 +93,13 @@ class CustomItemRegistryImpl(
         val item = lookup(e.itemDrop.itemStack) ?: return
         val handler = item.handlers.drop ?: return          // 未注册：默认允许丢弃
         DropContext(e, item).handler()
+    }
+
+    @EventHandler(ignoreCancelled = true)
+    private fun onConsume(e: PlayerItemConsumeEvent) {
+        val item = lookup(e.item) ?: return
+        val handler = item.handlers.consume ?: return       // 未注册：默认允许食用
+        ConsumeContext(e, item).handler()
     }
 
     @EventHandler(ignoreCancelled = true)

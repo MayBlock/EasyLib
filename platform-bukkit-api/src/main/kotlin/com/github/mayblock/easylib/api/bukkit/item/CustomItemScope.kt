@@ -5,6 +5,7 @@ import org.bukkit.event.Event
 import org.bukkit.event.inventory.InventoryClickEvent
 import org.bukkit.event.player.PlayerDropItemEvent
 import org.bukkit.event.player.PlayerInteractEvent
+import org.bukkit.event.player.PlayerItemConsumeEvent
 import org.bukkit.inventory.meta.ItemMeta
 
 @DslMarker
@@ -41,6 +42,16 @@ interface CustomItemScope {
      * 已被取消的丢弃事件不回调。注意：容器内对着槽位按 Q 丢弃会先触发 [onInventoryClick] 再触发本回调（取消该点击则本回调不触发）；把光标上的物品点击容器外丢弃则只触发本回调。
      */
     fun onDrop(block: CustomItemDrop.() -> Unit)
+
+    /**
+     * 玩家食用/饮用完本物品（[PlayerItemConsumeEvent]）时回调——食物、药水、牛奶桶等可消耗材质。
+     * 未注册时默认允许食用（原版效果生效、物品随消耗销毁）。
+     * [CustomItemContext.cancel] 可阻止本次消耗：物品保留、效果不生效。
+     * 已被取消的消耗事件不回调。
+     * 事件触发于消耗完成的瞬间；如需在开始进食时介入，请使用 [onInteract]（右键即开始进食）。
+     * 高级场景可经 event.setItem 替换实际被消耗的物品（原版能力，谨慎使用）。
+     */
+    fun onConsume(block: CustomItemConsume.() -> Unit)
 }
 
 fun CustomItemScope.meta(block: ItemMeta.() -> Unit) = this.meta(ItemMeta::class.java, block)
@@ -84,3 +95,6 @@ interface CustomItemClick : CustomItemContext<InventoryClickEvent> {
 
 /** [CustomItemScope.onDrop] 回调作用域。无 consume：物品已离开背包；[cancel] 使物品回到背包。 */
 interface CustomItemDrop : CustomItemContext<PlayerDropItemEvent>
+
+/** [CustomItemScope.onConsume] 回调作用域。无 consume：消耗由原版完成；[cancel] 阻止消耗（物品保留、效果不生效）。 */
+interface CustomItemConsume : CustomItemContext<PlayerItemConsumeEvent>

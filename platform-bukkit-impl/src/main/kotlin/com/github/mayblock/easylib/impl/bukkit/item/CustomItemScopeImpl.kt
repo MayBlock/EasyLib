@@ -10,6 +10,7 @@ internal class CustomItemScopeImpl : CustomItemScope {
     private var interactHandler: (CustomItemInteraction.() -> Unit)? = null
     private var clickHandler: (CustomItemClick.() -> Unit)? = null
     private var dropHandler: (CustomItemDrop.() -> Unit)? = null
+    private var consumeHandler: (CustomItemConsume.() -> Unit)? = null
 
     override fun <T : ItemMeta> meta(type: Class<out T>, block: T.() -> Unit) {
         @Suppress("UNCHECKED_CAST")
@@ -18,6 +19,7 @@ internal class CustomItemScopeImpl : CustomItemScope {
     override fun onInteract(block: CustomItemInteraction.() -> Unit) { interactHandler = block }
     override fun onInventoryClick(block: CustomItemClick.() -> Unit) { clickHandler = block }
     override fun onDrop(block: CustomItemDrop.() -> Unit) { dropHandler = block }
+    override fun onConsume(block: CustomItemConsume.() -> Unit) { consumeHandler = block }
 
-    fun handlers() = CustomItemHandlers(interactHandler, clickHandler, dropHandler)
+    fun handlers() = CustomItemHandlers(interactHandler, clickHandler, dropHandler, consumeHandler)
 }

@@ -1,6 +1,7 @@
 package com.github.mayblock.easylib.impl.bukkit.item
 
 import com.github.mayblock.easylib.api.bukkit.item.CustomItemClick
+import com.github.mayblock.easylib.api.bukkit.item.CustomItemConsume
 import com.github.mayblock.easylib.api.bukkit.item.CustomItemDrop
 import com.github.mayblock.easylib.api.bukkit.item.CustomItemInteraction
 
@@ -9,4 +10,5 @@ internal class CustomItemHandlers(
     val interact: (CustomItemInteraction.() -> Unit)?,
     val click: (CustomItemClick.() -> Unit)?,
     val drop: (CustomItemDrop.() -> Unit)?,
+    val consume: (CustomItemConsume.() -> Unit)?,
 )
