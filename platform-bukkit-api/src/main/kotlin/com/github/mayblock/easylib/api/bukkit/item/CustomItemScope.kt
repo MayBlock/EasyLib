@@ -23,13 +23,20 @@ interface CustomItemScope {
     /**
      * 玩家手持本物品交互（[PlayerInteractEvent]）时回调。
      * 回调对所有交互动作（左键/右键、方块/空气）均会触发，调用方需自行按 [PlayerInteractEvent.getAction] 过滤。
+     * 若事件的 useItemInHand() 结果为 DENY（例如事件已被取消），不回调。
      */
     fun onInteract(block: CustomItemInteraction.() -> Unit)
 
-    /** 背包/容器中点击本物品（[InventoryClickEvent]）时回调。 */
+    /**
+     * 背包/容器中点击本物品（[InventoryClickEvent]）时回调。
+     * 已被其他监听器取消的点击不回调。
+     */
     fun onInventoryClick(block: CustomItemClick.() -> Unit)
 
-    /** 玩家丢弃本物品（[PlayerDropItemEvent]）时回调。未注册时默认允许丢弃。 */
+    /**
+     * 玩家丢弃本物品（[PlayerDropItemEvent]）时回调。未注册时默认允许丢弃。
+     * 已被取消的丢弃事件不回调。注意：容器内对着槽位按 Q 丢弃会先触发 [onInventoryClick] 再触发本回调（取消该点击则本回调不触发）；把光标上的物品点击容器外丢弃则只触发本回调。
+     */
     fun onDrop(block: CustomItemDrop.() -> Unit)
 
     /**
@@ -38,6 +45,7 @@ interface CustomItemScope {
      * 注册即接管：handler 不调用 [CustomItemContext.cancel] 即允许放置。
      * 注意：放置方块时 [PlayerInteractEvent]（RIGHT_CLICK_BLOCK）先于 [BlockPlaceEvent] 触发，
      * [onInteract] 中不取消不影响本默认规则生效。
+     * 已被取消的放置事件不回调（也不再重复取消）。
      */
     fun onBlockPlace(block: CustomItemBlockPlace.() -> Unit)
 }
