@@ -189,4 +189,38 @@ class CustomItemDropPlaceTest {
         assertEquals(0, fired)
         assertFalse(e.isCancelled)
     }
+
+    @Test fun `备忘随 gameTime 前进而过期`() {
+        registry.define(Material.STONE, key("magic_stone"))
+        val p = server.addPlayer()
+        interactBlock(p, registry.get(key("magic_stone"))!!.createStack())
+        val world = p.world as org.mockbukkit.mockbukkit.world.WorldMock
+        world.setGameTime(world.gameTime + 1)
+        val e = placeEvent(p, org.bukkit.inventory.ItemStack(Material.AIR))
+        server.pluginManager.callEvent(e)
+        assertFalse(e.isCancelled)
+    }
+
+    @Test fun `非空快照不咨询备忘`() {
+        var fired = 0
+        registry.define(Material.STONE, key("magic_stone")) { onBlockPlace { fired++ } }
+        val p = server.addPlayer()
+        interactBlock(p, registry.get(key("magic_stone"))!!.createStack())
+        val e = placeEvent(p, org.bukkit.inventory.ItemStack(Material.DIRT))
+        server.pluginManager.callEvent(e)
+        assertEquals(0, fired)
+        assertFalse(e.isCancelled)
+    }
+
+    @Test fun `备忘命中即清（一次手势至多救援一次）`() {
+        registry.define(Material.STONE, key("magic_stone"))
+        val p = server.addPlayer()
+        interactBlock(p, registry.get(key("magic_stone"))!!.createStack())
+        val first = placeEvent(p, org.bukkit.inventory.ItemStack(Material.AIR))
+        server.pluginManager.callEvent(first)
+        assertTrue(first.isCancelled)   // 首次：备忘救援，默认禁生效
+        val second = placeEvent(p, org.bukkit.inventory.ItemStack(Material.AIR))
+        server.pluginManager.callEvent(second)
+        assertFalse(second.isCancelled) // 二次：备忘已清，不再救援
+    }
 }

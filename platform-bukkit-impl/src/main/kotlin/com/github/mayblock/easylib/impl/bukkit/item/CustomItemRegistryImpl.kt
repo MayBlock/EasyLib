@@ -63,7 +63,10 @@ class CustomItemRegistryImpl(
 
     override fun isRegistered(key: NamespacedKey): Boolean = items.containsKey(key.toString())
     override fun unregister(key: NamespacedKey): Boolean = items.remove(key.toString()) != null
-    override fun unregisterAll() = items.clear()
+    override fun unregisterAll() {
+        items.clear()
+        interactMemo = null
+    }
 
     /** 关停：清空注册并注销 Bukkit 监听器。仅供 BukkitEasyLib.close() 调用。 */
     internal fun shutdown() {
@@ -84,7 +87,7 @@ class CustomItemRegistryImpl(
             // RIGHT_CLICK_BLOCK 下 e.hand 按 Bukkit 契约非空（仅 PHYSICAL 可空）；?: 仅为类型兜底。
             interactMemo = InteractMemo(
                 e.player.uniqueId, e.player.world.uid, item.key.toString(),
-                e.hand ?: EquipmentSlot.HAND, e.player.world.fullTime,
+                e.hand ?: EquipmentSlot.HAND, e.player.world.gameTime,
             )
         }
         val handler = item.handlers.interact ?: return
@@ -116,11 +119,13 @@ class CustomItemRegistryImpl(
 
     /** 放置快照识别落空时的备忘回退：同玩家、同手、同 tick 才命中（见 [interactMemo]）。 */
     private fun memoLookup(e: BlockPlaceEvent): CustomItemImpl? {
+        if (!e.itemInHand.type.isAir) return null   // 兜底仅针对「快照被改写清空」的失效形态
         val memo = interactMemo ?: return null
         if (memo.player != e.player.uniqueId) return null
-        if (memo.world != e.player.world.uid) return null   // 多世界 fullTime 齐步走，须校验同世界
+        if (memo.world != e.player.world.uid) return null   // 多世界 gameTime 齐步走，须校验同世界
         if (memo.hand != e.hand) return null
-        if (memo.tick != e.player.world.fullTime) return null
+        if (memo.tick != e.player.world.gameTime) return null
+        interactMemo = null   // 一次手势至多一次放置：命中即清，收窄任何未来回归的暴露窗口
         return items[memo.key]
     }
 }
