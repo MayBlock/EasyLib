@@ -7,5 +7,8 @@ dependencies {
     api(project(":common:cache:api"))
     implementation(project(":common:base:impl"))
     implementation(libs.bundles.kotlinxEcosystem)
-    implementation("org.redisson:redisson:4.6.1")
+    implementation(libs.redisson)
+    testImplementation(kotlin("test"))
+    testImplementation(libs.bundles.mockk)
+    testImplementation(libs.kotlinxCoroutinesTest)
 }

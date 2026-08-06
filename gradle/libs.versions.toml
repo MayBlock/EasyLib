@@ -15,6 +15,7 @@ nbtApi = "2.15.7"
 mockbukkit = "4.114.0"
 mockk = "1.14.9"
 packetEvents = "2.12.2"
+redisson = "4.6.1"
 paperApi = "26.1.2.build.57-stable"
 slf4j-api = "2.0.17"
 
@@ -35,6 +36,7 @@ mockk = { module = "io.mockk:mockk", version.ref = "mockk" }
 mockkAgent = { module = "io.mockk:mockk-agent", version.ref = "mockk" }
 packetEvents-api = { module = "com.github.retrooper:packetevents-api", version.ref = "packetEvents" }
 packetEvents-spigot = { module = "com.github.retrooper:packetevents-spigot", version.ref = "packetEvents" }
+redisson = { module = "org.redisson:redisson", version.ref = "redisson" }
 paper-api = { module = "io.papermc.paper:paper-api", version.ref = "paperApi" }
 slf4jApi = { module = "org.slf4j:slf4j-api", version.ref = "slf4j-api" }
 
