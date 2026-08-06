@@ -10,6 +10,8 @@ plugins {
     kotlin("jvm")
     // Apply Maven Publish plugin to enable publishing the library.
     `maven-publish`
+    // 强制模块依赖方向；从这里应用，新模块无需记得手动加。
+    id("buildsrc.convention.layering")
 }
 
 kotlin {
