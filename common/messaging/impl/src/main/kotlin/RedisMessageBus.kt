@@ -93,9 +93,25 @@ class RedisMessageBus private constructor(
         }
     }
 
-    override suspend fun leaveGroup(name: String): Unit = TODO("Task 6")
+    override suspend fun leaveGroup(name: String) {
+        mutex.withLock {
+            if (!joined.remove(name)) return
+            removeListener(ChannelNames.of(namespace, Target.Group(name)))
+        }
+    }
 
-    override fun destroy(): Unit = TODO("Task 6")
+    override fun destroy() {
+        if (destroyed) return
+        destroyed = true
+        // 注销监听器是 I/O，而 Destroyable.destroy() 不可挂起，也就进不了 client.execute。
+        // 走 topicForShutdown 拿同步的 RTopic.removeListener(Integer...)，
+        // 仅在关停路径上执行这一次。
+        val snapshot = synchronized(listeners) { listeners.toMap().also { listeners.clear() } }
+        snapshot.forEach { (channel, id) ->
+            runCatching { client.topicForShutdown(channel, StringCodec.INSTANCE).removeListener(id) }
+                .onFailure { logger.warn("Failed to remove listener on {}", channel, it) }
+        }
+    }
 
     /** 调用方必须持有 [mutex]。 */
     private suspend fun addListener(channel: String) {
@@ -114,6 +130,14 @@ class RedisMessageBus private constructor(
                 .await()
         }
         listeners[channel] = id
+    }
+
+    /** 调用方必须持有 [mutex]。 */
+    private suspend fun removeListener(channel: String) {
+        val id = synchronized(listeners) { listeners.remove(channel) } ?: return
+        client.execute {
+            getTopic(channel, StringCodec.INSTANCE).removeListenerAsync(id).await()
+        }
     }
 
     companion object {
