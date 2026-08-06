@@ -19,7 +19,12 @@ kotlin {
 
 // Single source of truth for this module's published coordinate name,
 // reused by both the maven artifactId and the jar archive base name.
-val coordinateName = "${rootProject.name}-${project.name}"
+//
+// 由 project.path 而非 project.name 推导：模块树中存在多个同名叶子项目
+// （:common:base:api、:common:packetevents:api、:platform:bukkit:api 都叫 "api"），
+// 取 project.name 会让它们发布到同一个 artifactId。
+// 例：:platform:bukkit:impl -> "EasyLib-platform-bukkit-impl"。
+val coordinateName = rootProject.name + project.path.replace(':', '-')
 
 val rootExtra = rootProject.extra
 val gitBranch = rootExtra["gitBranch"] as String
@@ -63,7 +68,9 @@ publishing {
     publications {
         create<MavenPublication>("maven") {
             from(components["java"])
-            groupId = project.group as String
+            // 各子项目的 project.group 带有按路径唯一化的后缀（见 settings.gradle.kts），
+            // 对外发布必须统一回根项目的 group（com.github.mayblock，JitPack 要求）。
+            groupId = rootProject.group as String
             artifactId = coordinateName
             version = project.version as String
         }
