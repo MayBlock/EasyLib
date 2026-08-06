@@ -44,6 +44,9 @@ internal class RedisScope(
      *
      * 获取失败抛 [IllegalStateException]（此时不会尝试释放）。释放动作在
      * [NonCancellable] 中执行，避免协程被取消时锁泄漏到看门狗超时为止。
+     *
+     * 目前有意保持 `internal`，尚未对上游调用方开放（设计如此，非遗漏）——因此本仓库内
+     * 暂无调用方是预期状态，不代表这是死代码。
      */
     suspend fun <T> withLock(
         name: String,
@@ -53,10 +56,22 @@ internal class RedisScope(
         val lock = redisson.getLock(name)
         val locked = lock.tryLockAsync(waitTime.inWholeMilliseconds, TimeUnit.MILLISECONDS).await()
         check(locked) { "Redisson lock failed: $name" }
+        var primary: Throwable? = null
         try {
             return block()
+        } catch (e: Throwable) {
+            primary = e
+            throw e
         } finally {
-            withContext(NonCancellable) { lock.unlockAsync().await() }
+            try {
+                withContext(NonCancellable) { lock.unlockAsync().await() }
+            } catch (unlockFailure: Throwable) {
+                if (primary != null) {
+                    primary.addSuppressed(unlockFailure)
+                } else {
+                    throw unlockFailure
+                }
+            }
         }
     }
 
@@ -65,8 +80,11 @@ internal class RedisScope(
      * [block] 三次。末次仍失败则原样抛出该次异常。
      *
      * [CancellationException] 一律直接上抛，不计入重试：协程取消不是可重试的失败。
+     *
+     * [name] 用于标识重试日志所属的操作，便于在并发调用时区分不同来源的重试行——不传时
+     * 沿用无上下文的日志格式。
      */
-    suspend fun <T> withRetry(times: Int = 3, block: suspend RedisScope.() -> T): T {
+    suspend fun <T> withRetry(times: Int = 3, name: String? = null, block: suspend RedisScope.() -> T): T {
         require(times >= 1) { "times must be at least 1: $times" }
         repeat(times - 1) { attempt ->
             try {
@@ -74,7 +92,11 @@ internal class RedisScope(
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {
-                logger.warn("Retry ${attempt + 1}", e)
+                if (name != null) {
+                    logger.warn("Retry ${attempt + 1} [$name]", e)
+                } else {
+                    logger.warn("Retry ${attempt + 1}", e)
+                }
             }
         }
         return block()

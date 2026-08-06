@@ -14,8 +14,7 @@ import kotlin.time.toJavaDuration
  * [ttl] 为 null 表示永不过期。
  *
  * 三个方法都不加分布式锁：`RBucket` 的读写删本身是原子操作，为单次往返套锁只会变成
- * 「抢锁 + 操作 + 放锁」三次往返并引入锁竞争，换不到任何正确性收益。需要
- * read-modify-write 的调用方请自行在 [RedisScope.withLock] 中组合。
+ * 「抢锁 + 操作 + 放锁」三次往返并引入锁竞争，换不到任何正确性收益。
  */
 class RedisDistributedCache<K, V>(
     private val client: RedisClient,
@@ -27,7 +26,7 @@ class RedisDistributedCache<K, V>(
     private fun redisKey(key: K): String = "$namespace:${keyMapper(key)}"
 
     override suspend fun get(key: K): V? = client.execute {
-        withRetry {
+        withRetry(name = "cache.get") {
             withMetrics("cache.get") {
                 getBucket<V>(redisKey(key)).getAsync().await()
             }
@@ -36,7 +35,7 @@ class RedisDistributedCache<K, V>(
 
     override suspend fun put(key: K, value: V) {
         client.execute {
-            withRetry {
+            withRetry(name = "cache.put") {
                 withMetrics("cache.put") {
                     val bucket = getBucket<V>(redisKey(key))
                     if (ttl == null) bucket.setAsync(value).await()
@@ -47,7 +46,7 @@ class RedisDistributedCache<K, V>(
     }
 
     override suspend fun remove(key: K): Boolean = client.execute {
-        withRetry {
+        withRetry(name = "cache.remove") {
             withMetrics("cache.remove") {
                 getBucket<V>(redisKey(key)).deleteAsync().await()
             }

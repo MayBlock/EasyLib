@@ -112,4 +112,62 @@ class RedisScopeLockTest {
 
         assertTrue(job.isCompleted, "补上 unlock future 后 job 应当结束")
     }
+
+    /**
+     * unlockAsync().await() 跨越了一次真实的协程挂起（[CompletableFutureWrapper] 背后的
+     * future 尚未完成时才恢复），kotlinx.coroutines 的 stacktrace-recovery 机制会在这种
+     * 跨挂起点传播异常时拷贝出一个新的异常对象（同类型同消息，`.cause` 指回原始实例）
+     * 以补全可读的调用栈。因此这里不能用 `===` 比较 unlock 异常本身，而是顺着 `.cause`
+     * 链找回最初抛出的那个实例——`causeChain` 就是做这件事的。
+     */
+    private fun Throwable.causeChain(): Sequence<Throwable> =
+        generateSequence(this) { it.cause }
+
+    /**
+     * 验证 finally 中 unlock 失败不会掩盖 block 抛出的原始异常：
+     * 调用方看到的必须是 block 的异常 A，而 unlock 的异常 B 只应作为 A 的 suppressed
+     * 附加信息出现——而不是 B 取代 A 成为最终抛出的异常。
+     *
+     * 判别力：若实现退化为原始的裸 `finally { unlockAsync().await() }`（unlock 异常直接
+     * 从 finally 抛出，替换掉正在传播的 block 异常），本测试的 `assertFailsWith<异常A的类型>`
+     * 断言会失败（实际抛出的是 unlock 异常 B 的类型），且 A 的 suppressed 列表里也追溯不到
+     * B。两个断言合起来才能把「替换」与「附加」这两种截然不同的行为区分开。
+     */
+    @Test
+    fun `block 异常与 unlock 异常同时发生时保留原始异常并挂载 suppressed`() = runTest {
+        val blockFailure = IllegalStateException("A: block failed")
+        val unlockFailure = RuntimeException("B: unlock failed")
+
+        every { lock.tryLockAsync(any<Long>(), any<TimeUnit>()) } returns
+            CompletableFutureWrapper(true)
+        every { lock.unlockAsync() } returns CompletableFutureWrapper<Void>(unlockFailure)
+        every { redisson.getLock("L") } returns lock
+
+        val e = assertFailsWith<IllegalStateException> {
+            RedisScope(redisson, NoOpMetricsRecorder).withLock("L") {
+                throw blockFailure
+            }
+        }
+
+        assertTrue(e === blockFailure, "调用方应看到 block 的原始异常 A")
+        assertTrue(
+            e.suppressed.any { suppressed -> suppressed.causeChain().any { it === unlockFailure } },
+            "unlock 的异常 B（或其 stacktrace-recovery 副本）应作为 suppressed 挂在 A 上",
+        )
+    }
+
+    @Test
+    fun `正常返回时 unlock 失败仍然传播`() = runTest {
+        val unlockFailure = RuntimeException("unlock failed")
+
+        every { lock.tryLockAsync(any<Long>(), any<TimeUnit>()) } returns
+            CompletableFutureWrapper(true)
+        every { lock.unlockAsync() } returns CompletableFutureWrapper<Void>(unlockFailure)
+        every { redisson.getLock("L") } returns lock
+
+        val e = assertFailsWith<RuntimeException> {
+            RedisScope(redisson, NoOpMetricsRecorder).withLock("L") { "ok" }
+        }
+        assertTrue(e.causeChain().any { it === unlockFailure })
+    }
 }
