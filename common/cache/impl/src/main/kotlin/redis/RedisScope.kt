@@ -80,6 +80,15 @@ internal class RedisScope(
         return block()
     }
 
+    /**
+     * 用 [MetricsRecorder] 包裹 [block]，以 [operation] 为指标名。
+     *
+     * 走 [MetricsRecorder.recordSuspending]；注意该方法的默认实现**不计量**，
+     * 上游若使用自定义 recorder 而未覆写它，这里的指标会静默丢失。
+     */
+    suspend fun <T> withMetrics(operation: String, block: suspend RedisScope.() -> T): T =
+        metrics.recordSuspending(operation) { block() }
+
     private companion object {
         private val logger: Logger = LoggerFactory.getLogger(RedisScope::class.java)
     }
