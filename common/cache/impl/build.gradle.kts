@@ -5,6 +5,7 @@ plugins {
 
 dependencies {
     api(project(":common:cache:api"))
+    api(project(":common:base:api"))
     implementation(project(":common:base:impl"))
     implementation(libs.bundles.kotlinxEcosystem)
     implementation(libs.slf4jApi)
