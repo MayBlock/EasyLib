@@ -7,6 +7,7 @@ dependencies {
     api(project(":platform:bukkit:api"))
     implementation(project(":common:base:impl"))
     implementation(project(":common:packetevents:impl"))
+    implementation(libs.slf4jApi)
     compileOnly("org.spigotmc:spigot-api:26.1.2-R0.1-SNAPSHOT")
     compileOnly(libs.packetEvents.spigot)
     compileOnly(libs.adventure.serializer.legacy)
