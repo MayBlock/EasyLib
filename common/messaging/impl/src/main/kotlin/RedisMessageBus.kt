@@ -75,8 +75,16 @@ class RedisMessageBus private constructor(
         }
     }
 
-    override fun <M : Any> subscribe(type: KClass<M>, includeSelf: Boolean): Flow<Envelope<M>> =
-        TODO("Task 5")
+    override fun <M : Any> subscribe(type: KClass<M>, includeSelf: Boolean): Flow<Envelope<M>> {
+        // 立即解析，让缺注解／线上名冲突在 subscribe 处就抛出，而不是等到 collect 才炸。
+        val wireName = codec.wireNameOf(type)
+        return inbound
+            .filter { it.type == wireName }
+            .filter { includeSelf || it.sender != instanceId }
+            // 解码失败返回 null 即丢弃。M : Any 保证合法 payload 不可能是 null，
+            // 所以 null 只可能来自失败，两种情况不会混淆。
+            .mapNotNull { codec.toEnvelope(it, type) }
+    }
 
     override suspend fun joinGroup(name: String) {
         mutex.withLock {
