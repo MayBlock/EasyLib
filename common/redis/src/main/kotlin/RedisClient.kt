@@ -5,7 +5,9 @@ import com.github.mayblock.easylib.base.api.util.Destroyable
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import org.redisson.api.RTopic
 import org.redisson.api.RedissonClient
+import org.redisson.client.codec.Codec
 
 abstract class RedisClient : Destroyable {
 
@@ -60,4 +62,12 @@ abstract class RedisClient : Destroyable {
             RedisScopeImpl(redisson, metrics).block()
         }
     }
+
+    /**
+     * 取一个 [RTopic]，绕过 [execute] 这个挂起入口。
+     *
+     * **只用于关停路径。** `Destroyable.destroy()` 不可挂起，而注销 pub/sub 监听器必须在
+     * 那里完成。常规操作一律走 [execute]，否则会绕过关停校验、重试与指标。
+     */
+    fun topicForShutdown(name: String, codec: Codec): RTopic = redisson.getTopic(name, codec)
 }
