@@ -88,4 +88,44 @@ class RedisDistributedCacheTest {
 
         assertTrue(cache().remove(7))
     }
+
+    @Test
+    fun `get 首次失败后由 withRetry 重试并最终成功`() = runTest {
+        every { redisson.getBucket<String>("ns:7") } returns bucket
+        every { bucket.getAsync() } throws
+            RuntimeException("transient failure") andThen
+            CompletableFutureWrapper("value")
+
+        assertEquals("value", cache().get(7))
+        verify(exactly = 2) { bucket.getAsync() }
+    }
+
+    private class RecordingMetricsRecorder : MetricsRecorder {
+        val recorded = mutableListOf<String>()
+
+        override fun <T> record(name: String, block: () -> T): T = block()
+
+        override suspend fun <T> recordSuspending(name: String, block: suspend () -> T): T {
+            recorded += name
+            return block()
+        }
+    }
+
+    @Test
+    fun `get put remove 各自上报正确的 metric 名称`() = runTest {
+        val metrics = RecordingMetricsRecorder()
+        val metricClient = TestClient(redisson, metrics)
+        val metricCache = RedisDistributedCache<Int, String>(metricClient, namespace = "ns")
+
+        every { redisson.getBucket<String>("ns:7") } returns bucket
+        every { bucket.getAsync() } returns CompletableFutureWrapper("v")
+        every { bucket.setAsync("v") } returns CompletableFutureWrapper.completedNull()
+        every { bucket.deleteAsync() } returns CompletableFutureWrapper(true)
+
+        metricCache.get(7)
+        metricCache.put(7, "v")
+        metricCache.remove(7)
+
+        assertEquals(listOf("cache.get", "cache.put", "cache.remove"), metrics.recorded)
+    }
 }
