@@ -11,6 +11,7 @@ dependencies {
     implementation(libs.bundles.kotlinxEcosystem)
     implementation(libs.slf4jApi)
     implementation(libs.jackson.databind)
+    implementation(libs.jackson.datatypeJsr310)
     implementation(libs.jackson.moduleKotlin)
     testImplementation(kotlin("test"))
     testImplementation(libs.bundles.mockk)

@@ -3,6 +3,8 @@ package com.github.mayblock.easylib.messaging.impl
 import com.fasterxml.jackson.databind.DeserializationFeature
 import com.fasterxml.jackson.databind.JsonNode
 import com.fasterxml.jackson.databind.ObjectMapper
+import com.fasterxml.jackson.databind.SerializationFeature
+import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule
 import com.fasterxml.jackson.module.kotlin.registerKotlinModule
 import com.github.mayblock.easylib.messaging.api.Envelope
 import com.github.mayblock.easylib.messaging.api.MessageType
@@ -26,6 +28,14 @@ internal class MessageCodec(
 
     private val mapper: ObjectMapper = ObjectMapper()
         .registerKotlinModule()
+        // 支持 payload 里的 java.time 类型（Instant、LocalDateTime 等）——没有这个模块，
+        // valueToTree 遇到 java.time 值会抛 IllegalArgumentException，且异常类型与
+        // 「缺 @MessageType 注解」那个 IllegalArgumentException 撞了，容易误诊。
+        // kotlin.time.Instant / kotlin.time.Duration 这个模块不认，仍不支持——见
+        // MessageType 的 KDoc。
+        .registerModule(JavaTimeModule())
+        // 让 java.time 值以可读的 ISO-8601 上线，而不是纪元数组，与信封自身的 time 字段一致。
+        .disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS)
         // 新版本新增的字段不能让老实例解码失败——这是「加带默认值的字段属于兼容改动」
         // 这条演进契约成立的前提。
         .configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false)

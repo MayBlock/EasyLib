@@ -28,6 +28,7 @@ caffeine = { module = "com.github.ben-manes.caffeine:caffeine", version.ref = "c
 clikt-core = { module = "com.github.ajalt.clikt:clikt-core", version.ref = "clikt" }
 fastboard = { module = "fr.mrmicky:fastboard", version.ref = "fastboard" }
 jackson-databind = { module = "com.fasterxml.jackson.core:jackson-databind", version.ref = "jackson" }
+jackson-datatypeJsr310 = { module = "com.fasterxml.jackson.datatype:jackson-datatype-jsr310", version.ref = "jackson" }
 jackson-moduleKotlin = { module = "com.fasterxml.jackson.module:jackson-module-kotlin", version.ref = "jackson" }
 kotlinGradlePlugin = { module = "org.jetbrains.kotlin:kotlin-gradle-plugin", version.ref = "kotlin" }
 kotlinxDatetime = { module = "org.jetbrains.kotlinx:kotlinx-datetime", version.ref = "kotlinxDatetime" }

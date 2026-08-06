@@ -13,6 +13,9 @@ data class MoveV1(val player: String)
 @MessageType("com.example.move.v2")
 data class MoveV2(val player: String, val world: String = "world")
 
+@MessageType("com.example.scheduled.v1")
+data class ScheduledEvent(val label: String, val at: java.time.Instant)
+
 class MessageCodecJsonTest {
 
     private val fixedTime = Instant.parse("2026-08-07T10:23:45.123Z")
@@ -84,5 +87,16 @@ class MessageCodecJsonTest {
         val json = """{"id":"i","sender":"s","type":"com.example.move.v1","time":"not-a-time","payload":{"player":"Steve"}}"""
         val wire = assertNotNull(c.decodeEnvelope(json))
         assertNull(c.toEnvelope(wire, MoveV1::class))
+    }
+
+    @Test
+    fun `payload 中的 java-time Instant 字段完整往返`() {
+        val c = codec()
+        val at = java.time.Instant.parse("2026-01-02T03:04:05.678Z")
+        val json = c.encode("s", ScheduledEvent("launch", at))
+        val wire = assertNotNull(c.decodeEnvelope(json))
+        val env = assertNotNull(c.toEnvelope(wire, ScheduledEvent::class))
+
+        assertEquals(ScheduledEvent("launch", at), env.payload)
     }
 }
