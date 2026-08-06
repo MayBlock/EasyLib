@@ -10,4 +10,5 @@ dependencies {
     implementation(libs.boostedYaml)
     testImplementation(kotlin("test"))
     testImplementation(libs.bundles.mockk)
+    testImplementation(libs.kotlinxCoroutinesTest)
 }
