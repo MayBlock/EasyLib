@@ -15,6 +15,8 @@ import java.util.concurrent.ConcurrentHashMap
 import kotlin.reflect.KClass
 import kotlin.time.Clock
 import kotlin.time.Instant
+import kotlin.uuid.ExperimentalUuidApi
+import kotlin.uuid.Uuid
 
 /**
  * 信封的编解码，以及消息类到线上名的解析。
@@ -22,7 +24,10 @@ import kotlin.time.Instant
  * [idGenerator] 与 [clock] 是为了让编码结果可测——生产使用默认值即可。
  */
 internal class MessageCodec(
-    private val idGenerator: () -> String = { UUID.randomUUID().toString() },
+    private val idGenerator: () -> String = {
+        @OptIn(ExperimentalUuidApi::class)
+        Uuid.generateV7().toHexString()
+                                            },
     private val clock: () -> Instant = { Clock.System.now() },
 ) {
 
@@ -40,8 +45,24 @@ internal class MessageCodec(
         // 这条演进契约成立的前提。
         .configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false)
 
-    /** 线上名 -> 声明它的类。用于检测两个类抢同一个名字。 */
+    /**
+     * 线上名 -> 声明它的类。用于检测两个类抢同一个名字。
+     *
+     * 注意这里持有的是**强引用的 `Class` 对象**，而 Bukkit 下每个插件有独立 classloader，
+     * 一个 `Class` 就钉住整个 classloader。见 [clearRegistry]。
+     */
     private val claimedNames = ConcurrentHashMap<String, Class<*>>()
+
+    /**
+     * 清空线上名注册表，断开对消息类（进而对其 classloader）的强引用。
+     *
+     * 由 `RedisMessageBus.destroy()` 调用。这是 classloader 泄漏链上的最后一环：
+     * Redisson 持有监听器 → 监听器 lambda 捕获本 codec → 本表持有插件的 `Class` 对象。
+     * 即使某个监听器因故没能摘干净，清空这里也能让插件的 classloader 得以回收。
+     */
+    fun clearRegistry() {
+        claimedNames.clear()
+    }
 
     /**
      * 取 [type] 的线上名。
@@ -49,17 +70,16 @@ internal class MessageCodec(
      * 全程不做按名查类：注解从调用方给的 Class 对象上读取。Bukkit 下每个插件有独立
      * classloader，`Class.forName` 会用本库的 loader 而不是消息类所属插件的，必然出错。
      */
-    fun wireNameOf(type: KClass<*>): String {
-        val java = type.java
-        val annotation = java.getAnnotation(MessageType::class.java)
+    fun wireNameOf(type: Class<*>): String {
+        val annotation = type.getAnnotation(MessageType::class.java)
         requireNotNull(annotation) {
-            "${java.name} is not annotated with @MessageType; " +
+            "${type.name} is not annotated with @MessageType; " +
                 "a message class must declare its wire identity explicitly"
         }
         val name = annotation.value
-        val previous = claimedNames.putIfAbsent(name, java)
-        require(previous == null || previous == java) {
-            "wire name '$name' is claimed by both ${previous!!.name} and ${java.name}"
+        val previous = claimedNames.putIfAbsent(name, type)
+        require(previous == null || previous == type) {
+            "wire name '$name' is claimed by both ${previous!!.name} and ${type.name}"
         }
         return name
     }
@@ -69,7 +89,7 @@ internal class MessageCodec(
         val wire = mapper.createObjectNode().apply {
             put("id", idGenerator())
             put("sender", senderId)
-            put("type", wireNameOf(message::class))
+            put("type", wireNameOf(message::class.java))
             put("time", clock().toString())
             set<JsonNode>("payload", mapper.valueToTree(message))
         }
@@ -94,7 +114,7 @@ internal class MessageCodec(
      * 解码失败（版本偏移、字段类型改了、时间戳畸形）返回 null 并记 warn。同样是「一条坏消息
      * 不得打断订阅」——把异常抛进 Flow 会直接取消订阅方的 collect。
      */
-    fun <M : Any> toEnvelope(wire: WireEnvelope, type: KClass<M>): Envelope<M>? {
+    fun <M : Any> toEnvelope(wire: WireEnvelope, type: Class<M>): Envelope<M>? {
         val time = try {
             Instant.parse(wire.time)
         } catch (e: Exception) {
@@ -103,7 +123,7 @@ internal class MessageCodec(
         }
         return try {
             Envelope(
-                payload = mapper.treeToValue(wire.payload, type.java),
+                payload = mapper.treeToValue(wire.payload, type),
                 id = wire.id,
                 senderId = wire.sender,
                 time = time,
@@ -113,14 +133,14 @@ internal class MessageCodec(
                 "Discarding message {} of type {}: payload does not fit {}",
                 wire.id,
                 wire.type,
-                type.java.name,
+                type.name,
                 e,
             )
             null
         }
     }
 
-    private companion object {
+    companion object {
         private val logger: Logger = LoggerFactory.getLogger(MessageCodec::class.java)
     }
 }

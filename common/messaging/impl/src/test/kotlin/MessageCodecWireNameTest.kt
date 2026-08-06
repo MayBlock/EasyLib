@@ -23,33 +23,33 @@ class MessageCodecWireNameTest {
 
     @Test
     fun `读取注解上的线上名`() {
-        assertEquals("com.example.alpha.v1", codec().wireNameOf(Alpha::class))
+        assertEquals("com.example.alpha.v1", codec().wireNameOf(Alpha::class.java))
     }
 
     @Test
     fun `同一个类重复解析返回相同结果`() {
         val c = codec()
-        assertEquals(c.wireNameOf(Alpha::class), c.wireNameOf(Alpha::class))
+        assertEquals(c.wireNameOf(Alpha::class.java), c.wireNameOf(Alpha::class.java))
     }
 
     @Test
     fun `不同类的不同线上名互不干扰`() {
         val c = codec()
-        assertEquals("com.example.alpha.v1", c.wireNameOf(Alpha::class))
-        assertEquals("com.example.beta.v1", c.wireNameOf(Beta::class))
+        assertEquals("com.example.alpha.v1", c.wireNameOf(Alpha::class.java))
+        assertEquals("com.example.beta.v1", c.wireNameOf(Beta::class.java))
     }
 
     @Test
     fun `缺少注解抛 IllegalArgumentException`() {
-        val e = assertFailsWith<IllegalArgumentException> { codec().wireNameOf(Unannotated::class) }
+        val e = assertFailsWith<IllegalArgumentException> { codec().wireNameOf(Unannotated::class.java) }
         assertEquals(true, e.message!!.contains("@MessageType"))
     }
 
     @Test
     fun `两个类声明同一线上名时抛 IllegalArgumentException`() {
         val c = codec()
-        c.wireNameOf(Alpha::class)
-        val e = assertFailsWith<IllegalArgumentException> { c.wireNameOf(AlphaClash::class) }
+        c.wireNameOf(Alpha::class.java)
+        val e = assertFailsWith<IllegalArgumentException> { c.wireNameOf(AlphaClash::class.java) }
         assertEquals(true, e.message!!.contains("com.example.alpha.v1"))
     }
 }

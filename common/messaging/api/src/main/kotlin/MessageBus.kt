@@ -13,6 +13,21 @@ import kotlin.reflect.KClass
  *
  * 需要查询对端**状态**（如「好友是否在线」）时不要用消息广播——那会让流量与「玩家数 ×
  * 好友数」成正比。状态应写入分布式缓存供人直接读取，消息只用于通知变更。
+ *
+ * ## 必须在插件停用时调用 [destroy]
+ *
+ * 这不是可选的清理，忘记会**泄漏 classloader**：Redis 客户端通常与缓存模块共用、寿命长于你的
+ * 插件，它会一直持有本总线注册的订阅回调；回调又持有你所有消息类的 `Class` 对象；而在 Bukkit
+ * 上每个插件有自己的 classloader，一个 `Class` 就钉住整个插件。反复 `/reload` 会撑爆 Metaspace。
+ *
+ * ```
+ * override fun onDisable() {
+ *     bus.destroy()
+ * }
+ * ```
+ *
+ * [destroy] 之后 [publish] / [subscribe] / [joinGroup] / [leaveGroup] 一律抛
+ * [IllegalStateException]；已经在 collect 的 Flow 不会自行结束，需要你取消自己的作用域。
  */
 interface MessageBus : Destroyable {
 
@@ -44,7 +59,7 @@ interface MessageBus : Destroyable {
      * 因此 `bus.subscribe<X>().collect { }` 会一直挂着；请在一个你能取消的作用域里 collect，
      * 不要指望它自行结束。
      */
-    fun <M : Any> subscribe(type: KClass<M>, includeSelf: Boolean = false): Flow<Envelope<M>>
+    fun <M : Any> subscribe(type: Class<M>, includeSelf: Boolean = false): Flow<Envelope<M>>
 
     /** 加入群组 [name]，之后会收到发往该群组的消息。已加入时是空操作。 */
     suspend fun joinGroup(name: String)
@@ -55,4 +70,4 @@ interface MessageBus : Destroyable {
 
 /** [MessageBus.subscribe] 的 reified 便捷形式。 */
 inline fun <reified M : Any> MessageBus.subscribe(includeSelf: Boolean = false): Flow<Envelope<M>> =
-    subscribe(M::class, includeSelf)
+    subscribe(M::class.java, includeSelf)

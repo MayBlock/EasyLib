@@ -41,7 +41,7 @@ class MessageCodecJsonTest {
     fun `encode 到 toEnvelope 的往返保持 payload 与元数据`() {
         val c = codec()
         val wire = assertNotNull(c.decodeEnvelope(c.encode("lobby-1", MoveV1("Alex"))))
-        val env = assertNotNull(c.toEnvelope(wire, MoveV1::class))
+        val env = assertNotNull(c.toEnvelope(wire, MoveV1::class.java))
 
         assertEquals(MoveV1("Alex"), env.payload)
         assertEquals("fixed-id", env.id)
@@ -54,7 +54,7 @@ class MessageCodecJsonTest {
         val c = codec()
         val v2 = assertNotNull(c.decodeEnvelope(c.encode("s", MoveV2("Steve", "nether"))))
         // 线上名不同，实际不会投给 MoveV1 的订阅方；这里只验证解码器的宽容性
-        val asV1 = c.toEnvelope(v2, MoveV1::class)
+        val asV1 = c.toEnvelope(v2, MoveV1::class.java)
         assertEquals(MoveV1("Steve"), asV1?.payload)
     }
 
@@ -63,7 +63,7 @@ class MessageCodecJsonTest {
         val c = codec()
         val json = """{"id":"i","sender":"s","type":"com.example.move.v1","time":"2026-08-07T10:23:45.123Z","payload":{}}"""
         val empty = assertNotNull(c.decodeEnvelope(json))
-        assertNull(c.toEnvelope(empty, MoveV1::class))
+        assertNull(c.toEnvelope(empty, MoveV1::class.java))
     }
 
     @Test
@@ -71,7 +71,7 @@ class MessageCodecJsonTest {
         val c = codec()
         val json = """{"id":"i","sender":"s","type":"com.example.move.v2","time":"2026-08-07T10:23:45.123Z","payload":{"player":"Steve"}}"""
         val wire = assertNotNull(c.decodeEnvelope(json))
-        val env = assertNotNull(c.toEnvelope(wire, MoveV2::class))
+        val env = assertNotNull(c.toEnvelope(wire, MoveV2::class.java))
         assertEquals(MoveV2("Steve", "world"), env.payload)
     }
 
@@ -86,7 +86,7 @@ class MessageCodecJsonTest {
         val c = codec()
         val json = """{"id":"i","sender":"s","type":"com.example.move.v1","time":"not-a-time","payload":{"player":"Steve"}}"""
         val wire = assertNotNull(c.decodeEnvelope(json))
-        assertNull(c.toEnvelope(wire, MoveV1::class))
+        assertNull(c.toEnvelope(wire, MoveV1::class.java))
     }
 
     @Test
@@ -95,7 +95,7 @@ class MessageCodecJsonTest {
         val at = java.time.Instant.parse("2026-01-02T03:04:05.678Z")
         val json = c.encode("s", ScheduledEvent("launch", at))
         val wire = assertNotNull(c.decodeEnvelope(json))
-        val env = assertNotNull(c.toEnvelope(wire, ScheduledEvent::class))
+        val env = assertNotNull(c.toEnvelope(wire, ScheduledEvent::class.java))
 
         assertEquals(ScheduledEvent("launch", at), env.payload)
     }

@@ -218,4 +218,44 @@ class RedisMessageBusGroupTest {
         verify(exactly = 1) { instTopic.removeListener(2) }
         verify(exactly = 1) { lobbyTopic.removeListener(7) }
     }
+
+    @Test
+    fun `destroy 后 subscribe 抛 IllegalStateException`() = runTest {
+        wireUp()
+        val b = bus()
+        b.destroy()
+
+        // 返回一个永不产出的 Flow 会被误读成「没有消息」而非「总线已关停」；而且
+        // subscribe 会调 wireNameOf，把消息类重新登记进 codec 的注册表、再次钉住
+        // 本该被回收的 classloader。
+        assertFailsWith<IllegalStateException> { b.subscribe(Hello::class.java) }
+    }
+
+    @Test
+    fun `destroy 清空线上名注册表以释放 classloader`() = runTest {
+        wireUp()
+        val b = bus()
+        // 先让 Hello 登记进注册表。
+        b.subscribe(Hello::class.java)
+
+        b.destroy()
+
+        // 注册表清空后，一个「声明了同一线上名的不同类」不应再被判为冲突——若表未清空，
+        // 下面这次解析会因为 Hello 仍占着 com.example.hello.v1 而抛异常。
+        // 这是从外部观察「强引用是否已断开」的唯一手段：Class 引用本身不可直接断言。
+        val fresh = MessageCodec()
+        fresh.wireNameOf(HelloClash::class.java)
+        assertEquals("com.example.hello.v1", codecOf(b).wireNameOf(HelloClash::class.java))
+    }
+}
+
+/** 与 `Hello`（定义在 RedisMessageBusSubscribeTest.kt）声明了同一线上名，用于探测注册表状态。 */
+@com.github.mayblock.easylib.messaging.api.MessageType("com.example.hello.v1")
+private data class HelloClash(val who: String = "")
+
+/** 读出 bus 内部的 codec——注册表是否清空只能这样观察。 */
+private fun codecOf(bus: RedisMessageBus): MessageCodec {
+    val f = RedisMessageBus::class.java.getDeclaredField("codec")
+    f.isAccessible = true
+    return f.get(bus) as MessageCodec
 }

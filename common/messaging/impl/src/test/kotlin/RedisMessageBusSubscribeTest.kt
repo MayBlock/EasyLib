@@ -141,7 +141,7 @@ class RedisMessageBusSubscribeTest {
     fun `订阅未标注解的类型立即抛异常`() = runTest {
         wireUp()
         val b = bus()
-        assertFailsWith<IllegalArgumentException> { b.subscribe(NoAnnotation::class) }
+        assertFailsWith<IllegalArgumentException> { b.subscribe(NoAnnotation::class.java) }
     }
 
     @Test

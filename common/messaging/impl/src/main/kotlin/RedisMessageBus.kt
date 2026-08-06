@@ -76,7 +76,11 @@ class RedisMessageBus private constructor(
         }
     }
 
-    override fun <M : Any> subscribe(type: KClass<M>, includeSelf: Boolean): Flow<Envelope<M>> {
+    override fun <M : Any> subscribe(type: Class<M>, includeSelf: Boolean): Flow<Envelope<M>> {
+        // 关停后拒绝新订阅：既与 publish/joinGroup/leaveGroup 一致（返回一个永不产出的 Flow
+        // 会被误读成「没有消息」而不是「总线已关停」），也避免 wireNameOf 把消息类重新登记进
+        // codec 的注册表、再次钉住已经该被回收的 classloader。
+        check(!destroyed) { "MessageBus has been destroyed" }
         // 立即解析，让缺注解／线上名冲突在 subscribe 处就抛出，而不是等到 collect 才炸。
         val wireName = codec.wireNameOf(type)
         return inbound
@@ -135,6 +139,9 @@ class RedisMessageBus private constructor(
             val id = listeners.remove(channel) ?: return@forEach
             removeListenerBlocking(channel, id)
         }
+        // 断开对消息类的强引用。监听器 lambda 捕获了 codec，而 Redisson 可能因为上面某次
+        // 注销失败而仍然攥着它——清空注册表让插件的 classloader 无论如何都能被回收。
+        codec.clearRegistry()
     }
 
     /** 调用方必须持有 [mutex]。 */
