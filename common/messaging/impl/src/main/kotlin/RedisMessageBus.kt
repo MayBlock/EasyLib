@@ -45,8 +45,8 @@ class RedisMessageBus private constructor(
     )
 
     /** 频道 -> Redisson listener id。 */
-    private val listeners = mutableMapOf<String, Int>()
-    private val joined = mutableSetOf<String>()
+    private val listeners = java.util.concurrent.ConcurrentHashMap<String, Int>()
+    private val joined = java.util.concurrent.ConcurrentHashMap.newKeySet<String>()
     private val mutex = Mutex()
 
     @Volatile
@@ -56,7 +56,7 @@ class RedisMessageBus private constructor(
         get() = destroyed
 
     override val groups: Set<String>
-        get() = synchronized(joined) { joined.toSet() }
+        get() = joined.toSet()
 
     override suspend fun publish(target: Target, message: Any) {
         val json = codec.encode(instanceId, message)
@@ -100,7 +100,7 @@ class RedisMessageBus private constructor(
                 .addListenerAsync(String::class.java, listener)
                 .await()
         }
-        synchronized(listeners) { listeners[channel] = id }
+        listeners[channel] = id
     }
 
     companion object {
