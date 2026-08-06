@@ -158,7 +158,7 @@ class RedisMessageBus private constructor(
 
     /** 调用方必须持有 [mutex]。 */
     private suspend fun removeListener(channel: String) {
-        val id = synchronized(listeners) { listeners.remove(channel) } ?: return
+        val id = listeners.remove(channel) ?: return
         client.execute {
             getTopic(channel, StringCodec.INSTANCE).removeListenerAsync(id).await()
         }
