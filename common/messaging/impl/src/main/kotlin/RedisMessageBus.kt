@@ -100,16 +100,27 @@ class RedisMessageBus private constructor(
         }
     }
 
+    /**
+     * 关停：注销全部 Redis 监听器并清空群组。
+     *
+     * 幂等——重复调用是空操作。
+     *
+     * 关停后的契约：[isDestroyed] 为 true，[groups] 为空，入站消息不再到达任何订阅方；
+     * [publish] / [joinGroup] 会因 [RedisClient.execute] 的关停校验抛 [IllegalStateException]。
+     * 已存在的订阅 Flow 不会主动结束，只是不再有新消息——它们由各自的 collect 作用域取消。
+     *
+     * 单个频道注销失败只记 warn 并继续处理其余频道，不让一个坏频道卡住整个关停。
+     */
     override fun destroy() {
         if (destroyed) return
         destroyed = true
+        joined.clear()
         // 注销监听器是 I/O，而 Destroyable.destroy() 不可挂起，也就进不了 client.execute。
-        // 走 topicForShutdown 拿同步的 RTopic.removeListener(Integer...)，
-        // 仅在关停路径上执行这一次。
-        val snapshot = synchronized(listeners) { listeners.toMap().also { listeners.clear() } }
-        snapshot.forEach { (channel, id) ->
-            runCatching { client.topicForShutdown(channel, StringCodec.INSTANCE).removeListener(id) }
-                .onFailure { logger.warn("Failed to remove listener on {}", channel, it) }
+        // 走 topicForShutdown 拿同步的 RTopic.removeListener(Integer...)，仅在关停路径上执行。
+        // listeners 是 ConcurrentHashMap，取键快照后逐个 remove 即可，无需外部加锁。
+        listeners.keys.toList().forEach { channel ->
+            val id = listeners.remove(channel) ?: return@forEach
+            removeListenerBlocking(channel, id)
         }
     }
 
@@ -130,6 +141,19 @@ class RedisMessageBus private constructor(
                 .await()
         }
         listeners[channel] = id
+
+        // destroy() 拿不到 mutex（它不可挂起），所以它可能整个跑完在上面这次 await 之后、
+        // 这行记录之前——那样这个监听器就会漏在 Redis 上，而 bus 已经声称自己关停了。
+        // 这里补一次检查把它收回来。
+        if (destroyed && listeners.remove(channel) != null) {
+            removeListenerBlocking(channel, id)
+        }
+    }
+
+    /** 同步注销，供 [destroy] 与 [addListener] 的关停竞态收尾使用；失败只记 warn。 */
+    private fun removeListenerBlocking(channel: String, id: Int) {
+        runCatching { client.topicForShutdown(channel, StringCodec.INSTANCE).removeListener(id) }
+            .onFailure { logger.warn("Failed to remove listener on {}", channel, it) }
     }
 
     /** 调用方必须持有 [mutex]。 */
