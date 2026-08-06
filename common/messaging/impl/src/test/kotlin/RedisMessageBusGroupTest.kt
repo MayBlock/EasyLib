@@ -13,6 +13,7 @@ import org.redisson.client.codec.Codec
 import org.redisson.misc.CompletableFutureWrapper
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFailsWith
 import kotlin.test.assertTrue
 
 class RedisMessageBusGroupTest {
@@ -136,6 +137,70 @@ class RedisMessageBusGroupTest {
         verify(exactly = 1) { lobbyTopic.removeListener(7) }
         assertTrue(b.isDestroyed)
         assertTrue(b.groups.isEmpty())
+    }
+
+    @Test
+    fun `destroy 后 joinGroup 抛 IllegalStateException 且 groups 仍为空`() = runTest {
+        wireUp()
+        val b = bus()
+        b.destroy()
+
+        assertFailsWith<IllegalStateException> { b.joinGroup("lobby") }
+        assertTrue(b.groups.isEmpty())
+    }
+
+    @Test
+    fun `leaveGroup 的 I-O 失败不摘除监听器记录，重试后能干净收尾且不重复注册`() = runTest {
+        wireUp()
+        var attempts = 0
+        every { lobbyTopic.removeListenerAsync(7) } answers {
+            attempts++
+            if (attempts == 1) throw RuntimeException("redis down") else CompletableFutureWrapper.completedNull()
+        }
+        val b = bus()
+        b.joinGroup("lobby")
+
+        assertFailsWith<RuntimeException> { b.leaveGroup("lobby") }
+        // I/O 失败：listeners 与 joined 都必须保持原状，而不是提前声称已经离开。
+        assertEquals(setOf("lobby"), b.groups)
+
+        b.leaveGroup("lobby")
+
+        assertTrue(b.groups.isEmpty())
+        verify(exactly = 2) { lobbyTopic.removeListenerAsync(7) }
+        // 期间没有第二次 addListenerAsync——也就没有在同一频道上注册出第二个监听器。
+        verify(exactly = 1) { lobbyTopic.addListenerAsync(String::class.java, any()) }
+    }
+
+    @Test
+    fun `joinGroup 失败时回滚 joined，修复后重试可以成功`() = runTest {
+        wireUp()
+        var attempts = 0
+        every { lobbyTopic.addListenerAsync(String::class.java, any()) } answers {
+            attempts++
+            if (attempts == 1) throw RuntimeException("redis down") else CompletableFutureWrapper(7)
+        }
+        val b = bus()
+
+        assertFailsWith<RuntimeException> { b.joinGroup("lobby") }
+        // 注册失败：joined 不能残留这个名字，否则幂等检查会让重试变成静默空操作。
+        assertTrue(b.groups.isEmpty())
+
+        b.joinGroup("lobby")
+
+        assertEquals(setOf("lobby"), b.groups)
+    }
+
+    @Test
+    fun `create 失败时回收已注册的监听器`() = runTest {
+        wireUp()
+        every { instTopic.addListenerAsync(String::class.java, any()) } throws RuntimeException("redis down")
+
+        assertFailsWith<RuntimeException> { bus() }
+
+        // all 频道先于 inst 频道注册，成功登记了 id 1——create 失败后这个监听器不能
+        // 永远留在 Redis 上没人认领。
+        verify(exactly = 1) { allTopic.removeListener(1) }
     }
 
     @Test

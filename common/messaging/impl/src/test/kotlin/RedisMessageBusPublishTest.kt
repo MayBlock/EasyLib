@@ -107,6 +107,17 @@ class RedisMessageBusPublishTest {
     }
 
     @Test
+    fun `destroy 后 publish 抛 IllegalStateException`() = runTest {
+        topicFor("easylib:msg:all")
+        topicFor("easylib:msg:inst:bedwars-3")
+
+        val b = bus()
+        b.destroy()
+
+        assertFailsWith<IllegalStateException> { b.publish(Target.All, Ping("hi")) }
+    }
+
+    @Test
     fun `create 订阅 all 与本实例两个频道`() = runTest {
         val (allTopic, _) = topicFor("easylib:msg:all")
         val (instTopic, _) = topicFor("easylib:msg:inst:bedwars-3")

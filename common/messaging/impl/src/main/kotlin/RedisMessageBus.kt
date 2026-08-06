@@ -64,6 +64,7 @@ class RedisMessageBus private constructor(
         get() = joined.toSet()
 
     override suspend fun publish(target: Target, message: Any) {
+        check(!destroyed) { "MessageBus has been destroyed" }
         val json = codec.encode(instanceId, message)
         val channel = ChannelNames.of(namespace, target)
         client.execute {
@@ -87,16 +88,26 @@ class RedisMessageBus private constructor(
     }
 
     override suspend fun joinGroup(name: String) {
+        check(!destroyed) { "MessageBus has been destroyed" }
         mutex.withLock {
             if (!joined.add(name)) return
-            addListener(ChannelNames.of(namespace, Target.Group(name)))
+            try {
+                addListener(ChannelNames.of(namespace, Target.Group(name)))
+            } catch (e: Throwable) {
+                // 注册失败必须撤销 joined.add，否则 name 永远卡在「已加入但没有监听器」的
+                // 状态——幂等检查会让之后的重试变成静默空操作。
+                joined.remove(name)
+                throw e
+            }
         }
     }
 
     override suspend fun leaveGroup(name: String) {
+        check(!destroyed) { "MessageBus has been destroyed" }
         mutex.withLock {
-            if (!joined.remove(name)) return
+            if (!joined.contains(name)) return
             removeListener(ChannelNames.of(namespace, Target.Group(name)))
+            joined.remove(name)
         }
     }
 
@@ -106,7 +117,9 @@ class RedisMessageBus private constructor(
      * 幂等——重复调用是空操作。
      *
      * 关停后的契约：[isDestroyed] 为 true，[groups] 为空，入站消息不再到达任何订阅方；
-     * [publish] / [joinGroup] 会因 [RedisClient.execute] 的关停校验抛 [IllegalStateException]。
+     * [publish] / [joinGroup] / [leaveGroup] 会因本类自己的 `check(!destroyed)` 抛
+     * [IllegalStateException]——这个总线共享底层 [RedisClient]（与 cache 模块共用），
+     * 因此不会去关停 client 本身，[RedisClient.execute] 的关停校验对它不生效。
      * 已存在的订阅 Flow 不会主动结束，只是不再有新消息——它们由各自的 collect 作用域取消。
      *
      * 单个频道注销失败只记 warn 并继续处理其余频道，不让一个坏频道卡住整个关停。
@@ -156,12 +169,19 @@ class RedisMessageBus private constructor(
             .onFailure { logger.warn("Failed to remove listener on {}", channel, it) }
     }
 
-    /** 调用方必须持有 [mutex]。 */
+    /**
+     * 调用方必须持有 [mutex]。
+     *
+     * 先做 I/O 再从 [listeners] 摘除：若 I/O 失败，监听器仍然活在 Redis 上，[listeners] 就必须
+     * 如实保留这条记录，否则会既漏发一次真正的注销、又让后续 [joinGroup] 在同一频道上注册出
+     * 第二个监听器，导致消息重复投递。
+     */
     private suspend fun removeListener(channel: String) {
-        val id = listeners.remove(channel) ?: return
+        val id = listeners[channel] ?: return
         client.execute {
             getTopic(channel, StringCodec.INSTANCE).removeListenerAsync(id).await()
         }
+        listeners.remove(channel)
     }
 
     companion object {
@@ -180,11 +200,18 @@ class RedisMessageBus private constructor(
             initialGroups: Set<String> = emptySet(),
         ): RedisMessageBus {
             val bus = RedisMessageBus(client, instanceId, namespace)
-            bus.mutex.withLock {
-                bus.addListener(ChannelNames.of(namespace, Target.All))
-                bus.addListener(ChannelNames.of(namespace, Target.Instance(instanceId)))
+            try {
+                bus.mutex.withLock {
+                    bus.addListener(ChannelNames.of(namespace, Target.All))
+                    bus.addListener(ChannelNames.of(namespace, Target.Instance(instanceId)))
+                }
+                initialGroups.forEach { bus.joinGroup(it) }
+            } catch (e: Throwable) {
+                // 部分订阅失败：已经注册成功的监听器不能留在 Redis 上没人认领——bus 本身
+                // 因为这次 create 失败而永远拿不到，调用方一般会在启动循环里重试 create。
+                bus.destroy()
+                throw e
             }
-            initialGroups.forEach { bus.joinGroup(it) }
             return bus
         }
     }
