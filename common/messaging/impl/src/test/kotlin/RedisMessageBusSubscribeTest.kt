@@ -146,4 +146,28 @@ class RedisMessageBusSubscribeTest {
         val b = bus()
         assertFailsWith<IllegalArgumentException> { b.subscribe(NoAnnotation::class) }
     }
+
+    @Test
+    fun `已在 collect 的订阅方能收到 joinGroup 之后新群组频道的消息`() = runTest {
+        wireUp()
+        // 群组频道在 wireUp() 之后单独 stub，覆盖掉那里"any != all"的兜底 mock。
+        val groupTopic = mockk<RTopic>(relaxed = true)
+        val groupListener: CapturingSlot<MessageListener<String>> = slot()
+        every { groupTopic.addListenerAsync(String::class.java, capture(groupListener)) } returns
+            CompletableFutureWrapper(2)
+        every { redisson.getTopic("easylib:msg:group:lobby", any<Codec>()) } returns groupTopic
+
+        val b = bus()
+        // collector 必须先挂上——inbound 是 replay = 0 的 SharedFlow，晚到的订阅方收不到早发的消息。
+        val received = async { b.subscribe<Hello>().first() }
+        yield()
+
+        // 加入群组发生在 collector 已经在跑之后：不应该需要重新订阅。
+        b.joinGroup("lobby")
+
+        val json = """{"id":"i1","sender":"peer","type":"com.example.hello.v1","time":"2026-08-07T10:00:00Z","payload":{"who":"FromGroup"}}"""
+        groupListener.captured.onMessage("easylib:msg:group:lobby", json)
+
+        assertEquals(Hello("FromGroup"), received.await().payload)
+    }
 }
