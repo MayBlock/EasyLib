@@ -39,6 +39,10 @@ interface MessageBus : Destroyable {
      *
      * [type] 缺少 [MessageType] 注解、或其线上名已被另一个类占用时，**立即**抛
      * [IllegalArgumentException]（不是等到 collect 才抛）。
+     *
+     * **返回的 Flow 永不完成**，[Destroyable.destroy] 之后也不会——关停只是让新消息不再到来。
+     * 因此 `bus.subscribe<X>().collect { }` 会一直挂着；请在一个你能取消的作用域里 collect，
+     * 不要指望它自行结束。
      */
     fun <M : Any> subscribe(type: KClass<M>, includeSelf: Boolean = false): Flow<Envelope<M>>
 
