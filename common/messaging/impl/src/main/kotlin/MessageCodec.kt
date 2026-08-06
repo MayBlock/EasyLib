@@ -98,7 +98,7 @@ internal class MessageCodec(
         val time = try {
             Instant.parse(wire.time)
         } catch (e: Exception) {
-            logger.warn("Discarding message {}: malformed time '{}'", wire.id, wire.time)
+            logger.warn("Discarding message {}: malformed time '{}'", wire.id, wire.time, e)
             return null
         }
         return try {

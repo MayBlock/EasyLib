@@ -204,8 +204,9 @@ class RedisMessageBusPublishTest {
      * `null` 触发的是 Kotlin 为 `decodeEnvelope(json: String)` 生成的参数非空检查
      * （`Intrinsics.checkNotNullParameter`），这段检查在方法体（含其内部 try）执行之前抛出
      * `NullPointerException`，因此 decodeEnvelope 自己的 catch 抓不到它——只有本文件监听器
-     * lambda 外层的 catch 能拦下来。这是一个真实场景：Redisson 的 String codec 在某些情况下
-     * （如反序列化结果为 tombstone/空消息）可能把 null 交给监听器。
+     * lambda 外层的 catch 能拦下来。选它做判别输入不是因为「Redisson 确实会传 null」——那一点
+     * 无从证实，也不重要；选它单纯是因为它是唯一能证明能穿透到监听器外层 catch 的输入，而
+     * 那层 catch 本来就是给 Netty 回调兜底的纵深防御，值得单独验证它真的接得住。
      */
     @Test
     fun `畸形（null）消息体不会让 onMessage 抛出异常，也不会进入 inbound flow`() = runTest {

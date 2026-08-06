@@ -27,9 +27,6 @@ import kotlin.test.assertFailsWith
 @MessageType("com.example.hello.v1")
 data class Hello(val who: String)
 
-@MessageType("com.example.other.v1")
-data class Other(val n: Int)
-
 data class NoAnnotation(val v: Int = 0)
 
 class RedisMessageBusSubscribeTest {
