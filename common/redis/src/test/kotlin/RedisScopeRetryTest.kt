@@ -1,4 +1,4 @@
-package com.github.mayblock.easylib.cache.impl.redis
+package com.github.mayblock.easylib.redis
 
 import com.github.mayblock.easylib.base.impl.metrics.NoOpMetricsRecorder
 import io.mockk.mockk
@@ -11,7 +11,7 @@ import kotlin.test.assertFailsWith
 
 class RedisScopeRetryTest {
 
-    private fun scope() = RedisScope(mockk<RedissonClient>(relaxed = true), NoOpMetricsRecorder)
+    private fun scope() = RedisScopeImpl(mockk<RedissonClient>(relaxed = true), NoOpMetricsRecorder)
 
     @Test
     fun `第 N 次成功时恰好调用 N 次`() = runTest {

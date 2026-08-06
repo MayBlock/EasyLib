@@ -1,7 +1,8 @@
-package com.github.mayblock.easylib.cache.impl.redis
+package com.github.mayblock.easylib.cache.impl
 
 import com.github.mayblock.easylib.base.api.metrics.MetricsRecorder
 import com.github.mayblock.easylib.base.impl.metrics.NoOpMetricsRecorder
+import com.github.mayblock.easylib.redis.RedisClient
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.verify
@@ -13,6 +14,7 @@ import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
+import kotlin.time.Duration
 import kotlin.time.Duration.Companion.minutes
 import kotlin.time.toJavaDuration
 
@@ -30,7 +32,7 @@ class RedisDistributedCacheTest {
     }
     private val client = TestClient(redisson)
 
-    private fun cache(ttl: kotlin.time.Duration? = null) =
+    private fun cache(ttl: Duration? = null) =
         RedisDistributedCache<Int, String>(client, namespace = "ns", ttl = ttl)
 
     @Test
@@ -75,7 +77,7 @@ class RedisDistributedCacheTest {
         val ttl = 5.minutes
         every { redisson.getBucket<String>("ns:7") } returns bucket
         every { bucket.setAsync("v", ttl.toJavaDuration()) } returns
-            CompletableFutureWrapper.completedNull()
+                CompletableFutureWrapper.completedNull()
 
         cache(ttl).put(7, "v")
         verify(exactly = 1) { bucket.setAsync("v", ttl.toJavaDuration()) }
@@ -93,8 +95,8 @@ class RedisDistributedCacheTest {
     fun `get 首次失败后由 withRetry 重试并最终成功`() = runTest {
         every { redisson.getBucket<String>("ns:7") } returns bucket
         every { bucket.getAsync() } throws
-            RuntimeException("transient failure") andThen
-            CompletableFutureWrapper("value")
+                RuntimeException("transient failure") andThen
+                CompletableFutureWrapper("value")
 
         assertEquals("value", cache().get(7))
         verify(exactly = 2) { bucket.getAsync() }

@@ -19,6 +19,9 @@ include(":common:base:api")
 include(":common:base:impl")
 include(":common:packetevents:api")
 include(":common:packetevents:impl")
+// 后端适配器，不做 api/impl 拆分：它没有面向上游插件的契约，
+// 唯一的消费者是 *:impl 模块。见 CLAUDE.md「模块结构与依赖方向」。
+include(":common:redis")
 include(":common:cache:api")
 include(":common:cache:impl")
 include(":common:messaging:api")

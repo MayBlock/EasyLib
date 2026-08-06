@@ -1,4 +1,4 @@
-package com.github.mayblock.easylib.cache.impl.redis
+package com.github.mayblock.easylib.redis
 
 import com.github.mayblock.easylib.base.api.metrics.MetricsRecorder
 import io.mockk.every
@@ -25,7 +25,7 @@ class RedisScopeMetricsTest {
 
     @Test
     fun `withMetrics 上报操作名并透传返回值`() = runTest {
-        val scope = RedisScope(mockk<RedissonClient>(relaxed = true), recorder)
+        val scope = RedisScopeImpl(mockk<RedissonClient>(relaxed = true), recorder)
         val result = scope.withMetrics("cache.get") { "ok" }
         assertEquals("ok", result)
         assertEquals(listOf("cache.get"), recorded)
@@ -40,7 +40,7 @@ class RedisScopeMetricsTest {
         every { redisson.getLock("L") } returns lock
 
         var attempts = 0
-        val scope = RedisScope(redisson, recorder)
+        val scope = RedisScopeImpl(redisson, recorder)
         val result = scope.withLock("L") {
             withRetry(3) {
                 withMetrics("cache.get") {

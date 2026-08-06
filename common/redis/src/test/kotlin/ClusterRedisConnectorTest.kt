@@ -1,4 +1,4 @@
-package com.github.mayblock.easylib.cache.impl.redis
+package com.github.mayblock.easylib.redis
 
 import com.github.mayblock.easylib.base.api.metrics.MetricsRecorder
 import com.github.mayblock.easylib.base.impl.metrics.NoOpMetricsRecorder

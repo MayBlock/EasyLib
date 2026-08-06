@@ -1,4 +1,4 @@
-package com.github.mayblock.easylib.cache.impl.redis
+package com.github.mayblock.easylib.redis
 
 import com.github.mayblock.easylib.base.api.metrics.MetricsRecorder
 import com.github.mayblock.easylib.base.impl.metrics.NoOpMetricsRecorder
@@ -10,7 +10,7 @@ class ClusterRedisConnector(
     override val addresses: List<String>,
     override val username: String? = null,
     override val password: String? = null,
-    override val clientName: String = "Redis-Connector",
+    override val clientName: String = "Cluster-Redis-Connector",
     override val metrics: MetricsRecorder = NoOpMetricsRecorder
 ): RedisConnector, RedisClient() {
 

@@ -1,4 +1,4 @@
-package com.github.mayblock.easylib.cache.impl.redis
+package com.github.mayblock.easylib.redis
 
 import com.github.mayblock.easylib.base.impl.metrics.NoOpMetricsRecorder
 import io.mockk.every
@@ -31,7 +31,7 @@ class RedisScopeLockTest {
             CompletableFutureWrapper(acquired)
         every { lock.unlockAsync() } returns CompletableFutureWrapper.completedNull()
         every { redisson.getLock("L") } returns lock
-        return RedisScope(redisson, NoOpMetricsRecorder)
+        return RedisScopeImpl(redisson, NoOpMetricsRecorder)
     }
 
     @Test
@@ -82,7 +82,7 @@ class RedisScopeLockTest {
         every { lock.unlockAsync() } returns CompletableFutureWrapper(unlockFuture)
         every { redisson.getLock("L") } returns lock
 
-        val scope = RedisScope(redisson, NoOpMetricsRecorder)
+        val scope = RedisScopeImpl(redisson, NoOpMetricsRecorder)
         val enteredBlock = CompletableDeferred<Unit>()
 
         val job = launch {
@@ -144,7 +144,7 @@ class RedisScopeLockTest {
         every { redisson.getLock("L") } returns lock
 
         val e = assertFailsWith<IllegalStateException> {
-            RedisScope(redisson, NoOpMetricsRecorder).withLock("L") {
+            RedisScopeImpl(redisson, NoOpMetricsRecorder).withLock("L") {
                 throw blockFailure
             }
         }
@@ -166,7 +166,7 @@ class RedisScopeLockTest {
         every { redisson.getLock("L") } returns lock
 
         val e = assertFailsWith<RuntimeException> {
-            RedisScope(redisson, NoOpMetricsRecorder).withLock("L") { "ok" }
+            RedisScopeImpl(redisson, NoOpMetricsRecorder).withLock("L") { "ok" }
         }
         assertTrue(e.causeChain().any { it === unlockFailure })
     }
