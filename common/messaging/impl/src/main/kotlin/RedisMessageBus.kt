@@ -36,7 +36,12 @@ class RedisMessageBus private constructor(
 
     private val codec = MessageCodec()
 
-    private val inbound = MutableSharedFlow<WireEnvelope>(
+    /**
+     * `internal` (rather than `private`) solely so same-module tests can collect it to verify
+     * the Netty-thread listener callback actually delivers/discards messages correctly. Not
+     * part of any public contract.
+     */
+    internal val inbound = MutableSharedFlow<WireEnvelope>(
         replay = 0,
         extraBufferCapacity = INBOUND_BUFFER,
         // 绝不能因为某个慢订阅方而阻塞 Redisson 的 Netty 线程。缓冲满时丢最老的，
