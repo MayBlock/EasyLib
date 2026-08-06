@@ -2,9 +2,15 @@ package com.github.mayblock.easylib.cache.impl.redis
 
 import com.github.mayblock.easylib.base.api.metrics.MetricsRecorder
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.NonCancellable
+import kotlinx.coroutines.future.await
+import kotlinx.coroutines.withContext
 import org.redisson.api.RedissonClient
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
+import java.util.concurrent.TimeUnit
+import kotlin.time.Duration
+import kotlin.time.Duration.Companion.seconds
 
 /**
  * Redis 操作的 DSL 作用域。
@@ -29,6 +35,30 @@ internal class RedisScope(
     private val redisson: RedissonClient,
     private val metrics: MetricsRecorder,
 ) : RedissonClient by redisson {
+
+    /**
+     * 在分布式锁 [name] 的保护下执行 [block]，最多等待 [waitTime] 获取锁。
+     *
+     * 全程使用 Redisson 的异步 API，不阻塞线程——阻塞版在 `Dispatchers.IO` 上抢锁
+     * 会白占一个线程最长 [waitTime]。
+     *
+     * 获取失败抛 [IllegalStateException]（此时不会尝试释放）。释放动作在
+     * [NonCancellable] 中执行，避免协程被取消时锁泄漏到看门狗超时为止。
+     */
+    suspend fun <T> withLock(
+        name: String,
+        waitTime: Duration = 5.seconds,
+        block: suspend RedisScope.() -> T,
+    ): T {
+        val lock = redisson.getLock(name)
+        val locked = lock.tryLockAsync(waitTime.inWholeMilliseconds, TimeUnit.MILLISECONDS).await()
+        check(locked) { "Redisson lock failed: $name" }
+        try {
+            return block()
+        } finally {
+            withContext(NonCancellable) { lock.unlockAsync().await() }
+        }
+    }
 
     /**
      * 失败重试。[times] 是**总尝试次数**，不是首次之外的重试次数——`withRetry(3)` 最多执行
