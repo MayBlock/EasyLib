@@ -10,7 +10,6 @@ dependencies {
     implementation(project(":common:redis"))
     implementation(libs.bundles.kotlinxEcosystem)
     implementation(libs.slf4jApi)
-    implementation(libs.redisson)
     testImplementation(kotlin("test"))
     testImplementation(libs.bundles.mockk)
     testImplementation(libs.kotlinxCoroutinesTest)
