@@ -5,15 +5,22 @@ import com.github.mayblock.easylib.base.impl.metrics.NoOpMetricsRecorder
 import com.github.mayblock.easylib.redis.RedisClient
 import io.mockk.every
 import io.mockk.mockk
+import io.mockk.slot
 import io.mockk.verify
+import kotlinx.coroutines.async
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.test.runTest
+import kotlinx.coroutines.withTimeoutOrNull
+import kotlinx.coroutines.yield
 import org.redisson.api.RTopic
 import org.redisson.api.RedissonClient
+import org.redisson.api.listener.MessageListener
 import org.redisson.client.codec.Codec
 import org.redisson.misc.CompletableFutureWrapper
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
+import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
 class RedisMessageBusGroupTest {
@@ -37,9 +44,11 @@ class RedisMessageBusGroupTest {
 
     private fun wireUp() {
         every { allTopic.addListenerAsync(String::class.java, any()) } returns CompletableFutureWrapper(1)
+        every { allTopic.removeListenerAsync(1) } returns CompletableFutureWrapper.completedNull()
         every { redisson.getTopic("easylib:msg:all", any<Codec>()) } returns allTopic
 
         every { instTopic.addListenerAsync(String::class.java, any()) } returns CompletableFutureWrapper(2)
+        every { instTopic.removeListenerAsync(2) } returns CompletableFutureWrapper.completedNull()
         every { redisson.getTopic("easylib:msg:inst:me", any<Codec>()) } returns instTopic
 
         every { lobbyTopic.addListenerAsync(String::class.java, any()) } returns CompletableFutureWrapper(7)
@@ -100,9 +109,11 @@ class RedisMessageBusGroupTest {
         assertTrue(b.isDestroyed)
         // 「全部」：create 订的 all 与 inst 两个，加上 joinGroup 订的 lobby。
         // 「幂等」：两次 destroy 之后每个仍然只被注销一次。
-        verify(exactly = 1) { allTopic.removeListener(1) }
-        verify(exactly = 1) { instTopic.removeListener(2) }
-        verify(exactly = 1) { lobbyTopic.removeListener(7) }
+        // 注销走异步 API 并行发出——同步逐个等待会让主线程上的 destroy 在 Redis
+        // 不可达时停顿「频道数 × 命令超时」之久。
+        verify(exactly = 1) { allTopic.removeListenerAsync(1) }
+        verify(exactly = 1) { instTopic.removeListenerAsync(2) }
+        verify(exactly = 1) { lobbyTopic.removeListenerAsync(7) }
     }
 
     @Test
@@ -134,7 +145,7 @@ class RedisMessageBusGroupTest {
 
         // 这个监听器是在 bus 已声称关停之后才登记的。若不收回，它会永远留在 Redis 上，
         // 而调用方看到的是 isDestroyed == true。
-        verify(exactly = 1) { lobbyTopic.removeListener(7) }
+        verify(exactly = 1) { lobbyTopic.removeListenerAsync(7) }
         assertTrue(b.isDestroyed)
         assertTrue(b.groups.isEmpty())
     }
@@ -200,14 +211,14 @@ class RedisMessageBusGroupTest {
 
         // all 频道先于 inst 频道注册，成功登记了 id 1——create 失败后这个监听器不能
         // 永远留在 Redis 上没人认领。
-        verify(exactly = 1) { allTopic.removeListener(1) }
+        verify(exactly = 1) { allTopic.removeListenerAsync(1) }
     }
 
     @Test
     fun `destroy 中单个频道注销失败不影响其余频道`() = runTest {
         wireUp()
         // all 频道注销时抛异常——其余两个仍必须被注销，且 destroy 本身不得把异常抛出去。
-        every { allTopic.removeListener(1) } throws IllegalStateException("redis down")
+        every { allTopic.removeListenerAsync(1) } throws IllegalStateException("redis down")
 
         val b = bus()
         b.joinGroup("lobby")
@@ -215,8 +226,36 @@ class RedisMessageBusGroupTest {
         b.destroy()
 
         assertTrue(b.isDestroyed)
-        verify(exactly = 1) { instTopic.removeListener(2) }
-        verify(exactly = 1) { lobbyTopic.removeListener(7) }
+        verify(exactly = 1) { instTopic.removeListenerAsync(2) }
+        verify(exactly = 1) { lobbyTopic.removeListenerAsync(7) }
+    }
+
+    @Test
+    fun `destroy 置位后残存监听器立即停止投递，不等注销完成`() = runTest {
+        wireUp()
+        val lateJson =
+            """{"id":"i1","sender":"peer","type":"com.example.hello.v1","time":"2026-08-07T10:00:00Z","payload":{"who":"late"}}"""
+        val listenerSlot = slot<MessageListener<String>>()
+        every { allTopic.addListenerAsync(String::class.java, capture(listenerSlot)) } returns
+            CompletableFutureWrapper(1)
+        // 注销 all 频道的 I/O 尚未完成时，一条消息恰好到达该监听器；且注销最终失败，
+        // 监听器残留在 Redis 上（destroy 对此只记 warn）。
+        every { allTopic.removeListenerAsync(1) } answers {
+            listenerSlot.captured.onMessage("easylib:msg:all", lateJson)
+            throw IllegalStateException("redis down")
+        }
+
+        val b = bus()
+        val received = async { withTimeoutOrNull(50) { b.inbound.first() } }
+        yield()
+
+        b.destroy()
+        // 注销失败后监听器仍活着——重连后又送来一条。
+        listenerSlot.captured.onMessage("easylib:msg:all", lateJson)
+
+        // destroy 的契约是「入站消息不再到达任何订阅方」，它不能依赖注销是否成功、
+        // 也不能等注销 I/O 做完才生效——destroyed 置位即是闸门。
+        assertNull(received.await(), "destroyed bus must not deliver inbound messages")
     }
 
     @Test
@@ -240,11 +279,11 @@ class RedisMessageBusGroupTest {
 
         b.destroy()
 
-        // 注册表清空后，一个「声明了同一线上名的不同类」不应再被判为冲突——若表未清空，
-        // 下面这次解析会因为 Hello 仍占着 com.example.hello.v1 而抛异常。
-        // 这是从外部观察「强引用是否已断开」的唯一手段：Class 引用本身不可直接断言。
-        val fresh = MessageCodec()
-        fresh.wireNameOf(HelloClash::class.java)
+        // close 之后注册表已清空、且解析不再写回：一个「声明了同一线上名的不同类」不应
+        // 再被判为冲突——若表未清空（或这次解析又把类登记了回去），下面会因 Hello 仍占着
+        // com.example.hello.v1 而抛异常。这是从外部观察「强引用是否已断开」的唯一手段：
+        // Class 引用本身不可直接断言。
+        assertEquals("com.example.hello.v1", codecOf(b).wireNameOf(HelloClash::class.java))
         assertEquals("com.example.hello.v1", codecOf(b).wireNameOf(HelloClash::class.java))
     }
 }

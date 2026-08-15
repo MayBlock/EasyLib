@@ -10,9 +10,7 @@ import com.github.mayblock.easylib.messaging.api.Envelope
 import com.github.mayblock.easylib.messaging.api.MessageType
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
-import java.util.UUID
 import java.util.concurrent.ConcurrentHashMap
-import kotlin.reflect.KClass
 import kotlin.time.Clock
 import kotlin.time.Instant
 import kotlin.uuid.ExperimentalUuidApi
@@ -27,11 +25,20 @@ internal class MessageCodec(
     private val idGenerator: () -> String = {
         @OptIn(ExperimentalUuidApi::class)
         Uuid.generateV7().toHexString()
-                                            },
+    },
     private val clock: () -> Instant = { Clock.System.now() },
 ) {
 
-    private val mapper: ObjectMapper = ObjectMapper()
+    /** 见 [close]。 */
+    @Volatile
+    private var closed = false
+
+    /**
+     * 可空 + `@Volatile`：[close] 把它置 null 以断开序列化器缓存对消息类的强引用，
+     * 见 [close] 的说明。除 [close] 外没有任何写入方。
+     */
+    @Volatile
+    private var mapper: ObjectMapper? = ObjectMapper()
         .registerKotlinModule()
         // 支持 payload 里的 java.time 类型（Instant、LocalDateTime 等）——没有这个模块，
         // valueToTree 遇到 java.time 值会抛 IllegalArgumentException，且异常类型与
@@ -54,14 +61,23 @@ internal class MessageCodec(
     private val claimedNames = ConcurrentHashMap<String, Class<*>>()
 
     /**
-     * 清空线上名注册表，断开对消息类（进而对其 classloader）的强引用。
+     * 关闭编解码器：断开本类持有的、指向消息类（进而指向其 classloader）的**全部**强引用。
      *
-     * 由 `RedisMessageBus.destroy()` 调用。这是 classloader 泄漏链上的最后一环：
-     * Redisson 持有监听器 → 监听器 lambda 捕获本 codec → 本表持有插件的 `Class` 对象。
-     * 即使某个监听器因故没能摘干净，清空这里也能让插件的 classloader 得以回收。
+     * 由 `RedisMessageBus.destroy()` 调用。泄漏链是：Redisson 持有监听器 → 监听器 lambda
+     * 捕获本 codec → codec 经**两条**路径强引用插件的 `Class` 对象——[claimedNames]
+     * 注册表，以及 [mapper] 内部的序列化器/TypeFactory 缓存（凡 encode/decode 过的类型
+     * 都会被缓存）。只清注册表不够：即使某个监听器因故没能从 Redis 摘干净，两条路径
+     * 都断开后，插件的 classloader 仍能被回收。
+     *
+     * 关闭后的行为：[encode] 抛 [IllegalStateException]（与总线 destroy 后 publish 的契约
+     * 一致）；[decodeEnvelope] / [toEnvelope] 返回 null，按"坏消息"路径静默丢弃；
+     * [wireNameOf] 照常校验注解但**不再写入注册表**——这样即使调用方在 destroy 竞态中
+     * 穿过了总线的 destroyed 检查，也没有任何路径能把 `Class` 重新钉回来。
      */
-    fun clearRegistry() {
+    fun close() {
+        closed = true
         claimedNames.clear()
+        mapper = null
     }
 
     /**
@@ -77,44 +93,61 @@ internal class MessageCodec(
                 "a message class must declare its wire identity explicitly"
         }
         val name = annotation.value
+        // 关闭后只读注解、不登记：登记会把 Class 重新钉进强引用（见 close 的 KDoc）。
+        if (closed) return name
         val previous = claimedNames.putIfAbsent(name, type)
         require(previous == null || previous == type) {
             "wire name '$name' is claimed by both ${previous!!.name} and ${type.name}"
         }
+        // close() 与本方法之间没有锁：上面的 putIfAbsent 可能恰好落在 close() 清空注册表
+        // 之后。这里复查一次，把竞态中挤进来的登记撤掉——与 RedisMessageBus.addListener
+        // 里 destroy 竞态收尾是同一个模式。
+        if (closed && previous == null) {
+            claimedNames.remove(name, type)
+        }
         return name
     }
 
-    /** 把 [message] 连同元数据编码成线上 JSON。 */
+    /**
+     * 把 [message] 连同元数据编码成线上 JSON。
+     *
+     * [close] 之后抛 [IllegalStateException]——发送方必须得到明确失败，而不是静默不发。
+     */
     fun encode(senderId: String, message: Any): String {
-        val wire = mapper.createObjectNode().apply {
+        val m = checkNotNull(mapper) { "MessageCodec has been closed" }
+        val wire = m.createObjectNode().apply {
             put("id", idGenerator())
             put("sender", senderId)
             put("type", wireNameOf(message::class.java))
             put("time", clock().toString())
-            set<JsonNode>("payload", mapper.valueToTree(message))
+            set<JsonNode>("payload", m.valueToTree(message))
         }
-        return mapper.writeValueAsString(wire)
+        return m.writeValueAsString(wire)
     }
 
     /**
      * 解析线上 JSON 的信封部分，payload 保持未解码。
      *
-     * 畸形输入返回 null 并记 warn——一条坏消息不得打断整条订阅。
+     * 畸形输入返回 null 并记 warn——一条坏消息不得打断整条订阅。[close] 之后一律返回 null。
      */
-    fun decodeEnvelope(json: String): WireEnvelope? = try {
-        mapper.readValue(json, WireEnvelope::class.java)
-    } catch (e: Exception) {
-        logger.warn("Discarding malformed message envelope", e)
-        null
+    fun decodeEnvelope(json: String): WireEnvelope? {
+        val m = mapper ?: return null
+        return try {
+            m.readValue(json, WireEnvelope::class.java)
+        } catch (e: Exception) {
+            logger.warn("Discarding malformed message envelope", e)
+            null
+        }
     }
 
     /**
      * 把 [wire] 的 payload 解码成 [type]，连同元数据组装成 [Envelope]。
      *
      * 解码失败（版本偏移、字段类型改了、时间戳畸形）返回 null 并记 warn。同样是「一条坏消息
-     * 不得打断订阅」——把异常抛进 Flow 会直接取消订阅方的 collect。
+     * 不得打断订阅」——把异常抛进 Flow 会直接取消订阅方的 collect。[close] 之后一律返回 null。
      */
     fun <M : Any> toEnvelope(wire: WireEnvelope, type: Class<M>): Envelope<M>? {
+        val m = mapper ?: return null
         val time = try {
             Instant.parse(wire.time)
         } catch (e: Exception) {
@@ -123,7 +156,7 @@ internal class MessageCodec(
         }
         return try {
             Envelope(
-                payload = mapper.treeToValue(wire.payload, type),
+                payload = m.treeToValue(wire.payload, type),
                 id = wire.id,
                 senderId = wire.sender,
                 time = time,

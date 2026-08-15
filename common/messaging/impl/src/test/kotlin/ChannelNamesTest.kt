@@ -3,6 +3,7 @@ package com.github.mayblock.easylib.messaging.impl
 import com.github.mayblock.easylib.messaging.api.Target
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertNull
 
 class ChannelNamesTest {
 
@@ -24,5 +25,19 @@ class ChannelNamesTest {
     @Test
     fun `namespace 参与拼接`() {
         assertEquals("mynet:msg:all", ChannelNames.of("mynet", Target.All))
+    }
+
+    @Test
+    fun `groupOf 与 of 互为逆映射`() {
+        val channel = ChannelNames.of("easylib", Target.Group("lobby"))
+        assertEquals("lobby", ChannelNames.groupOf("easylib", channel))
+    }
+
+    @Test
+    fun `groupOf 对非群组频道返回 null`() {
+        assertNull(ChannelNames.groupOf("easylib", "easylib:msg:all"))
+        assertNull(ChannelNames.groupOf("easylib", "easylib:msg:inst:bedwars-3"))
+        // namespace 不匹配的频道不属于本总线。
+        assertNull(ChannelNames.groupOf("mynet", "easylib:msg:group:lobby"))
     }
 }

@@ -52,4 +52,23 @@ class MessageCodecWireNameTest {
         val e = assertFailsWith<IllegalArgumentException> { c.wireNameOf(AlphaClash::class.java) }
         assertEquals(true, e.message!!.contains("com.example.alpha.v1"))
     }
+
+    @Test
+    fun `close 后 wireNameOf 不再登记线上名`() {
+        val c = codec()
+        c.wireNameOf(Alpha::class.java)
+        c.close()
+        // 关闭后解析只读注解、不写注册表：AlphaClash 不会占住线上名，
+        // 因而随后解析 Alpha 也不会被判为冲突——注册表保持空，
+        // 消息类的 Class 不会在 close 之后被重新钉进强引用。
+        assertEquals("com.example.alpha.v1", c.wireNameOf(AlphaClash::class.java))
+        assertEquals("com.example.alpha.v1", c.wireNameOf(Alpha::class.java))
+    }
+
+    @Test
+    fun `close 后 wireNameOf 仍校验注解`() {
+        val c = codec()
+        c.close()
+        assertFailsWith<IllegalArgumentException> { c.wireNameOf(Unannotated::class.java) }
+    }
 }

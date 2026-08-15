@@ -37,7 +37,21 @@ class RedisMessageBusPublishTest {
         override val metrics: MetricsRecorder = NoOpMetricsRecorder,
     ) : RedisClient()
 
-    private val topics = mutableMapOf<String, RTopic>()
+    /** 记录所有经过 recordSuspending 的指标名，用于断言 I/O 路径确实被计量。 */
+    private class RecordingMetrics : MetricsRecorder {
+        val names = mutableListOf<String>()
+
+        override fun <T> record(name: String, block: () -> T): T {
+            names += name
+            return block()
+        }
+
+        override suspend fun <T> recordSuspending(name: String, block: suspend () -> T): T {
+            names += name
+            return block()
+        }
+    }
+
     private val redisson = mockk<RedissonClient>(relaxed = true).also {
         every { it.isShutdown } returns false
         every { it.isShuttingDown } returns false
@@ -50,7 +64,6 @@ class RedisMessageBusPublishTest {
         every { topic.publishAsync(capture(payload)) } returns CompletableFutureWrapper(1L)
         every { topic.addListenerAsync(String::class.java, any()) } returns CompletableFutureWrapper(1)
         every { redisson.getTopic(channel, any<Codec>()) } returns topic
-        topics[channel] = topic
         return topic to payload
     }
 
@@ -62,7 +75,6 @@ class RedisMessageBusPublishTest {
             topic.addListenerAsync(String::class.java, capture(listenerSlot))
         } returns CompletableFutureWrapper(1)
         every { redisson.getTopic(channel, any<Codec>()) } returns topic
-        topics[channel] = topic
         return topic to listenerSlot
     }
 
@@ -94,6 +106,27 @@ class RedisMessageBusPublishTest {
         assertEquals("bedwars-3", node.get("sender").asText())
         assertEquals("com.example.ping.v1", node.get("type").asText())
         assertEquals("hi", node.get("payload").get("note").asText())
+    }
+
+    @Test
+    fun `publish 失败直接上抛，不重试`() = runTest {
+        topicFor("easylib:msg:all")
+        topicFor("easylib:msg:inst:bedwars-3")
+        var attempts = 0
+        val failing = mockk<RTopic>(relaxed = true)
+        every { failing.publishAsync(any()) } answers {
+            attempts++
+            throw RuntimeException("redis down")
+        }
+        every { redisson.getTopic("easylib:msg:group:g", any<Codec>()) } returns failing
+
+        val b = bus()
+
+        assertFailsWith<RuntimeException> { b.publish(Target.Group("g"), Ping("hi")) }
+        // 至多一次投递：PUBLISH 已送达但响应丢失的场景下，重试会把同一条消息（同一
+        // envelope id）重复扇出给所有订阅方。本总线的契约是「允许丢失」而非「允许重复」，
+        // 所以发送失败不重试，一次尝试后原样上抛。
+        assertEquals(1, attempts)
     }
 
     @Test
@@ -172,6 +205,30 @@ class RedisMessageBusPublishTest {
 
         verify(exactly = 1) { groupTopic.addListenerAsync(String::class.java, any()) }
         assertEquals(setOf("lobby"), b.groups)
+    }
+
+    @Test
+    fun `监听器注册与注销和 publish 一样发出指标`() = runTest {
+        topicFor("easylib:msg:all")
+        topicFor("easylib:msg:inst:bedwars-3")
+        val (groupTopic, _) = topicFor("easylib:msg:group:lobby")
+        every { groupTopic.removeListenerAsync(1) } returns CompletableFutureWrapper.completedNull()
+        val metrics = RecordingMetrics()
+
+        val b = RedisMessageBus.create(
+            client = TestClient(redisson, metrics),
+            instanceId = "bedwars-3",
+            namespace = "easylib",
+        )
+        // create 注册 all 与 inst 两个监听器，每次注册 I/O 都应计量——
+        // publish 与 cache 模块的每个 Redis 操作都有指标，监听器 I/O 不该是盲区。
+        assertEquals(2, metrics.names.count { it == "messaging.listener.add" })
+
+        b.joinGroup("lobby")
+        assertEquals(3, metrics.names.count { it == "messaging.listener.add" })
+
+        b.leaveGroup("lobby")
+        assertEquals(1, metrics.names.count { it == "messaging.listener.remove" })
     }
 
     @Test

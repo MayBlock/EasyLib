@@ -3,6 +3,7 @@ package com.github.mayblock.easylib.messaging.impl
 import com.github.mayblock.easylib.messaging.api.MessageType
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFailsWith
 import kotlin.test.assertNotNull
 import kotlin.test.assertNull
 import kotlin.time.Instant
@@ -86,6 +87,28 @@ class MessageCodecJsonTest {
         val c = codec()
         val json = """{"id":"i","sender":"s","type":"com.example.move.v1","time":"not-a-time","payload":{"player":"Steve"}}"""
         val wire = assertNotNull(c.decodeEnvelope(json))
+        assertNull(c.toEnvelope(wire, MoveV1::class.java))
+    }
+
+    @Test
+    fun `close 后 encode 抛 IllegalStateException`() {
+        val c = codec()
+        c.close()
+        assertFailsWith<IllegalStateException> { c.encode("s", MoveV1("Steve")) }
+    }
+
+    @Test
+    fun `close 后 decodeEnvelope 与 toEnvelope 返回 null`() {
+        val c = codec()
+        val json = c.encode("s", MoveV1("Steve"))
+        val wire = assertNotNull(c.decodeEnvelope(json))
+
+        c.close()
+
+        // close 断开了对 ObjectMapper 的引用——mapper 的序列化器缓存强引用着
+        // 每个处理过的消息类，是 claimedNames 之外的第二条 classloader 泄漏链。
+        // 关闭后编解码一律按"坏消息"路径丢弃，与总线 destroy 后不再投递的语义一致。
+        assertNull(c.decodeEnvelope(json))
         assertNull(c.toEnvelope(wire, MoveV1::class.java))
     }
 
