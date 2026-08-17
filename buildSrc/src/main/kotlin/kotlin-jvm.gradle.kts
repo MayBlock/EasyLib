@@ -36,12 +36,26 @@ tasks.withType<Test>().configureEach {
     // Configure all test Gradle tasks to use JUnitPlatform.
     useJUnitPlatform()
 
+    // Redis 集成测试夹具（common:redis testFixtures）在 Docker 不可用而跳过用例时会写这个标记文件。
+    // 一次「跳过了真实 Redis 覆盖」的测试结果不能被当成可复用的成功：否则开发者启动 Docker
+    // 之后再跑测试，Gradle 会因 up-to-date / 构建缓存直接复用上次的 SKIPPED 结果，集成测试永远不跑。
+    // 声明为局部变量：下面的 lambda 只能捕获 File，不能捕获脚本对象（配置缓存不允许）。
+    val redisSkipMarker = project.layout.buildDirectory.file("easylib-redis-skipped.marker").get().asFile
+    systemProperty("easylib.redisSkipMarker", redisSkipMarker.absolutePath)
+    doFirst { redisSkipMarker.delete() }
+    outputs.upToDateWhen { !redisSkipMarker.exists() }
+    outputs.cacheIf("上次运行跳过了 Redis 集成测试，结果不可复用") { !redisSkipMarker.exists() }
+
     // Log information about all test results, not only the failed ones.
+    // 同时转发测试进程的 stderr：集成测试夹具（common:redis testFixtures）在 Docker 不可用而
+    // 跳过 @RequiresRedis 用例时会往 stderr 打警告，Gradle 对 SKIPPED 只显示状态不显示原因，
+    // 不转发的话没人会注意到真实 Redis 那部分覆盖没跑。
     testLogging {
         events(
             TestLogEvent.FAILED,
             TestLogEvent.PASSED,
-            TestLogEvent.SKIPPED
+            TestLogEvent.SKIPPED,
+            TestLogEvent.STANDARD_ERROR,
         )
     }
 }

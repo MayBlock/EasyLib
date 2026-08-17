@@ -14,6 +14,6 @@ dependencies {
     implementation(libs.jackson.datatypeJsr310)
     implementation(libs.jackson.moduleKotlin)
     testImplementation(kotlin("test"))
-    testImplementation(libs.bundles.mockk)
-    testImplementation(libs.kotlinxCoroutinesTest)
+    // 真实 Redis 集成测试夹具（Testcontainers）；无 Docker 时相关用例会被跳过并给出警告。
+    testImplementation(testFixtures(project(":common:redis")))
 }

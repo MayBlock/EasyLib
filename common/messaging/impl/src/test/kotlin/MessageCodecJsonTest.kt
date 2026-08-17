@@ -15,7 +15,7 @@ data class MoveV1(val player: String)
 data class MoveV2(val player: String, val world: String = "world")
 
 @MessageType("com.example.scheduled.v1")
-data class ScheduledEvent(val label: String, val at: java.time.Instant)
+data class ScheduledEvent(val label: String, val at: Instant)
 
 class MessageCodecJsonTest {
 
@@ -115,7 +115,7 @@ class MessageCodecJsonTest {
     @Test
     fun `payload 中的 java-time Instant 字段完整往返`() {
         val c = codec()
-        val at = java.time.Instant.parse("2026-01-02T03:04:05.678Z")
+        val at = Instant.parse("2026-01-02T03:04:05.678Z")
         val json = c.encode("s", ScheduledEvent("launch", at))
         val wire = assertNotNull(c.decodeEnvelope(json))
         val env = assertNotNull(c.toEnvelope(wire, ScheduledEvent::class.java))

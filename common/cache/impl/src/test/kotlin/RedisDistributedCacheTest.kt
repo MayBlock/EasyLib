@@ -1,105 +1,127 @@
 package com.github.mayblock.easylib.cache.impl
 
 import com.github.mayblock.easylib.base.api.metrics.MetricsRecorder
-import com.github.mayblock.easylib.base.impl.metrics.NoOpMetricsRecorder
 import com.github.mayblock.easylib.redis.RedisClient
-import io.mockk.every
-import io.mockk.mockk
-import io.mockk.verify
-import kotlinx.coroutines.test.runTest
-import org.redisson.api.RBucket
-import org.redisson.api.RedissonClient
-import org.redisson.misc.CompletableFutureWrapper
+import com.github.mayblock.easylib.redis.testing.RedisOp
+import com.github.mayblock.easylib.redis.testing.RedisTestSupport
+import com.github.mayblock.easylib.redis.testing.RequiresRedis
+import com.github.mayblock.easylib.redis.testing.TestRedisClient
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.future.await
+import kotlinx.coroutines.runBlocking
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFalse
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
 import kotlin.time.Duration
+import kotlin.time.Duration.Companion.milliseconds
 import kotlin.time.Duration.Companion.minutes
-import kotlin.time.toJavaDuration
 
+/**
+ * 跑在真实 Redis 上：键长什么样、有没有 TTL、值能不能读回，都直接问 Redis，
+ * 而不是断言「调用了哪个 Redisson 方法」。
+ *
+ * 用 [runBlocking] 而非 `runTest`：TTL 过期依赖真实时钟。
+ */
+@RequiresRedis
 class RedisDistributedCacheTest {
 
-    private class TestClient(
-        override val redisson: RedissonClient,
-        override val metrics: MetricsRecorder = NoOpMetricsRecorder,
-    ) : RedisClient()
-
-    private val bucket = mockk<RBucket<String>>(relaxed = true)
-    private val redisson = mockk<RedissonClient>(relaxed = true).also {
-        every { it.isShutdown } returns false
-        every { it.isShuttingDown } returns false
-    }
-    private val client = TestClient(redisson)
-
-    private fun cache(ttl: Duration? = null) =
+    private fun cache(client: RedisClient, ttl: Duration? = null) =
         RedisDistributedCache<Int, String>(client, namespace = "ns", ttl = ttl)
 
-    @Test
-    fun `get 按 namespace 与 keyMapper 拼键并返回值`() = runTest {
-        every { redisson.getBucket<String>("ns:7") } returns bucket
-        every { bucket.getAsync() } returns CompletableFutureWrapper("value")
+    /** 直接从 Redis 读某个原始键的值。 */
+    private suspend fun RedisClient.rawGet(key: String): String? = execute { getBucket<String>(key).getAsync().await() }
 
-        assertEquals("value", cache().get(7))
-        verify { redisson.getBucket<String>("ns:7") }
+    /** 直接从 Redis 读某个原始键剩余 TTL（毫秒）；-1 表示无过期，-2 表示键不存在。 */
+    private suspend fun RedisClient.rawTtl(key: String): Long = execute { getBucket<String>(key).remainTimeToLiveAsync().await() }
+
+    @Test
+    fun `put 按 namespace 拼键写入，get 读回同一个值`(client: TestRedisClient) = runBlocking {
+        cache(client).put(7, "value")
+
+        assertEquals("value", client.rawGet("ns:7"))
+        assertEquals("value", cache(client).get(7))
     }
 
     @Test
-    fun `get 未命中返回 null`() = runTest {
-        every { redisson.getBucket<String>("ns:7") } returns bucket
-        every { bucket.getAsync() } returns CompletableFutureWrapper.completedNull()
-
-        assertNull(cache().get(7))
+    fun `get 未命中返回 null`(client: TestRedisClient) = runBlocking {
+        assertNull(cache(client).get(404))
     }
 
     @Test
-    fun `自定义 keyMapper 参与拼键`() = runTest {
-        every { redisson.getBucket<String>("ns:K7") } returns bucket
-        every { bucket.getAsync() } returns CompletableFutureWrapper("v")
+    fun `自定义 keyMapper 参与拼键`(client: TestRedisClient) = runBlocking {
+        val c = RedisDistributedCache<Int, String>(client, namespace = "ns", keyMapper = { "K$it" })
 
-        val c = RedisDistributedCache<Int, String>(
-            client, namespace = "ns", keyMapper = { "K$it" },
-        )
+        c.put(7, "v")
+
+        assertEquals("v", client.rawGet("ns:K7"))
         assertEquals("v", c.get(7))
     }
 
     @Test
-    fun `ttl 为 null 时 put 不带过期`() = runTest {
-        every { redisson.getBucket<String>("ns:7") } returns bucket
-        every { bucket.setAsync("v") } returns CompletableFutureWrapper.completedNull()
+    fun `不同 namespace 互不可见`(client: TestRedisClient) = runBlocking {
+        val a = RedisDistributedCache<Int, String>(client, namespace = "a")
+        val b = RedisDistributedCache<Int, String>(client, namespace = "b")
 
-        cache().put(7, "v")
-        verify(exactly = 1) { bucket.setAsync("v") }
+        a.put(1, "from-a")
+
+        assertNull(b.get(1))
     }
 
     @Test
-    fun `ttl 非 null 时 put 带过期`() = runTest {
-        val ttl = 5.minutes
-        every { redisson.getBucket<String>("ns:7") } returns bucket
-        every { bucket.setAsync("v", ttl.toJavaDuration()) } returns
-                CompletableFutureWrapper.completedNull()
+    fun `复合值经 Redisson 默认编解码往返`(client: TestRedisClient) = runBlocking {
+        val c = RedisDistributedCache<String, Map<String, List<Int>>>(client, namespace = "ns")
+        val value = mapOf("a" to listOf(1, 2, 3), "b" to emptyList())
 
-        cache(ttl).put(7, "v")
-        verify(exactly = 1) { bucket.setAsync("v", ttl.toJavaDuration()) }
+        c.put("k", value)
+
+        assertEquals(value, c.get("k"))
     }
 
     @Test
-    fun `remove 透传 deleteAsync 的结果`() = runTest {
-        every { redisson.getBucket<String>("ns:7") } returns bucket
-        every { bucket.deleteAsync() } returns CompletableFutureWrapper(true)
+    fun `ttl 为 null 时 put 不带过期`(client: TestRedisClient) = runBlocking {
+        cache(client).put(7, "v")
 
-        assertTrue(cache().remove(7))
+        assertEquals(-1L, client.rawTtl("ns:7"))
     }
 
     @Test
-    fun `get 首次失败后由 withRetry 重试并最终成功`() = runTest {
-        every { redisson.getBucket<String>("ns:7") } returns bucket
-        every { bucket.getAsync() } throws
-                RuntimeException("transient failure") andThen
-                CompletableFutureWrapper("value")
+    fun `ttl 非 null 时 put 带过期`(client: TestRedisClient) = runBlocking {
+        cache(client, ttl = 5.minutes).put(7, "v")
 
-        assertEquals("value", cache().get(7))
-        verify(exactly = 2) { bucket.getAsync() }
+        val ttl = client.rawTtl("ns:7")
+        assertTrue(ttl in 1..5.minutes.inWholeMilliseconds, "unexpected TTL: $ttl")
+    }
+
+    @Test
+    fun `带 TTL 的值到期后由 Redis 过期`(client: TestRedisClient) = runBlocking {
+        val c = cache(client, ttl = 300.milliseconds)
+        c.put(1, "short-lived")
+        assertEquals("short-lived", c.get(1))
+
+        delay(700)
+
+        assertNull(c.get(1))
+    }
+
+    @Test
+    fun `remove 删除已有键返回 true，再删返回 false`(client: TestRedisClient) = runBlocking {
+        val c = cache(client)
+        c.put(2, "two")
+
+        assertTrue(c.remove(2))
+        assertNull(client.rawGet("ns:2"))
+        assertFalse(c.remove(2))
+    }
+
+    @Test
+    fun `get 首次失败后由 withRetry 重试并最终成功`(client: TestRedisClient) = runBlocking {
+        cache(client).put(7, "value")
+        client.hooks.failOnce("ns:7", RedisOp.BUCKET_GET) { RuntimeException("transient failure") }
+
+        assertEquals("value", cache(client).get(7))
+        assertEquals(2, client.hooks.calls("ns:7", RedisOp.BUCKET_GET))
     }
 
     private class RecordingMetricsRecorder : MetricsRecorder {
@@ -114,20 +136,19 @@ class RedisDistributedCacheTest {
     }
 
     @Test
-    fun `get put remove 各自上报正确的 metric 名称`() = runTest {
+    fun `get put remove 各自上报正确的 metric 名称`() = runBlocking {
         val metrics = RecordingMetricsRecorder()
-        val metricClient = TestClient(redisson, metrics)
-        val metricCache = RedisDistributedCache<Int, String>(metricClient, namespace = "ns")
+        val client = RedisTestSupport.newClient(metrics)
+        try {
+            val c = cache(client)
 
-        every { redisson.getBucket<String>("ns:7") } returns bucket
-        every { bucket.getAsync() } returns CompletableFutureWrapper("v")
-        every { bucket.setAsync("v") } returns CompletableFutureWrapper.completedNull()
-        every { bucket.deleteAsync() } returns CompletableFutureWrapper(true)
+            c.get(7)
+            c.put(7, "v")
+            c.remove(7)
 
-        metricCache.get(7)
-        metricCache.put(7, "v")
-        metricCache.remove(7)
-
-        assertEquals(listOf("cache.get", "cache.put", "cache.remove"), metrics.recorded)
+            assertEquals(listOf("cache.get", "cache.put", "cache.remove"), metrics.recorded)
+        } finally {
+            client.destroy()
+        }
     }
 }

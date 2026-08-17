@@ -87,6 +87,10 @@ jobs:
       - name: Run manual build steps
         if: matrix.build-mode == 'manual'
         shell: bash
+        env:
+          # ubuntu-latest 自带 Docker；Redis 集成测试（@RequiresRedis，Testcontainers）在 CI 上
+          # 必须真的跑起来，Docker 不可用时直接失败而不是静默跳过。
+          EASYLIB_REQUIRE_REDIS: "true"
         run: |
           chmod +x gradlew
           ./gradlew build --no-daemon

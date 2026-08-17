@@ -1,267 +1,237 @@
 package com.github.mayblock.easylib.messaging.impl
 
-import com.github.mayblock.easylib.base.api.metrics.MetricsRecorder
-import com.github.mayblock.easylib.base.impl.metrics.NoOpMetricsRecorder
-import com.github.mayblock.easylib.redis.RedisClient
-import io.mockk.every
-import io.mockk.mockk
-import io.mockk.slot
-import io.mockk.verify
-import kotlinx.coroutines.async
+import com.github.mayblock.easylib.messaging.api.MessageType
+import com.github.mayblock.easylib.messaging.api.Target
+import com.github.mayblock.easylib.messaging.api.subscribe
+import com.github.mayblock.easylib.redis.testing.RedisOp
+import com.github.mayblock.easylib.redis.testing.RequiresRedis
+import com.github.mayblock.easylib.redis.testing.TestRedisClient
+import com.github.mayblock.easylib.redis.testing.eventually
+import com.github.mayblock.easylib.redis.testing.subscriberCount
 import kotlinx.coroutines.flow.first
-import kotlinx.coroutines.test.runTest
-import kotlinx.coroutines.withTimeoutOrNull
-import kotlinx.coroutines.yield
-import org.redisson.api.RTopic
-import org.redisson.api.RedissonClient
-import org.redisson.api.listener.MessageListener
-import org.redisson.client.codec.Codec
-import org.redisson.misc.CompletableFutureWrapper
+import kotlinx.coroutines.runBlocking
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
+/**
+ * 群组生命周期与 destroy，跑在真实 Redis 上。
+ *
+ * 「监听器是否还在 Redis 上」直接问 Redis（`PUBSUB NUMSUB`）；I/O 故障由 [TestRedisClient.hooks]
+ * 在真实调用发出**之前**注入——注册失败时 Redis 上确实没有监听器，注销失败时监听器确实残留在
+ * Redis 上，被测代码面对的是真实的故障后状态。
+ */
+@RequiresRedis
 class RedisMessageBusGroupTest {
 
-    private class TestClient(
-        override val redisson: RedissonClient,
-        override val metrics: MetricsRecorder = NoOpMetricsRecorder,
-    ) : RedisClient()
+    private val ns = ns()
+    private val all = ChannelNames.of(ns, Target.All)
+    private val inst = ChannelNames.of(ns, Target.Instance("me"))
+    private val lobby = ChannelNames.of(ns, Target.Group("lobby"))
 
-    private val redisson = mockk<RedissonClient>(relaxed = true).also {
-        every { it.isShutdown } returns false
-        every { it.isShuttingDown } returns false
-    }
-
-    // 每个频道各有自己的 mock 与各不相同的 listener id，这样「注销了全部监听器」是可断言的，
-    // 而不是只验证其中一个。id 由本文件的 addListenerAsync 打桩决定，因此是已知值——
-    // 用具体 id 打桩/验证，避开 MockK 对 Integer... 可变参数匹配器的坑。
-    private val allTopic = mockk<RTopic>(relaxed = true)
-    private val instTopic = mockk<RTopic>(relaxed = true)
-    private val lobbyTopic = mockk<RTopic>(relaxed = true)
-
-    private fun wireUp() {
-        every { allTopic.addListenerAsync(String::class.java, any()) } returns CompletableFutureWrapper(1)
-        every { allTopic.removeListenerAsync(1) } returns CompletableFutureWrapper.completedNull()
-        every { redisson.getTopic("easylib:msg:all", any<Codec>()) } returns allTopic
-
-        every { instTopic.addListenerAsync(String::class.java, any()) } returns CompletableFutureWrapper(2)
-        every { instTopic.removeListenerAsync(2) } returns CompletableFutureWrapper.completedNull()
-        every { redisson.getTopic("easylib:msg:inst:me", any<Codec>()) } returns instTopic
-
-        every { lobbyTopic.addListenerAsync(String::class.java, any()) } returns CompletableFutureWrapper(7)
-        every { lobbyTopic.removeListenerAsync(7) } returns CompletableFutureWrapper.completedNull()
-        every { redisson.getTopic("easylib:msg:group:lobby", any<Codec>()) } returns lobbyTopic
-    }
-
-    private suspend fun bus() = RedisMessageBus.create(
-        client = TestClient(redisson),
-        instanceId = "me",
-        namespace = "easylib",
-    )
+    private suspend fun bus(client: TestRedisClient, id: String = "me") =
+        RedisMessageBus.create(client = client, instanceId = id, namespace = ns)
 
     @Test
-    fun `leaveGroup 注销监听器并更新 groups`() = runTest {
-        wireUp()
-        val b = bus()
+    fun `加入群组后收到群组消息，leaveGroup 注销监听器后不再收到`(client: TestRedisClient) = runBlocking {
+        val a = bus(client, "a")
+        val b = bus(client)
+        try {
+            b.joinGroup("lobby")
+            val onB = collecting(b) { b.subscribe<Ping>().first() }
+            a.publish(Target.Group("lobby"), Ping("in"))
+            assertEquals("in", onB.awaitSoon().payload.note)
+
+            b.leaveGroup("lobby")
+
+            assertTrue(b.groups.isEmpty())
+            assertEquals(1, client.hooks.calls(lobby, RedisOp.REMOVE_LISTENER))
+            eventually { client.subscriberCount(lobby) == 0L }
+            val afterLeave = collecting(b) { b.subscribe<Ping>().first() }
+            a.publish(Target.Group("lobby"), Ping("out"))
+            assertNull(afterLeave.awaitNothing(), "离开群组后不应再收到该群组的消息")
+        } finally {
+            a.destroy(); b.destroy()
+        }
+    }
+
+    @Test
+    fun `leaveGroup 对未加入的群组是空操作`(client: TestRedisClient) = runBlocking {
+        val b = bus(client)
+        try {
+            b.leaveGroup("never-joined")
+
+            assertEquals(0, client.hooks.calls(ChannelNames.of(ns, Target.Group("never-joined")), RedisOp.REMOVE_LISTENER))
+        } finally {
+            b.destroy()
+        }
+    }
+
+    @Test
+    fun `groups 返回快照——之后的 leave 不影响已取出的集合`(client: TestRedisClient) = runBlocking {
+        val b = bus(client)
+        try {
+            b.joinGroup("lobby")
+            val snapshot = b.groups
+
+            b.leaveGroup("lobby")
+
+            assertEquals(setOf("lobby"), snapshot)
+            assertTrue(b.groups.isEmpty())
+        } finally {
+            b.destroy()
+        }
+    }
+
+    @Test
+    fun `destroy 注销全部三个频道的监听器、清空 groups 且幂等`(client: TestRedisClient) = runBlocking {
+        val b = bus(client)
         b.joinGroup("lobby")
-
-        b.leaveGroup("lobby")
-
-        verify(exactly = 1) { lobbyTopic.removeListenerAsync(7) }
-        assertTrue(b.groups.isEmpty())
-    }
-
-    @Test
-    fun `leaveGroup 对未加入的群组是空操作`() = runTest {
-        wireUp()
-        val b = bus()
-
-        b.leaveGroup("never-joined")
-
-        verify(exactly = 0) { lobbyTopic.removeListenerAsync(7) }
-    }
-
-    @Test
-    fun `groups 返回快照——之后的 join 不影响已取出的集合`() = runTest {
-        wireUp()
-        val b = bus()
-        b.joinGroup("lobby")
-        val snapshot = b.groups
-
-        b.leaveGroup("lobby")
-
-        assertEquals(setOf("lobby"), snapshot)
-        assertTrue(b.groups.isEmpty())
-    }
-
-    @Test
-    fun `destroy 注销全部三个频道的监听器且幂等`() = runTest {
-        wireUp()
-        val b = bus()
-        b.joinGroup("lobby")
+        assertEquals(setOf("lobby"), b.groups)
 
         b.destroy()
         b.destroy()
 
         assertTrue(b.isDestroyed)
-        // 「全部」：create 订的 all 与 inst 两个，加上 joinGroup 订的 lobby。
-        // 「幂等」：两次 destroy 之后每个仍然只被注销一次。
-        // 注销走异步 API 并行发出——同步逐个等待会让主线程上的 destroy 在 Redis
-        // 不可达时停顿「频道数 × 命令超时」之久。
-        verify(exactly = 1) { allTopic.removeListenerAsync(1) }
-        verify(exactly = 1) { instTopic.removeListenerAsync(2) }
-        verify(exactly = 1) { lobbyTopic.removeListenerAsync(7) }
-    }
-
-    @Test
-    fun `destroy 后 groups 为空`() = runTest {
-        wireUp()
-        val b = bus()
-        b.joinGroup("lobby")
-        assertEquals(setOf("lobby"), b.groups)
-
-        b.destroy()
-
         assertTrue(b.groups.isEmpty())
+        // 「全部」：create 订的 all 与 inst 两个，加上 joinGroup 订的 lobby——Redis 上一个都不剩。
+        eventually { client.subscriberCount(all) == 0L }
+        eventually { client.subscriberCount(inst) == 0L }
+        eventually { client.subscriberCount(lobby) == 0L }
+        // 「幂等」：两次 destroy 之后每个仍然只被注销一次。
+        assertEquals(1, client.hooks.calls(all, RedisOp.REMOVE_LISTENER))
+        assertEquals(1, client.hooks.calls(inst, RedisOp.REMOVE_LISTENER))
+        assertEquals(1, client.hooks.calls(lobby, RedisOp.REMOVE_LISTENER))
     }
 
     @Test
-    fun `joinGroup 与 destroy 竞态——await 之后才登记的监听器仍被收回`() = runTest {
-        wireUp()
+    fun `joinGroup 与 destroy 竞态——await 之后才登记的监听器仍被收回`(client: TestRedisClient) = runBlocking {
         lateinit var b: RedisMessageBus
-        // 制造竞态：让 destroy() 恰好在 addListenerAsync 返回之前跑完。真实场景里这是
+        // 制造竞态：让 destroy() 恰好在 lobby 的 addListenerAsync 发出之前跑完。真实场景里这是
         // 另一个线程调用 destroy()——destroy() 不可挂起，拿不到 mutex，所以它能插进
         // addListener 的 await 与随后的登记之间。
-        every { lobbyTopic.addListenerAsync(String::class.java, any()) } answers {
-            b.destroy()
-            CompletableFutureWrapper(7)
-        }
-        b = bus()
+        client.hooks.before { name, op -> if (name == lobby && op == RedisOp.ADD_LISTENER) b.destroy() }
+        b = bus(client)
 
         b.joinGroup("lobby")
 
         // 这个监听器是在 bus 已声称关停之后才登记的。若不收回，它会永远留在 Redis 上，
         // 而调用方看到的是 isDestroyed == true。
-        verify(exactly = 1) { lobbyTopic.removeListenerAsync(7) }
+        assertEquals(1, client.hooks.calls(lobby, RedisOp.REMOVE_LISTENER))
+        eventually { client.subscriberCount(lobby) == 0L }
         assertTrue(b.isDestroyed)
         assertTrue(b.groups.isEmpty())
     }
 
     @Test
-    fun `destroy 后 joinGroup 抛 IllegalStateException 且 groups 仍为空`() = runTest {
-        wireUp()
-        val b = bus()
+    fun `destroy 后 joinGroup 抛 IllegalStateException 且 groups 仍为空`(client: TestRedisClient) = runBlocking {
+        val b = bus(client)
         b.destroy()
 
         assertFailsWith<IllegalStateException> { b.joinGroup("lobby") }
         assertTrue(b.groups.isEmpty())
+        assertEquals(0L, client.subscriberCount(lobby))
     }
 
     @Test
-    fun `leaveGroup 的 I-O 失败不摘除监听器记录，重试后能干净收尾且不重复注册`() = runTest {
-        wireUp()
-        var attempts = 0
-        every { lobbyTopic.removeListenerAsync(7) } answers {
-            attempts++
-            if (attempts == 1) throw RuntimeException("redis down") else CompletableFutureWrapper.completedNull()
+    fun `leaveGroup 的 I-O 失败不摘除监听器记录，重试后能干净收尾且不重复注册`(client: TestRedisClient) = runBlocking {
+        client.hooks.failOnce(lobby, RedisOp.REMOVE_LISTENER)
+        val b = bus(client)
+        try {
+            b.joinGroup("lobby")
+
+            assertFailsWith<RuntimeException> { b.leaveGroup("lobby") }
+            // I/O 失败：监听器仍然真的挂在 Redis 上，listeners 表必须如实保留，不能提前声称已经离开。
+            assertEquals(setOf("lobby"), b.groups)
+            assertEquals(1L, client.subscriberCount(lobby))
+
+            b.leaveGroup("lobby")
+
+            assertTrue(b.groups.isEmpty())
+            eventually { client.subscriberCount(lobby) == 0L }
+            assertEquals(2, client.hooks.calls(lobby, RedisOp.REMOVE_LISTENER))
+            // 期间没有第二次 addListenerAsync——也就没有在同一频道上注册出第二个监听器。
+            assertEquals(1, client.hooks.calls(lobby, RedisOp.ADD_LISTENER))
+        } finally {
+            b.destroy()
         }
-        val b = bus()
-        b.joinGroup("lobby")
-
-        assertFailsWith<RuntimeException> { b.leaveGroup("lobby") }
-        // I/O 失败：listeners 与 joined 都必须保持原状，而不是提前声称已经离开。
-        assertEquals(setOf("lobby"), b.groups)
-
-        b.leaveGroup("lobby")
-
-        assertTrue(b.groups.isEmpty())
-        verify(exactly = 2) { lobbyTopic.removeListenerAsync(7) }
-        // 期间没有第二次 addListenerAsync——也就没有在同一频道上注册出第二个监听器。
-        verify(exactly = 1) { lobbyTopic.addListenerAsync(String::class.java, any()) }
     }
 
     @Test
-    fun `joinGroup 失败时回滚 joined，修复后重试可以成功`() = runTest {
-        wireUp()
-        var attempts = 0
-        every { lobbyTopic.addListenerAsync(String::class.java, any()) } answers {
-            attempts++
-            if (attempts == 1) throw RuntimeException("redis down") else CompletableFutureWrapper(7)
+    fun `joinGroup 失败时回滚，修复后重试可以成功`(client: TestRedisClient) = runBlocking {
+        client.hooks.failOnce(lobby, RedisOp.ADD_LISTENER)
+        val b = bus(client)
+        try {
+            assertFailsWith<RuntimeException> { b.joinGroup("lobby") }
+            // 注册失败：groups 不能残留这个名字，否则幂等检查会让重试变成静默空操作。
+            assertTrue(b.groups.isEmpty())
+            assertEquals(0L, client.subscriberCount(lobby))
+
+            b.joinGroup("lobby")
+
+            assertEquals(setOf("lobby"), b.groups)
+            assertEquals(1L, client.subscriberCount(lobby))
+        } finally {
+            b.destroy()
         }
-        val b = bus()
-
-        assertFailsWith<RuntimeException> { b.joinGroup("lobby") }
-        // 注册失败：joined 不能残留这个名字，否则幂等检查会让重试变成静默空操作。
-        assertTrue(b.groups.isEmpty())
-
-        b.joinGroup("lobby")
-
-        assertEquals(setOf("lobby"), b.groups)
     }
 
     @Test
-    fun `create 失败时回收已注册的监听器`() = runTest {
-        wireUp()
-        every { instTopic.addListenerAsync(String::class.java, any()) } throws RuntimeException("redis down")
+    fun `create 失败时回收已注册的监听器`(client: TestRedisClient) = runBlocking {
+        client.hooks.failAlways(inst, RedisOp.ADD_LISTENER)
 
-        assertFailsWith<RuntimeException> { bus() }
+        assertFailsWith<RuntimeException> { bus(client) }
 
-        // all 频道先于 inst 频道注册，成功登记了 id 1——create 失败后这个监听器不能
-        // 永远留在 Redis 上没人认领。
-        verify(exactly = 1) { allTopic.removeListenerAsync(1) }
+        // all 频道先于 inst 频道注册成功——create 失败后这个监听器不能永远留在 Redis 上没人认领。
+        assertEquals(1, client.hooks.calls(all, RedisOp.REMOVE_LISTENER))
+        eventually { client.subscriberCount(all) == 0L }
     }
 
     @Test
-    fun `destroy 中单个频道注销失败不影响其余频道`() = runTest {
-        wireUp()
+    fun `destroy 中单个频道注销失败不影响其余频道`(client: TestRedisClient) = runBlocking {
         // all 频道注销时抛异常——其余两个仍必须被注销，且 destroy 本身不得把异常抛出去。
-        every { allTopic.removeListenerAsync(1) } throws IllegalStateException("redis down")
-
-        val b = bus()
+        client.hooks.failAlways(all, RedisOp.REMOVE_LISTENER) { IllegalStateException("redis down") }
+        val b = bus(client)
         b.joinGroup("lobby")
 
         b.destroy()
 
         assertTrue(b.isDestroyed)
-        verify(exactly = 1) { instTopic.removeListenerAsync(2) }
-        verify(exactly = 1) { lobbyTopic.removeListenerAsync(7) }
+        eventually { client.subscriberCount(inst) == 0L }
+        eventually { client.subscriberCount(lobby) == 0L }
+        // 注销失败的那个真的残留在 Redis 上——这正是下一条用例要面对的状态。
+        assertEquals(1L, client.subscriberCount(all))
     }
 
     @Test
-    fun `destroy 置位后残存监听器立即停止投递，不等注销完成`() = runTest {
-        wireUp()
-        val lateJson =
-            """{"id":"i1","sender":"peer","type":"com.example.hello.v1","time":"2026-08-07T10:00:00Z","payload":{"who":"late"}}"""
-        val listenerSlot = slot<MessageListener<String>>()
-        every { allTopic.addListenerAsync(String::class.java, capture(listenerSlot)) } returns
-            CompletableFutureWrapper(1)
+    fun `destroy 置位后残存监听器立即停止投递，不等注销完成`(client: TestRedisClient) = runBlocking {
+        val lateJson = envelopeJson("peer", "com.example.hello.v1", """{"who":"late"}""")
         // 注销 all 频道的 I/O 尚未完成时，一条消息恰好到达该监听器；且注销最终失败，
         // 监听器残留在 Redis 上（destroy 对此只记 warn）。
-        every { allTopic.removeListenerAsync(1) } answers {
-            listenerSlot.captured.onMessage("easylib:msg:all", lateJson)
-            throw IllegalStateException("redis down")
+        client.hooks.before { name, op ->
+            if (name == all && op == RedisOp.REMOVE_LISTENER) {
+                client.hooks.listenersOn(all).single().onMessage(all, lateJson)
+                throw IllegalStateException("redis down")
+            }
         }
-
-        val b = bus()
-        val received = async { withTimeoutOrNull(50) { b.inbound.first() } }
-        yield()
+        val b = bus(client)
+        val received = collecting(b) { b.inbound.first() }
 
         b.destroy()
-        // 注销失败后监听器仍活着——重连后又送来一条。
-        listenerSlot.captured.onMessage("easylib:msg:all", lateJson)
+        // 注销失败后监听器仍真的挂在 Redis 上——重连后 Redis 又送来一条。
+        assertEquals(1L, client.subscriberCount(all))
+        client.publishRaw(all, lateJson)
 
         // destroy 的契约是「入站消息不再到达任何订阅方」，它不能依赖注销是否成功、
         // 也不能等注销 I/O 做完才生效——destroyed 置位即是闸门。
-        assertNull(received.await(), "destroyed bus must not deliver inbound messages")
+        assertNull(received.awaitNothing(), "destroyed bus must not deliver inbound messages")
     }
 
     @Test
-    fun `destroy 后 subscribe 抛 IllegalStateException`() = runTest {
-        wireUp()
-        val b = bus()
+    fun `destroy 后 subscribe 抛 IllegalStateException`(client: TestRedisClient) = runBlocking {
+        val b = bus(client)
         b.destroy()
 
         // 返回一个永不产出的 Flow 会被误读成「没有消息」而非「总线已关停」；而且
@@ -271,9 +241,8 @@ class RedisMessageBusGroupTest {
     }
 
     @Test
-    fun `destroy 清空线上名注册表以释放 classloader`() = runTest {
-        wireUp()
-        val b = bus()
+    fun `destroy 清空线上名注册表以释放 classloader`(client: TestRedisClient) = runBlocking {
+        val b = bus(client)
         // 先让 Hello 登记进注册表。
         b.subscribe(Hello::class.java)
 
@@ -288,8 +257,8 @@ class RedisMessageBusGroupTest {
     }
 }
 
-/** 与 `Hello`（定义在 RedisMessageBusSubscribeTest.kt）声明了同一线上名，用于探测注册表状态。 */
-@com.github.mayblock.easylib.messaging.api.MessageType("com.example.hello.v1")
+/** 与 [Hello] 声明了同一线上名，用于探测注册表状态。 */
+@MessageType("com.example.hello.v1")
 private data class HelloClash(val who: String = "")
 
 /** 读出 bus 内部的 codec——注册表是否清空只能这样观察。 */

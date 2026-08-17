@@ -16,6 +16,7 @@ import org.redisson.api.listener.MessageListener
 import org.redisson.client.codec.StringCodec
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
+import java.util.concurrent.ConcurrentHashMap
 
 /**
  * 基于 Redis Pub/Sub 的 [MessageBus]。
@@ -55,7 +56,7 @@ class RedisMessageBus private constructor(
      * 不单独维护群组集合。两份状态靠手工同步的年代，destroy 与 joinGroup 的竞态会让
      * 群组集合残留已收回监听器的名字——单一来源让这类失同步在结构上不可能发生。
      */
-    private val listeners = java.util.concurrent.ConcurrentHashMap<String, Int>()
+    private val listeners = ConcurrentHashMap<String, Int>()
     private val mutex = Mutex()
 
     @Volatile
@@ -88,7 +89,7 @@ class RedisMessageBus private constructor(
         // 会被误读成「没有消息」而不是「总线已关停」），也避免 wireNameOf 把消息类重新登记进
         // codec 的注册表、再次钉住已经该被回收的 classloader。
         check(!destroyed) { "MessageBus has been destroyed" }
-        // 立即解析，让缺注解／线上名冲突在 subscribe 处就抛出，而不是等到 collect 才炸。
+        // 立即解析，让缺注解／线上名冲突在 subscribe 处就抛出，而不是等到 collect 才炸
         val wireName = codec.wireNameOf(type)
         return inbound
             .filter { it.type == wireName }

@@ -1,170 +1,204 @@
 package com.github.mayblock.easylib.messaging.impl
 
-import com.github.mayblock.easylib.base.api.metrics.MetricsRecorder
-import com.github.mayblock.easylib.base.impl.metrics.NoOpMetricsRecorder
 import com.github.mayblock.easylib.messaging.api.MessageType
+import com.github.mayblock.easylib.messaging.api.Target
 import com.github.mayblock.easylib.messaging.api.subscribe
-import com.github.mayblock.easylib.redis.RedisClient
-import io.mockk.CapturingSlot
-import io.mockk.every
-import io.mockk.mockk
-import io.mockk.slot
-import kotlinx.coroutines.async
+import com.github.mayblock.easylib.redis.testing.RequiresRedis
+import com.github.mayblock.easylib.redis.testing.TestRedisClient
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.take
 import kotlinx.coroutines.flow.toList
-import kotlinx.coroutines.test.runTest
-import kotlinx.coroutines.yield
-import org.redisson.api.RTopic
-import org.redisson.api.RedissonClient
-import org.redisson.api.listener.MessageListener
-import org.redisson.client.codec.Codec
-import org.redisson.misc.CompletableFutureWrapper
+import kotlinx.coroutines.runBlocking
+import java.time.Instant
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
+import kotlin.test.assertNull
 
-@MessageType("com.example.hello.v1")
-data class Hello(val who: String)
+@MessageType("com.example.stamped.v1")
+data class Stamped(val n: Int, val at: Instant)
 
-data class NoAnnotation(val v: Int = 0)
-
+/**
+ * subscribe 的过滤/投递语义，跑在真实 Redis 上。
+ *
+ * 需要伪造发送方、类型或畸形 JSON 的用例，直接往频道 publish 原始字符串（[publishRaw]）——
+ * 消息经过真实的 Redis Pub/Sub 与 Redisson 监听器进入总线，而不是手工调用监听器回调。
+ */
+@RequiresRedis
 class RedisMessageBusSubscribeTest {
 
-    private class TestClient(
-        override val redisson: RedissonClient,
-        override val metrics: MetricsRecorder = NoOpMetricsRecorder,
-    ) : RedisClient()
+    private val ns = ns()
+    private val all = ChannelNames.of(ns, Target.All)
 
-    private val redisson = mockk<RedissonClient>(relaxed = true).also {
-        every { it.isShutdown } returns false
-        every { it.isShuttingDown } returns false
-    }
-
-    /** 捕获注册到 all 频道的监听器，用于手动灌消息。 */
-    private val allListener: CapturingSlot<MessageListener<String>> = slot()
-
-    private fun wireUp() {
-        val topic = mockk<RTopic>(relaxed = true)
-        every { topic.addListenerAsync(String::class.java, capture(allListener)) } returns
-            CompletableFutureWrapper(1)
-        every { redisson.getTopic("easylib:msg:all", any<Codec>()) } returns topic
-
-        val other = mockk<RTopic>(relaxed = true)
-        every { other.addListenerAsync(String::class.java, any()) } returns CompletableFutureWrapper(2)
-        every { redisson.getTopic(match { it != "easylib:msg:all" }, any<Codec>()) } returns other
-    }
-
-    private suspend fun bus() = RedisMessageBus.create(
-        client = TestClient(redisson),
-        instanceId = "me",
-        namespace = "easylib",
-    )
+    private suspend fun bus(client: TestRedisClient, id: String = "me") =
+        RedisMessageBus.create(client = client, instanceId = id, namespace = ns)
 
     /** 模拟一条来自 [sender] 的入站消息。 */
-    private fun deliver(sender: String, type: String, payloadJson: String) {
-        val json = """{"id":"i1","sender":"$sender","type":"$type","time":"2026-08-07T10:00:00Z","payload":$payloadJson}"""
-        allListener.captured.onMessage("easylib:msg:all", json)
+    private suspend fun TestRedisClient.deliver(sender: String, type: String, payloadJson: String) =
+        publishRaw(all, envelopeJson(sender, type, payloadJson))
+
+    @Test
+    fun `收到匹配类型的消息`(client: TestRedisClient) = runBlocking {
+        val b = bus(client)
+        try {
+            val received = collecting(b) { b.subscribe<Hello>().first() }
+
+            client.deliver("other-instance", "com.example.hello.v1", """{"who":"Steve"}""")
+
+            val env = received.awaitSoon()
+            assertEquals(Hello("Steve"), env.payload)
+            assertEquals("other-instance", env.senderId)
+            assertEquals("i1", env.id)
+        } finally {
+            b.destroy()
+        }
     }
 
     @Test
-    fun `收到匹配类型的消息`() = runTest {
-        wireUp()
-        val b = bus()
-        val received = async { b.subscribe<Hello>().first() }
-        yield()
+    fun `不匹配的类型不投递`(client: TestRedisClient) = runBlocking {
+        val b = bus(client)
+        try {
+            val received = collecting(b) { b.subscribe<Hello>().take(1).toList() }
 
-        deliver("other-instance", "com.example.hello.v1", """{"who":"Steve"}""")
+            client.deliver("other", "com.example.other.v1", """{"n":1}""")
+            client.deliver("other", "com.example.hello.v1", """{"who":"Alex"}""")
 
-        val env = received.await()
-        assertEquals(Hello("Steve"), env.payload)
-        assertEquals("other-instance", env.senderId)
-        assertEquals("i1", env.id)
+            assertEquals(listOf(Hello("Alex")), received.awaitSoon().map { it.payload })
+        } finally {
+            b.destroy()
+        }
     }
 
     @Test
-    fun `不匹配的类型不投递`() = runTest {
-        wireUp()
-        val b = bus()
-        val received = async { b.subscribe<Hello>().take(1).toList() }
-        yield()
+    fun `默认丢弃自己发出的消息`(client: TestRedisClient) = runBlocking {
+        val b = bus(client)
+        try {
+            val received = collecting(b) { b.subscribe<Hello>().take(1).toList() }
 
-        deliver("other", "com.example.other.v1", """{"n":1}""")
-        deliver("other", "com.example.hello.v1", """{"who":"Alex"}""")
+            client.deliver("me", "com.example.hello.v1", """{"who":"self"}""")
+            client.deliver("peer", "com.example.hello.v1", """{"who":"peer"}""")
 
-        assertEquals(listOf(Hello("Alex")), received.await().map { it.payload })
+            assertEquals(listOf(Hello("peer")), received.awaitSoon().map { it.payload })
+        } finally {
+            b.destroy()
+        }
     }
 
     @Test
-    fun `默认丢弃自己发出的消息`() = runTest {
-        wireUp()
-        val b = bus()
-        val received = async { b.subscribe<Hello>().take(1).toList() }
-        yield()
+    fun `includeSelf 为 true 时收到自己发出的消息`(client: TestRedisClient) = runBlocking {
+        val b = bus(client)
+        try {
+            val received = collecting(b) { b.subscribe<Hello>(includeSelf = true).first() }
 
-        deliver("me", "com.example.hello.v1", """{"who":"self"}""")
-        deliver("peer", "com.example.hello.v1", """{"who":"peer"}""")
+            // 真正由自己 publish，而不是伪造 sender——这条走完整的 encode → Redis → decode 链路。
+            b.publish(Target.All, Hello("self"))
 
-        assertEquals(listOf(Hello("peer")), received.await().map { it.payload })
+            assertEquals(Hello("self"), received.awaitSoon().payload)
+        } finally {
+            b.destroy()
+        }
     }
 
     @Test
-    fun `includeSelf 为 true 时收到自己发出的消息`() = runTest {
-        wireUp()
-        val b = bus()
-        val received = async { b.subscribe<Hello>(includeSelf = true).first() }
-        yield()
+    fun `一条坏消息不会打断订阅`(client: TestRedisClient) = runBlocking {
+        val b = bus(client)
+        try {
+            val received = collecting(b) { b.subscribe<Hello>().take(1).toList() }
 
-        deliver("me", "com.example.hello.v1", """{"who":"self"}""")
+            // 畸形 JSON
+            client.publishRaw(all, "}{ not json")
+            // 类型名匹配但缺必填字段
+            client.deliver("peer", "com.example.hello.v1", """{}""")
+            // 正常消息——订阅必须还活着
+            client.deliver("peer", "com.example.hello.v1", """{"who":"survivor"}""")
 
-        assertEquals(Hello("self"), received.await().payload)
+            assertEquals(listOf(Hello("survivor")), received.awaitSoon().map { it.payload })
+        } finally {
+            b.destroy()
+        }
     }
 
     @Test
-    fun `一条坏消息不会打断订阅`() = runTest {
-        wireUp()
-        val b = bus()
-        val received = async { b.subscribe<Hello>().take(1).toList() }
-        yield()
-
-        // 畸形 JSON
-        allListener.captured.onMessage("easylib:msg:all", "}{ not json")
-        // 类型名匹配但缺必填字段
-        deliver("peer", "com.example.hello.v1", """{}""")
-        // 正常消息——订阅必须还活着
-        deliver("peer", "com.example.hello.v1", """{"who":"survivor"}""")
-
-        assertEquals(listOf(Hello("survivor")), received.await().map { it.payload })
+    fun `订阅未标注解的类型立即抛异常`(client: TestRedisClient) = runBlocking {
+        val b = bus(client)
+        try {
+            assertFailsWith<IllegalArgumentException> { b.subscribe(NotAMessage::class.java) }
+        } finally {
+            b.destroy()
+        }
     }
 
     @Test
-    fun `订阅未标注解的类型立即抛异常`() = runTest {
-        wireUp()
-        val b = bus()
-        assertFailsWith<IllegalArgumentException> { b.subscribe(NoAnnotation::class.java) }
+    fun `已在 collect 的订阅方能收到 joinGroup 之后新群组频道的消息`(client: TestRedisClient) = runBlocking {
+        val b = bus(client)
+        try {
+            // collector 必须先挂上——inbound 是 replay = 0 的 SharedFlow，晚到的订阅方收不到早发的消息。
+            val received = collecting(b) { b.subscribe<Hello>().first() }
+
+            // 加入群组发生在 collector 已经在跑之后：不应该需要重新订阅。
+            b.joinGroup("lobby")
+
+            client.publishRaw(
+                ChannelNames.of(ns, Target.Group("lobby")),
+                envelopeJson("peer", "com.example.hello.v1", """{"who":"FromGroup"}"""),
+            )
+
+            assertEquals(Hello("FromGroup"), received.awaitSoon().payload)
+        } finally {
+            b.destroy()
+        }
     }
 
     @Test
-    fun `已在 collect 的订阅方能收到 joinGroup 之后新群组频道的消息`() = runTest {
-        wireUp()
-        // 群组频道在 wireUp() 之后单独 stub，覆盖掉那里"any != all"的兜底 mock。
-        val groupTopic = mockk<RTopic>(relaxed = true)
-        val groupListener: CapturingSlot<MessageListener<String>> = slot()
-        every { groupTopic.addListenerAsync(String::class.java, capture(groupListener)) } returns
-            CompletableFutureWrapper(2)
-        every { redisson.getTopic("easylib:msg:group:lobby", any<Codec>()) } returns groupTopic
+    fun `广播消息送达另一实例并且不回灌给自己`(client: TestRedisClient) = runBlocking {
+        val a = bus(client, "a")
+        val b = bus(client, "b")
+        try {
+            val onB = collecting(b) { b.subscribe<Stamped>().first() }
+            val onA = collecting(a) { a.subscribe<Stamped>().first() }
+            val at = Instant.parse("2026-08-17T00:00:00.123Z")
 
-        val b = bus()
-        // collector 必须先挂上——inbound 是 replay = 0 的 SharedFlow，晚到的订阅方收不到早发的消息。
-        val received = async { b.subscribe<Hello>().first() }
-        yield()
+            a.publish(Target.All, Stamped(1, at))
 
-        // 加入群组发生在 collector 已经在跑之后：不应该需要重新订阅。
-        b.joinGroup("lobby")
+            val env = onB.awaitSoon()
+            assertEquals(Stamped(1, at), env.payload)
+            assertEquals("a", env.senderId)
+            assertNull(onA.awaitNothing(), "发送方自己不应收到未开启 includeSelf 的消息")
+        } finally {
+            a.destroy(); b.destroy()
+        }
+    }
 
-        val json = """{"id":"i1","sender":"peer","type":"com.example.hello.v1","time":"2026-08-07T10:00:00Z","payload":{"who":"FromGroup"}}"""
-        groupListener.captured.onMessage("easylib:msg:group:lobby", json)
+    @Test
+    fun `Instance 目标只送达对应实例`(client: TestRedisClient) = runBlocking {
+        val a = bus(client, "a")
+        val b = bus(client, "b")
+        val c = bus(client, "c")
+        try {
+            val onB = collecting(b) { b.subscribe<Ping>().first() }
+            val onC = collecting(c) { c.subscribe<Ping>().first() }
 
-        assertEquals(Hello("FromGroup"), received.await().payload)
+            a.publish(Target.Instance("b"), Ping("for-b"))
+
+            assertEquals("for-b", onB.awaitSoon().payload.note)
+            assertNull(onC.awaitNothing(), "非目标实例不应收到点对点消息")
+        } finally {
+            a.destroy(); b.destroy(); c.destroy()
+        }
+    }
+
+    @Test
+    fun `多条消息按发布顺序到达`(client: TestRedisClient) = runBlocking {
+        val a = bus(client, "a")
+        val b = bus(client, "b")
+        try {
+            val onB = collecting(b) { b.subscribe<Stamped>().take(20).toList() }
+
+            repeat(20) { a.publish(Target.All, Stamped(it, Instant.EPOCH)) }
+
+            assertEquals((0 until 20).toList(), onB.awaitSoon().map { it.payload.n })
+        } finally {
+            a.destroy(); b.destroy()
+        }
     }
 }
