@@ -41,13 +41,15 @@ class BukkitTaskScheduler(
         val trigger = task.trigger
         val taskScope = BukkitTaskScope(id)
         val isOneShot = trigger is TaskScheduler.Trigger.Once || trigger is TaskScheduler.Trigger.Delay
+        // Bukkit 调度器只负责「何时触发」，触发后把回调交给 Task.executor 决定「在哪个线程跑」：
+        // Direct/sync 在主线程就地执行；async 会再转投到异步线程。
         val repeatingRunnable = Runnable {
-            task.onTick(taskScope)
+            task.executor.execute { task.onTick(taskScope) }
         }
         val oneShotRunnable = Runnable {
-            task.onTick(taskScope)
-            // 自删而非 cancelTask(id)：任务已经跑完，没有底层 BukkitTask 需要再 cancel()，
-            // 直接把 map 里的记录（占位或真实引用）摘掉即可。
+            task.executor.execute { task.onTick(taskScope) }
+            // 自删而非 cancelTask(id)：任务已经跑完（或已移交给 executor），没有底层 BukkitTask
+            // 需要再 cancel()，直接把 map 里的记录（占位或真实引用）摘掉即可。
             tasks.remove(id)
         }
         if (isOneShot) {

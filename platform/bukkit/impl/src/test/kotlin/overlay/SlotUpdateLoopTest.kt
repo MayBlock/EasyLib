@@ -33,9 +33,9 @@ private object NoopScope : TaskScheduler.TaskScope {
  * `task.executor === SyncMarker` 即证明 loop 确实经 scheduleSyncTask 排程——
  * 若它绕道裸 scheduleTask（默认 Direct）或误走 async 路径，身份断言当场失败。
  *
- * 注意这只钉住**排程路径**，不代表**线程落地**：生产环境唯一的 `TaskScheduler` 实现
- * （`BukkitTaskSchedulerImpl`）从不读 `Task.executor`，scheduleSyncTask/scheduleAsyncTask 派发的任务
- * 最终都经 `Bukkit.getScheduler().runTask` 系列落地，实际执行线程由那一层决定，与本断言无关。
+ * 注意这只钉住**排程路径**，不代表**线程落地**：生产环境的 `BukkitTaskScheduler` 在 Bukkit 调度器
+ * 触发后再把回调交给 `Task.executor` 执行（见 `BukkitTaskSchedulerTest`），本测试用假调度器内联执行，
+ * 实际执行线程与本断言无关。
  */
 private val SyncMarker = TaskExecutor { it() }
 private val AsyncMarker = TaskExecutor { it() }

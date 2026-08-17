@@ -2,6 +2,7 @@ package com.github.mayblock.easylib.base.api.bukkit
 
 import com.github.mayblock.easylib.api.bukkit.item.CustomItemRegistry
 import com.github.mayblock.easylib.api.bukkit.menu.MenuFactory
+import com.github.mayblock.easylib.api.bukkit.menu.MenuRegistry
 import com.github.mayblock.easylib.api.bukkit.overlay.PlayerOverlayFactory
 import com.github.mayblock.easylib.api.bukkit.prompt.PromptApi
 import com.github.mayblock.easylib.api.bukkit.scheduler.BukkitDispatcher
@@ -15,6 +16,8 @@ interface BukkitEasyLibApi : EasyLibApi, Closeable {
     val promptApi: PromptApi
     val customItemRegistry: CustomItemRegistry
     val menuFactory: MenuFactory
+    /** 菜单只读查询：某玩家当前打开的菜单、某菜单的观看者。 */
+    val menuRegistry: MenuRegistry
     val overlayFactory: PlayerOverlayFactory
 }
 

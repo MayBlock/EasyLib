@@ -25,7 +25,7 @@ fun PageableChestMenuScope.setNextPageItem(
 fun PageableChestMenuScope.setPreviousPageItem(
     type: Material,
     amount: Int = 1,
-    slot: Int = this.type.size - 4,
+    slot: Int = this.type.size - 6,
     metadata: (ItemMeta.() -> Unit)? = null
 ) = this.setPreviousPageItem(ItemStack(type, amount), slot, metadata)
 

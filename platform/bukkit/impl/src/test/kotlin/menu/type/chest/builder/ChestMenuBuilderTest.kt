@@ -3,6 +3,7 @@ package com.github.mayblock.easylib.base.impl.bukkit.menu.type.chest.builder
 import com.github.mayblock.easylib.api.bukkit.menu.slot.dsl.item
 import com.github.mayblock.easylib.api.bukkit.menu.type.chest.ChestMenu
 import com.github.mayblock.easylib.api.bukkit.menu.type.chest.ChestMenuType
+import com.github.mayblock.easylib.api.bukkit.menu.type.chest.dsl.slot
 import com.github.mayblock.easylib.base.impl.bukkit.menu.slot.SlotSpec
 import io.mockk.mockk
 import net.kyori.adventure.text.Component
@@ -41,5 +42,15 @@ class ChestMenuBuilderTest {
         val specs = buildSpecs { slot(3..5) { item(Material.STONE); onPlace { isCancelled = false } } }
         assertEquals(setOf(3, 4, 5), specs.keys)
         assertTrue(specs.values.all { it.hasPlaceHandlers })
+    }
+
+    @Test
+    fun `行列矩形重载只声明区域内的槽位，不把中间列一并吞掉`() {
+        // 一列（0..2 行、第 0 列）= 0、9、18；修复前会被合并成 0..18 连续区间
+        assertEquals(setOf(0, 9, 18), buildSpecs { slot(0..2, 0) { item(Material.STONE) } }.keys)
+        // 一行（第 1 行、2..4 列）= 11..13
+        assertEquals(setOf(11, 12, 13), buildSpecs { slot(1, 2..4) { item(Material.STONE) } }.keys)
+        // 2×2 矩形
+        assertEquals(setOf(10, 11, 19, 20), buildSpecs { slot(1..2, 1..2) { item(Material.STONE) } }.keys)
     }
 }

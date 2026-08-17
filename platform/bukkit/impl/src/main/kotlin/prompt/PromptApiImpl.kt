@@ -1,6 +1,7 @@
 package com.github.mayblock.easylib.base.impl.bukkit.prompt
 
 import com.github.mayblock.easylib.api.bukkit.prompt.PromptApi
+import com.github.mayblock.easylib.base.api.scheduler.TaskExecutor
 import com.github.mayblock.easylib.base.api.util.Disposable
 import com.github.mayblock.easylib.base.api.util.Vector
 import com.github.mayblock.easylib.base.impl.bukkit.util.sendPackets
@@ -32,12 +33,12 @@ import kotlin.coroutines.resume
  * 客户端回填文本后经 [WrapperPlayClientUpdateSign] 收包拿到结果、把方块还原为它本来的样子、回调结果。
  *
  * 线程契约：无论是 [openPrompt] 的回调版本还是 suspend 版本，结果回调与方块恢复都
- * 经由 [com.github.mayblock.easylib.base.api.scheduler.TaskScheduler] 调度到 Bukkit 主线程执行——
- * 调用方无需（也不应该）自行切线程。PacketEvents 的收包发生在网络线程而非主线程，
- * 直接在其中调用 `Player#sendBlockChange` 等 Bukkit API 是不安全的。
+ * 经 [mainThread]（主线程执行器）回到 Bukkit 主线程执行——调用方无需（也不应该）自行切线程。
+ * PacketEvents 的收包发生在网络线程而非主线程，直接在其中调用 `Player#sendBlockChange` 等 Bukkit API 是不安全的。
  */
 class PromptApiImpl(
-    packetManager: PacketManager<*>
+    packetManager: PacketManager<*>,
+    private val mainThread: TaskExecutor,
 ) : PromptApi, Listener {
 
     private val logger = LoggerFactory.getLogger(PromptApiImpl::class.java)
@@ -66,19 +67,22 @@ class PromptApiImpl(
             promptList.remove(uuid)
             val result = packet.textLines[0].ifBlank { null }
             val (position, callback) = pending
-            val player = Bukkit.getPlayer(uuid)
-            // 不再无脑发 AIR：把客户端此前看到的假告示牌还原为服务端此刻的真实方块状态。
-            if (player != null && player.isOnline) {
-                val block = player.world.getBlockAt(position.x, position.y, position.z)
-                player.sendPackets {
-                    forBlock(position) {
-                        blockChange(SpigotConversionUtil.fromBukkitBlockData(block.blockData))
+            // 收包在 Netty 线程：方块还原与回调都要回到主线程，调用方才能安全操作 Bukkit 状态。
+            mainThread.execute {
+                val player = Bukkit.getPlayer(uuid)
+                // 不再无脑发 AIR：把客户端此前看到的假告示牌还原为服务端此刻的真实方块状态。
+                if (player != null && player.isOnline) {
+                    val block = player.world.getBlockAt(position.x, position.y, position.z)
+                    player.sendPackets {
+                        forBlock(position) {
+                            blockChange(SpigotConversionUtil.fromBukkitBlockData(block.blockData))
+                        }
                     }
+                } else {
+                    logger.debug("Player {} went offline before prompt block restore could run", uuid)
                 }
-            } else {
-                logger.debug("Player {} went offline before prompt block restore could run", uuid)
+                callback(result)
             }
-            callback(result)
         }
     })
 
@@ -125,11 +129,15 @@ class PromptApiImpl(
 
     /**
      * 由 [com.github.mayblock.easylib.base.impl.bukkit.BukkitEasyLib] 在 `close()` 时调用：
-     * 注销 packet listener，避免 plugin 卸载/重载后残留监听器持续持有引用。
+     * 注销 packet listener，避免 plugin 卸载/重载后残留监听器持续持有引用；
+     * 尚未提交的 prompt 以 `null` 结算，使挂起版调用方不会永久挂起。
      */
     internal fun shutdown() {
         offListener.dispose()
         HandlerList.unregisterAll(this)
+        val pending = promptList.values.toList()
+        promptList.clear()
+        pending.forEach { (_, callback) -> callback(null) }
     }
 
     /**

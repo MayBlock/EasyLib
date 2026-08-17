@@ -43,19 +43,19 @@ fun ChestMenuScope.slot(
     rows: IntRange,
     column: Int,
     block: (SlotScope<InventoryClickEvent>.() -> Unit)? = null
-) = slot(indexOf(rows, column..column), block)
+) = indexOf(rows, column..column).forEach { slot(it, block) }
 
 fun ChestMenuScope.slot(
     row: Int,
     columns: IntRange,
     block: (SlotScope<InventoryClickEvent>.() -> Unit)? = null
-) = slot(indexOf(row..row, columns), block)
+) = indexOf(row..row, columns).forEach { slot(it, block) }
 
 fun ChestMenuScope.slot(
     rows: IntRange,
     columns: IntRange,
     block: (SlotScope<InventoryClickEvent>.() -> Unit)? = null
-) = slot(indexOf(rows, columns), block)
+) = indexOf(rows, columns).forEach { slot(it, block) }
 
 fun ChestMenuScope.closeButton(
     index: Int,

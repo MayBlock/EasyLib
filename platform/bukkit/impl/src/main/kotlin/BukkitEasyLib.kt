@@ -5,6 +5,7 @@ import com.github.mayblock.easylib.base.api.bukkit.BukkitEasyLibApi
 import com.github.mayblock.easylib.base.api.bukkit.bukkitApi
 import com.github.mayblock.easylib.base.impl.bukkit.command.BukkitCommandRegistry
 import com.github.mayblock.easylib.base.impl.bukkit.item.CustomItemRegistryImpl
+import com.github.mayblock.easylib.api.bukkit.menu.MenuRegistry
 import com.github.mayblock.easylib.base.impl.bukkit.menu.MenuManager
 import com.github.mayblock.easylib.base.impl.bukkit.overlay.OverlayManager
 import com.github.mayblock.easylib.base.impl.bukkit.packet.BukkitPacketManager
@@ -17,6 +18,10 @@ import org.bukkit.Bukkit
 import org.bukkit.entity.Player
 import org.bukkit.plugin.Plugin
 
+/**
+ * Bukkit 平台的 EasyLib 入口：由上游插件在 onEnable 中构造、onDisable 中 [close]。
+ * 接入方式与最小示例见 `docs/getting-started.md`。
+ */
 class BukkitEasyLib(
     plugin: Plugin,
 ) : BukkitEasyLibApi {
@@ -30,11 +35,12 @@ class BukkitEasyLib(
     override val taskScheduler = BukkitTaskScheduler(plugin)
     override val dispatcher = BukkitDispatcherImpl(plugin)
     // 注册其断线清理监听（onQuit）；shutdown() 时经 HandlerList.unregisterAll(this) 注销。
-    override val promptApi = PromptApiImpl(packetManager).also {
+    override val promptApi = PromptApiImpl(packetManager, taskExecutors.sync).also {
         Bukkit.getPluginManager().registerEvents(it, plugin)
     }
     override val customItemRegistry = CustomItemRegistryImpl(plugin)
     override val menuFactory = MenuManager(taskScheduler, packetManager, plugin)
+    override val menuRegistry: MenuRegistry get() = menuFactory
     override val overlayFactory = OverlayManager(taskScheduler, plugin)
     override val commandRegistry = BukkitCommandRegistry(plugin)
 
