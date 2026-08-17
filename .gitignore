@@ -42,5 +42,7 @@ bin/
 ### Mac OS ###
 .DS_Store
 ### Agent process docs (local only) ###
-/docs/
+# 公共文档位于 docs/ 根下并纳入版本管理；只忽略内部过程稿。
+/docs/superpowers/
+/docs/menu-architecture-design.md
 /.superpowers/

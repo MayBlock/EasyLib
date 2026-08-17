@@ -1,6 +1,5 @@
 package com.github.mayblock.easylib.api.bukkit.overlay
 
-import com.github.mayblock.easylib.api.bukkit.overlay.slot.dsl.OverlayUpdateScope
 import com.github.mayblock.easylib.base.api.event.EventSource
 import com.github.mayblock.easylib.base.api.util.Destroyable
 import org.bukkit.entity.Player
@@ -18,40 +17,25 @@ import org.bukkit.inventory.ItemStack
  */
 interface PlayerOverlay : Destroyable, EventSource<OverlayEvent> {
     /**
-     * 对该玩家开启覆盖层（发送初始虚拟物品并登记观察者）。
-     *
-     * **须在主线程调用**：内部会同步为该玩家跑一遍各槽的 `onUpdate` 显示规则（见 [OverlayUpdateScope]）
-     * 并读写更新循环的内部记账状态，均非线程安全。
-     * @throws IllegalStateException 覆盖层已销毁（[destroy] 之后）
+     * 对该玩家开启覆盖层。**须在主线程调用**。
+     * @throws IllegalStateException 覆盖层已销毁
      */
     fun show(player: Player)
 
     /**
-     * 对该玩家关闭覆盖层并还原真实背包渲染；此前未开启返回 false。
-     *
-     * **须在主线程调用**：可能触发更新循环停止并清理其内部记账状态，与 [show]/[setItem] 共享同一套
-     * 非线程安全的状态。
-     * @throws IllegalStateException 覆盖层已销毁（[destroy] 之后）
+     * 对该玩家关闭覆盖层并还原真实背包渲染；此前未开启返回 false。**须在主线程调用**。
+     * @throws IllegalStateException 覆盖层已销毁
      */
     fun hide(player: Player): Boolean
 
     /**
-     * 某声明槽位**共享基底**虚拟物品的**拷贝**；未声明或为空（AIR/数量≤0）返回 null。改动返回值不影响覆盖层。
-     *
-     * 这是共享基底，**不是**某个观察者实际看到的物品：每个观察者实际所见由该槽的 `onUpdate` 显示规则
-     * （见 [OverlayUpdateScope]）在此基底之上各算一份，本方法**不反映** `onUpdate` 的结果——不同观察者
-     * 可能看到互不相同的物品，且都可能与本方法的返回值不同。
+     * 某声明槽位**共享基底**物品的拷贝；未声明或为空返回 null。
+     * 不反映 `onUpdate` 对各观察者的显示结果（见 `docs/overlay.md`）。
      */
     fun getItem(index: Int): ItemStack?
 
     /**
-     * 改写某声明槽位**共享基底**的虚拟物品并重绘给所有观察者；`null` 等价清空（AIR）。
-     * 存入的是 [item] 的**拷贝**：调用后继续改动原对象不影响覆盖层。
-     *
-     * 这只改变基底：每个观察者最终看到的物品仍由该槽的 `onUpdate` 显示规则（见 [OverlayUpdateScope]）
-     * 在新基底上各自重算得出，不同观察者即便面对同一次写入也可能看到不同结果。
-     *
-     * **须在主线程调用**：会同步触发该槽 `onUpdate` 规则对每个观察者的重算。
+     * 改写某声明槽位**共享基底**（存入拷贝）并重绘给所有观察者；`null` 等价清空。**须在主线程调用**。
      * @throws IllegalArgumentException 槽位未在构建时声明
      */
     fun setItem(index: Int, item: ItemStack?)

@@ -2,33 +2,16 @@ package com.github.mayblock.easylib.messaging.api
 
 import com.github.mayblock.easylib.base.api.util.Destroyable
 import kotlinx.coroutines.flow.Flow
-import kotlin.reflect.KClass
 
 /**
  * 跨实例消息总线。
  *
- * **投递语义是 fire-and-forget 的至多一次：允许丢失，绝不重复。** 实例宕机、重启、甚至一次
- * 短暂重连期间的消息全部消失且不补发；发送失败也不重试——重试可能把已经送达的消息重复
- * 扇出给所有订阅方，因此订阅方无需做幂等处理。适合过期作废的消息（玩家切服通知、全网公告、
- * 对局事件）；需要至少一次送达的场景本总线不适用。
+ * 投递语义是 fire-and-forget 的**至多一次**：允许丢失、绝不重复、发送失败不重试。
+ * **上游插件停用时必须调用 [destroy]**，否则长寿命的 Redis 客户端会一直持有消息类，泄漏插件 classloader。
+ * 使用方式、适用场景与注意事项见 `docs/redis.md`。
  *
- * 需要查询对端**状态**（如「好友是否在线」）时不要用消息广播——那会让流量与「玩家数 ×
- * 好友数」成正比。状态应写入分布式缓存供人直接读取，消息只用于通知变更。
- *
- * ## 必须在插件停用时调用 [destroy]
- *
- * 这不是可选的清理，忘记会**泄漏 classloader**：Redis 客户端通常与缓存模块共用、寿命长于你的
- * 插件，它会一直持有本总线注册的订阅回调；回调又持有你所有消息类的 `Class` 对象；而在 Bukkit
- * 上每个插件有自己的 classloader，一个 `Class` 就钉住整个插件。反复 `/reload` 会撑爆 Metaspace。
- *
- * ```
- * override fun onDisable() {
- *     bus.destroy()
- * }
- * ```
- *
- * [destroy] 之后 [publish] / [subscribe] / [joinGroup] / [leaveGroup] 一律抛
- * [IllegalStateException]；已经在 collect 的 Flow 不会自行结束，需要你取消自己的作用域。
+ * [destroy] 之后 [publish] / [subscribe] / [joinGroup] / [leaveGroup] 一律抛 [IllegalStateException]；
+ * 已经在 collect 的 Flow 不会自行结束，需要调用方取消自己的作用域。
  */
 interface MessageBus : Destroyable {
 
@@ -40,25 +23,15 @@ interface MessageBus : Destroyable {
 
     /**
      * 向 [target] 投递 [message]。
-     *
-     * [message] 的类必须标注 [MessageType]，否则抛 [IllegalArgumentException]。
+     * @throws IllegalArgumentException [message] 的类未标注 [MessageType]
      */
     suspend fun publish(target: Target, message: Any)
 
     /**
-     * 订阅类型为 [type] 的消息。
-     *
-     * 返回冷 [Flow]：真正的消费发生在 `collect`，取消 collect 即退订。取消只是脱离内部的
-     * 消息分发，不会注销 Redis 监听器（其它订阅方仍在用）。
-     *
-     * [includeSelf] 为 false（默认）时，本实例自己发出的消息不会回灌给自己。
-     *
-     * [type] 缺少 [MessageType] 注解、或其线上名已被另一个类占用时，**立即**抛
-     * [IllegalArgumentException]（不是等到 collect 才抛）。
-     *
-     * **返回的 Flow 永不完成**，[Destroyable.destroy] 之后也不会——关停只是让新消息不再到来。
-     * 因此 `bus.subscribe<X>().collect { }` 会一直挂着；请在一个你能取消的作用域里 collect，
-     * 不要指望它自行结束。
+     * 订阅类型为 [type] 的消息，返回冷 [Flow]：collect 才开始消费，取消 collect 即退订；
+     * **Flow 永不完成**（[destroy] 之后也不会），请在可取消的作用域里 collect。
+     * [includeSelf] 为 false（默认）时不接收本实例自己发出的消息。
+     * @throws IllegalArgumentException [type] 缺少 [MessageType] 或其线上名已被另一个类占用（立即抛出，不等到 collect）
      */
     fun <M : Any> subscribe(type: Class<M>, includeSelf: Boolean = false): Flow<Envelope<M>>
 
