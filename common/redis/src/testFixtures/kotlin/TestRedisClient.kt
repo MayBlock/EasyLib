@@ -102,10 +102,10 @@ class TestRedisClient internal constructor(
         override fun getTopic(name: String, codec: Codec): RTopic =
             InstrumentedTopic(real.getTopic(name, codec), name, hooks)
 
-        override fun <V : Any?> getBucket(name: String): RBucket<V> =
+        override fun <V> getBucket(name: String): RBucket<V> =
             InstrumentedBucket(real.getBucket(name), name, hooks)
 
-        override fun <V : Any?> getBucket(name: String, codec: Codec): RBucket<V> =
+        override fun <V> getBucket(name: String, codec: Codec): RBucket<V> =
             InstrumentedBucket(real.getBucket(name, codec), name, hooks)
     }
 

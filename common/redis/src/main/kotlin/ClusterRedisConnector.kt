@@ -42,10 +42,8 @@ class ClusterRedisConnector(
     override val redisson: RedissonClient by lazy {
         Config().apply {
             useClusterServers().apply {
-                apply {
-                    this.clientName = this@ClusterRedisConnector.clientName
-                    this.nodeAddresses = this@ClusterRedisConnector.addresses
-                }
+                this.clientName = this@ClusterRedisConnector.clientName
+                this.nodeAddresses = this@ClusterRedisConnector.addresses
             }
             this.username = this@ClusterRedisConnector.username
             this.password = this@ClusterRedisConnector.password

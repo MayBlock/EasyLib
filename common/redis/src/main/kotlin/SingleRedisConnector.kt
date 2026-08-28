@@ -44,9 +44,9 @@ class SingleRedisConnector(
                 this.address = this@SingleRedisConnector.address
                 this.database = this@SingleRedisConnector.database
                 this.clientName = this@SingleRedisConnector.clientName
-                this.username = this@SingleRedisConnector.username
-                this.password = this@SingleRedisConnector.password
             }
+            this.username = this@SingleRedisConnector.username
+            this.password = this@SingleRedisConnector.password
         }.let(Redisson::create)
     }
 }

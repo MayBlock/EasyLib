@@ -12,7 +12,7 @@ import kotlin.test.assertTrue
 class RedisClientTest {
 
     @Test
-    fun `destroy 幂等，之后 isDestroyed 为 true 且 execute 被拒绝`() = runBlocking {
+    fun `destroy 幂等，之后 isDestroyed 为 true 且 execute 被拒绝`(): Unit = runBlocking {
         val client = RedisTestSupport.newClient()
         assertFalse(client.isDestroyed)
         client.execute { }
