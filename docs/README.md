@@ -19,7 +19,9 @@ EasyLib 是一个面向 Bukkit/Spigot/Paper（Minecraft **26.1.2+**）的 Kotlin
 | [玩家背包覆盖层](overlay.md) | `PlayerOverlay`：在玩家背包上叠加虚拟物品并捕获交互 |
 | [Prompt 与自定义物品](prompt-and-items.md) | 告示牌文本输入；带持久身份的 `CustomItem` 及其交互回调 |
 | [Arena 游戏框架](arena.md) | Arena 生命周期、事件桥接、Feature / Service 与内置组件 |
-| [Redis：缓存与消息](redis.md) | `RedisClient` / `RedisScope` DSL、`DistributedCache`、`MessageBus` |
+| [Redis 连接](redis.md) | `SingleRedisConnector` / `ClusterRedisConnector`、`RedisClient` 与 `RedisScope` |
+| [分布式缓存](distributed-cache.md) | `DistributedCache` / `RedisDistributedCache` 的装配、使用与生命周期 |
+| [跨服消息总线](message-bus.md) | `MessageBus` / `RedisMessageBus` 的消息协议、订阅、投递与关闭 |
 
 ## 模块一览
 

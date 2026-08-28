@@ -181,6 +181,8 @@ api.taskExecutors.async.execute { heavyWork() }
 - [箱子菜单](menus.md)（分页、取出/放入把关、显示更新规则）与[玩家背包覆盖层](overlay.md)
 - [Prompt 与自定义物品](prompt-and-items.md)
 - [Arena 游戏框架](arena.md)：Feature / Service / 事件桥接
-- [Redis：缓存与消息](redis.md)
+- [Redis 连接](redis.md)
+- [分布式缓存](distributed-cache.md)
+- [跨服消息总线](message-bus.md)
 
 完整目录见 [文档索引](README.md)。

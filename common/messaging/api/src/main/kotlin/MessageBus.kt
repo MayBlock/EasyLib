@@ -8,7 +8,7 @@ import kotlinx.coroutines.flow.Flow
  *
  * 投递语义是 fire-and-forget 的**至多一次**：允许丢失、绝不重复、发送失败不重试。
  * **上游插件停用时必须调用 [destroy]**，否则长寿命的 Redis 客户端会一直持有消息类，泄漏插件 classloader。
- * 使用方式、适用场景与注意事项见 `docs/redis.md`。
+ * 使用方式、适用场景与注意事项见 `docs/message-bus.md`。
  *
  * [destroy] 之后 [publish] / [subscribe] / [joinGroup] / [leaveGroup] 一律抛 [IllegalStateException]；
  * 已经在 collect 的 Flow 不会自行结束，需要调用方取消自己的作用域。
