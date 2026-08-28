@@ -1,9 +1,9 @@
-package com.github.mayblock.easylib.base.impl.bukkit.util
+package com.github.mayblock.easylib.platform.bukkit.impl.util
 
 import com.github.mayblock.easylib.base.api.EasyLibApi
-import com.github.mayblock.easylib.base.api.bukkit.bukkitApi
 import com.github.mayblock.easylib.base.api.scheduler.TaskExecutor
 import com.github.mayblock.easylib.base.api.scheduler.TaskScheduler
+import com.github.mayblock.easylib.platform.bukkit.api.bukkitApi
 import kotlin.time.Duration
 import kotlin.time.DurationUnit
 import kotlin.time.toDuration

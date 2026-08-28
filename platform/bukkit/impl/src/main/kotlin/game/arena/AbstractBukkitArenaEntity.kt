@@ -1,6 +1,6 @@
-package com.github.mayblock.easylib.base.impl.bukkit.game.arena
+package com.github.mayblock.easylib.platform.bukkit.impl.game.arena
 
-import com.github.mayblock.easylib.api.bukkit.game.arena.BukkitArenaEntity
+import com.github.mayblock.easylib.platform.bukkit.api.game.arena.BukkitArenaEntity
 import org.bukkit.entity.Entity
 import java.util.*
 

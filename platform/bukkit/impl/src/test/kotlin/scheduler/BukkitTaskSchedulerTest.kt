@@ -1,16 +1,11 @@
-package com.github.mayblock.easylib.base.impl.bukkit.scheduler
+package com.github.mayblock.easylib.platform.bukkit.impl.scheduler
 
 import com.github.mayblock.easylib.base.api.scheduler.TaskExecutor
 import com.github.mayblock.easylib.base.api.scheduler.TaskScheduler.Trigger
 import com.github.mayblock.easylib.base.api.scheduler.scheduleTask
 import org.mockbukkit.mockbukkit.MockBukkit
 import org.mockbukkit.mockbukkit.ServerMock
-import kotlin.test.AfterTest
-import kotlin.test.BeforeTest
-import kotlin.test.Test
-import kotlin.test.assertEquals
-import kotlin.test.assertFalse
-import kotlin.test.assertTrue
+import kotlin.test.*
 import kotlin.time.Duration.Companion.milliseconds
 
 /**

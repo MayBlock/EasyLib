@@ -1,4 +1,4 @@
-package com.github.mayblock.easylib.base.impl.bukkit.menu.type.chest
+package com.github.mayblock.easylib.platform.bukkit.impl.menu.type.chest
 
 import org.bukkit.event.inventory.InventoryAction
 import org.bukkit.event.inventory.InventoryAction.*

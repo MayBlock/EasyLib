@@ -1,8 +1,8 @@
-package com.github.mayblock.easylib.api.bukkit.menu
+package com.github.mayblock.easylib.platform.bukkit.api.menu
 
-import com.github.mayblock.easylib.api.bukkit.menu.type.chest.ChestMenu
-import com.github.mayblock.easylib.api.bukkit.menu.type.chest.ChestMenuType
-import com.github.mayblock.easylib.api.bukkit.menu.type.chest.dsl.PageableChestMenuScope
+import com.github.mayblock.easylib.platform.bukkit.api.menu.type.chest.ChestMenu
+import com.github.mayblock.easylib.platform.bukkit.api.menu.type.chest.ChestMenuType
+import com.github.mayblock.easylib.platform.bukkit.api.menu.type.chest.dsl.PageableChestMenuScope
 
 interface MenuFactory {
 

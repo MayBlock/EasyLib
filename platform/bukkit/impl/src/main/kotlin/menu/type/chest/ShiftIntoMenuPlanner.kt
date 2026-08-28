@@ -1,6 +1,6 @@
-package com.github.mayblock.easylib.base.impl.bukkit.menu.type.chest
+package com.github.mayblock.easylib.platform.bukkit.impl.menu.type.chest
 
-import com.github.mayblock.easylib.base.impl.bukkit.util.isEmptyStack
+import com.github.mayblock.easylib.platform.bukkit.impl.util.isEmptyStack
 import org.bukkit.inventory.ItemStack
 
 /** 一次 shift-入菜单向某候选槽放入的量。 */

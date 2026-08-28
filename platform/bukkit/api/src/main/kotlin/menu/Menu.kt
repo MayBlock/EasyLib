@@ -1,9 +1,8 @@
-package com.github.mayblock.easylib.api.bukkit.menu
+package com.github.mayblock.easylib.platform.bukkit.api.menu
 
 import com.github.mayblock.easylib.base.api.event.EventSource
 import com.github.mayblock.easylib.base.api.util.Destroyable
 import org.bukkit.entity.Player
-import org.bukkit.inventory.ItemStack
 
 /**
  * 菜单对外只暴露「订阅侧」事件源（[EventSource]）——可监听 [MenuEvent]（开/关、槽点击等），

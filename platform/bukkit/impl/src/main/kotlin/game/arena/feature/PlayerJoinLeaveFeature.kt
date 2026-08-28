@@ -1,10 +1,10 @@
-package com.github.mayblock.easylib.base.impl.bukkit.game.arena.feature
+package com.github.mayblock.easylib.platform.bukkit.impl.game.arena.feature
 
-import com.github.mayblock.easylib.api.bukkit.game.arena.BukkitArena
-import com.github.mayblock.easylib.api.bukkit.game.arena.BukkitArenaEntity
-import com.github.mayblock.easylib.api.bukkit.game.arena.BukkitArenaPlayer
 import com.github.mayblock.easylib.base.api.feature.Feature
 import com.github.mayblock.easylib.base.api.feature.FeatureKey
+import com.github.mayblock.easylib.platform.bukkit.api.game.arena.BukkitArena
+import com.github.mayblock.easylib.platform.bukkit.api.game.arena.BukkitArenaEntity
+import com.github.mayblock.easylib.platform.bukkit.api.game.arena.BukkitArenaPlayer
 import org.bukkit.Bukkit
 import org.bukkit.World
 import org.bukkit.entity.Player

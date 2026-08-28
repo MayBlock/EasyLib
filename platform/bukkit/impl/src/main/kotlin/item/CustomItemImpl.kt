@@ -1,12 +1,11 @@
-package com.github.mayblock.easylib.base.impl.bukkit.item
+package com.github.mayblock.easylib.platform.bukkit.impl.item
 
-import com.github.mayblock.easylib.api.bukkit.item.CustomItem
-import com.github.mayblock.easylib.base.impl.bukkit.util.stack
+import com.github.mayblock.easylib.platform.bukkit.api.item.CustomItem
+import com.github.mayblock.easylib.platform.bukkit.impl.util.stack
 import org.bukkit.Material
 import org.bukkit.NamespacedKey
 import org.bukkit.entity.Player
 import org.bukkit.inventory.ItemStack
-import org.bukkit.persistence.PersistentDataType
 
 internal class CustomItemImpl(
     override val key: NamespacedKey,

@@ -1,16 +1,16 @@
-package com.github.mayblock.easylib.base.impl.bukkit.game.arena.feature
+package com.github.mayblock.easylib.platform.bukkit.impl.game.arena.feature
 
-import com.github.mayblock.easylib.api.bukkit.game.arena.BukkitArena
 import com.github.mayblock.easylib.base.api.event.on
 import com.github.mayblock.easylib.base.api.feature.Feature
 import com.github.mayblock.easylib.base.api.feature.FeatureKey
 import com.github.mayblock.easylib.base.api.game.arena.event.ArenaLeaveEvent
 import com.github.mayblock.easylib.base.api.service.require
 import com.github.mayblock.easylib.base.api.util.Disposable
-import com.github.mayblock.easylib.base.impl.bukkit.BukkitEasyLib.Companion.api
-import com.github.mayblock.easylib.base.impl.bukkit.game.arena.bridge.BridgeEvent
-import com.github.mayblock.easylib.base.impl.bukkit.game.arena.service.SpectatorService
-import com.github.mayblock.easylib.base.impl.bukkit.util.sendTitle
+import com.github.mayblock.easylib.platform.bukkit.api.game.arena.BukkitArena
+import com.github.mayblock.easylib.platform.bukkit.impl.BukkitEasyLib.Companion.api
+import com.github.mayblock.easylib.platform.bukkit.impl.game.arena.bridge.BridgeEvent
+import com.github.mayblock.easylib.platform.bukkit.impl.game.arena.service.SpectatorService
+import com.github.mayblock.easylib.platform.bukkit.impl.util.sendTitle
 import com.github.retrooper.packetevents.event.PacketListener
 import com.github.retrooper.packetevents.event.PacketReceiveEvent
 import com.github.retrooper.packetevents.protocol.packettype.PacketType

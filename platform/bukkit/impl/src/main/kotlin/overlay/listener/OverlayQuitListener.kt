@@ -1,6 +1,6 @@
-package com.github.mayblock.easylib.base.impl.bukkit.overlay.listener
+package com.github.mayblock.easylib.platform.bukkit.impl.overlay.listener
 
-import com.github.mayblock.easylib.base.impl.bukkit.overlay.PlayerOverlayImpl
+import com.github.mayblock.easylib.platform.bukkit.impl.overlay.PlayerOverlayImpl
 import org.bukkit.entity.Player
 import org.bukkit.event.EventHandler
 import org.bukkit.event.Listener
@@ -8,10 +8,10 @@ import org.bukkit.event.inventory.InventoryOpenEvent
 import org.bukkit.event.player.PlayerQuitEvent
 
 /**
- * 进程内唯一的覆盖层断线清理监听器（由 [com.github.mayblock.easylib.base.impl.bukkit.overlay.OverlayManager] 注册/注销，单一共享，
+ * 进程内唯一的覆盖层断线清理监听器（由 [com.github.mayblock.easylib.platform.bukkit.impl.overlay.OverlayManager] 注册/注销，单一共享，
  * 与菜单侧 `MenuInteractionListener` 同模式）：把断线玩家从所有活动覆盖层移除，
  * 防止 viewers 集合泄漏，并保证断线时也派发
- * [com.github.mayblock.easylib.api.bukkit.overlay.OverlayHideEvent]。
+ * [com.github.mayblock.easylib.platform.bukkit.api.overlay.OverlayHideEvent]。
  *
  * 同时兜底处理「打开其他容器绕过覆盖层」：玩家一旦打开任意容器界面（`InventoryOpenEvent`，
  * 玩家自己背包视图不会触发该事件，不会误伤），就把其从所有活动覆盖层移除，避免透过容器界面

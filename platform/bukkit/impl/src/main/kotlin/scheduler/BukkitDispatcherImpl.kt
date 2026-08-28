@@ -1,15 +1,11 @@
-package com.github.mayblock.easylib.base.impl.bukkit.scheduler
+package com.github.mayblock.easylib.platform.bukkit.impl.scheduler
 
-import com.github.mayblock.easylib.api.bukkit.scheduler.BukkitDispatcher
-import com.github.mayblock.easylib.base.impl.bukkit.util.toTicks
-import kotlinx.coroutines.CancellableContinuation
-import kotlinx.coroutines.CoroutineDispatcher
-import kotlinx.coroutines.Delay
-import kotlinx.coroutines.ExperimentalCoroutinesApi
-import kotlinx.coroutines.InternalCoroutinesApi
-import kotlinx.coroutines.isActive
+import com.github.mayblock.easylib.platform.bukkit.api.scheduler.BukkitDispatcher
+import com.github.mayblock.easylib.platform.bukkit.impl.util.toTicks
+import kotlinx.coroutines.*
 import org.bukkit.Bukkit
 import org.bukkit.plugin.Plugin
+import java.lang.Runnable
 import kotlin.coroutines.CoroutineContext
 import kotlin.time.Duration.Companion.milliseconds
 

@@ -1,6 +1,6 @@
-package com.github.mayblock.easylib.base.impl.bukkit.item
+package com.github.mayblock.easylib.platform.bukkit.impl.item
 
-import com.github.mayblock.easylib.api.bukkit.item.*
+import com.github.mayblock.easylib.platform.bukkit.api.item.*
 import org.bukkit.inventory.meta.ItemMeta
 
 internal data class MetaRule(val type: Class<out ItemMeta>, val block: ItemMeta.() -> Unit)

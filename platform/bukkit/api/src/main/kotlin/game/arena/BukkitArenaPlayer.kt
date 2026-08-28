@@ -1,4 +1,4 @@
-package com.github.mayblock.easylib.api.bukkit.game.arena
+package com.github.mayblock.easylib.platform.bukkit.api.game.arena
 
 import com.github.mayblock.easylib.base.api.game.arena.ArenaPlayer
 import org.bukkit.Location

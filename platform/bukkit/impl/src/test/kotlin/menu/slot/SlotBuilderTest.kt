@@ -1,12 +1,12 @@
-package com.github.mayblock.easylib.base.impl.bukkit.menu.slot
+package com.github.mayblock.easylib.platform.bukkit.impl.menu.slot
 
-import com.github.mayblock.easylib.api.bukkit.menu.Menu
-import com.github.mayblock.easylib.api.bukkit.menu.slot.dsl.item
-import com.github.mayblock.easylib.api.bukkit.menu.slot.event.InventoryClickEvent
-import com.github.mayblock.easylib.api.bukkit.menu.slot.event.SlotPlaceEvent
-import com.github.mayblock.easylib.api.bukkit.menu.slot.event.SlotTakeEvent
-import com.github.mayblock.easylib.base.impl.bukkit.menu.slot.builder.SlotBuilder
-import com.github.mayblock.easylib.base.impl.bukkit.util.stack
+import com.github.mayblock.easylib.platform.bukkit.api.menu.Menu
+import com.github.mayblock.easylib.platform.bukkit.api.menu.slot.dsl.item
+import com.github.mayblock.easylib.platform.bukkit.api.menu.slot.event.InventoryClickEvent
+import com.github.mayblock.easylib.platform.bukkit.api.menu.slot.event.SlotPlaceEvent
+import com.github.mayblock.easylib.platform.bukkit.api.menu.slot.event.SlotTakeEvent
+import com.github.mayblock.easylib.platform.bukkit.impl.menu.slot.builder.SlotBuilder
+import com.github.mayblock.easylib.platform.bukkit.impl.util.stack
 import io.mockk.mockk
 import org.bukkit.Material
 import org.bukkit.entity.Player

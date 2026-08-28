@@ -1,6 +1,6 @@
-package com.github.mayblock.easylib.base.impl.bukkit.extension
+package com.github.mayblock.easylib.platform.bukkit.impl.extension
 
-import com.github.mayblock.easylib.base.impl.bukkit.util.stack
+import com.github.mayblock.easylib.platform.bukkit.impl.util.stack
 import de.tr7zw.nbtapi.NBT
 import org.bukkit.Bukkit
 import org.bukkit.Location

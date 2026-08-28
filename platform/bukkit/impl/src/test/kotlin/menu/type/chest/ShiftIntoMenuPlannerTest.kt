@@ -1,6 +1,6 @@
-package com.github.mayblock.easylib.base.impl.bukkit.menu.type.chest
+package com.github.mayblock.easylib.platform.bukkit.impl.menu.type.chest
 
-import com.github.mayblock.easylib.base.impl.bukkit.util.stack
+import com.github.mayblock.easylib.platform.bukkit.impl.util.stack
 import org.bukkit.Material
 import org.mockbukkit.mockbukkit.MockBukkit
 import kotlin.test.AfterTest

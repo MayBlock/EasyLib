@@ -1,8 +1,8 @@
-package com.github.mayblock.easylib.base.impl.bukkit.overlay.slot
+package com.github.mayblock.easylib.platform.bukkit.impl.overlay.slot
 
 import com.github.retrooper.packetevents.protocol.item.ItemStack
 
-/** 覆盖层槽集合：从不可变 [com.github.mayblock.easylib.base.impl.bukkit.overlay.slot.OverlaySlotSpec] 映射出运行态 [LiveSlot]。 */
+/** 覆盖层槽集合：从不可变 [com.github.mayblock.easylib.platform.bukkit.impl.overlay.slot.OverlaySlotSpec] 映射出运行态 [LiveSlot]。 */
 internal class SlotMap(specs: Map<Int, OverlaySlotSpec>)
     : Map<Int, LiveSlot> by (specs.mapValues { LiveSlot(it.value) }) {
 

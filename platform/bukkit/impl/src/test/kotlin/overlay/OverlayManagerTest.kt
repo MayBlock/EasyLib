@@ -1,11 +1,14 @@
-package com.github.mayblock.easylib.base.impl.bukkit.overlay
+package com.github.mayblock.easylib.platform.bukkit.impl.overlay
 
 import com.github.mayblock.easylib.base.api.scheduler.TaskScheduler
-import com.github.mayblock.easylib.base.impl.bukkit.overlay.listener.OverlayQuitListener
+import com.github.mayblock.easylib.platform.bukkit.impl.overlay.listener.OverlayQuitListener
 import io.mockk.mockk
 import org.bukkit.event.player.PlayerQuitEvent
 import org.mockbukkit.mockbukkit.MockBukkit
-import kotlin.test.*
+import kotlin.test.AfterTest
+import kotlin.test.BeforeTest
+import kotlin.test.Test
+import kotlin.test.assertTrue
 
 class OverlayManagerTest {
 

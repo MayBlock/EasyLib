@@ -1,7 +1,7 @@
-package com.github.mayblock.easylib.base.impl.bukkit.overlay.slot
+package com.github.mayblock.easylib.platform.bukkit.impl.overlay.slot
 
 import com.github.benmanes.caffeine.cache.Caffeine
-import com.github.mayblock.easylib.base.impl.bukkit.util.fromBukkit
+import com.github.mayblock.easylib.platform.bukkit.impl.util.fromBukkit
 import com.github.retrooper.packetevents.protocol.item.ItemStack
 
 internal class LiveSlot(private val spec: OverlaySlotSpec) {

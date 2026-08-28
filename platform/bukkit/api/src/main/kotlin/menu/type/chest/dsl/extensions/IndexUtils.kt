@@ -1,4 +1,4 @@
-package com.github.mayblock.easylib.api.bukkit.menu.type.chest.dsl.extensions
+package com.github.mayblock.easylib.platform.bukkit.api.menu.type.chest.dsl.extensions
 
 /**
  * 矩形区域 [rows] × [columns] 对应的槽位下标，按行拆成若干段连续区间。

@@ -1,8 +1,8 @@
-package com.github.mayblock.easylib.base.impl.bukkit.util
+package com.github.mayblock.easylib.platform.bukkit.impl.util
 
 import org.bukkit.Material
 import org.mockbukkit.mockbukkit.MockBukkit
-import java.util.UUID
+import java.util.*
 import kotlin.test.*
 
 class SlotDisplayMapTest {

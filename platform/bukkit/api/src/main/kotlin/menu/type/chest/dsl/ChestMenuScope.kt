@@ -1,12 +1,12 @@
-package com.github.mayblock.easylib.api.bukkit.menu.type.chest.dsl
+package com.github.mayblock.easylib.platform.bukkit.api.menu.type.chest.dsl
 
-import com.github.mayblock.easylib.api.bukkit.menu.slot.dsl.SlotScope
-import com.github.mayblock.easylib.api.bukkit.menu.slot.dsl.item
-import com.github.mayblock.easylib.api.bukkit.menu.slot.event.InventoryClickEvent
-import com.github.mayblock.easylib.api.bukkit.menu.slot.event.SlotPlaceEvent
-import com.github.mayblock.easylib.api.bukkit.menu.slot.event.SlotTakeEvent
-import com.github.mayblock.easylib.api.bukkit.menu.type.chest.ChestMenuType
-import com.github.mayblock.easylib.api.bukkit.menu.type.chest.dsl.extensions.indexOf
+import com.github.mayblock.easylib.platform.bukkit.api.menu.slot.dsl.SlotScope
+import com.github.mayblock.easylib.platform.bukkit.api.menu.slot.dsl.item
+import com.github.mayblock.easylib.platform.bukkit.api.menu.slot.event.InventoryClickEvent
+import com.github.mayblock.easylib.platform.bukkit.api.menu.slot.event.SlotPlaceEvent
+import com.github.mayblock.easylib.platform.bukkit.api.menu.slot.event.SlotTakeEvent
+import com.github.mayblock.easylib.platform.bukkit.api.menu.type.chest.ChestMenuType
+import com.github.mayblock.easylib.platform.bukkit.api.menu.type.chest.dsl.extensions.indexOf
 import net.kyori.adventure.text.Component
 import org.bukkit.ChatColor
 import org.bukkit.Material

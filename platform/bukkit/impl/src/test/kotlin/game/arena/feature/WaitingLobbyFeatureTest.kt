@@ -1,16 +1,16 @@
-package com.github.mayblock.easylib.base.impl.bukkit.game.arena.feature
+package com.github.mayblock.easylib.platform.bukkit.impl.game.arena.feature
 
 import com.github.mayblock.easylib.base.api.EasyLibApi
-import com.github.mayblock.easylib.api.bukkit.game.arena.BukkitArena
-import com.github.mayblock.easylib.api.bukkit.game.arena.BukkitArenaEntity
-import com.github.mayblock.easylib.api.bukkit.game.arena.BukkitArenaPlayer
 import com.github.mayblock.easylib.base.api.scheduler.TaskScheduler
-import com.github.mayblock.easylib.base.impl.bukkit.BukkitEasyLib
-import com.github.mayblock.easylib.base.impl.bukkit.game.arena.AbstractBukkitArena
-import com.github.mayblock.easylib.base.impl.bukkit.game.arena.AbstractBukkitArenaEntity
-import com.github.mayblock.easylib.base.impl.bukkit.game.arena.AbstractBukkitArenaPlayer
-import com.github.mayblock.easylib.base.impl.bukkit.game.arena.bridge.BridgeEvent
 import com.github.mayblock.easylib.base.impl.util.Counter
+import com.github.mayblock.easylib.platform.bukkit.api.game.arena.BukkitArena
+import com.github.mayblock.easylib.platform.bukkit.api.game.arena.BukkitArenaEntity
+import com.github.mayblock.easylib.platform.bukkit.api.game.arena.BukkitArenaPlayer
+import com.github.mayblock.easylib.platform.bukkit.impl.BukkitEasyLib
+import com.github.mayblock.easylib.platform.bukkit.impl.game.arena.AbstractBukkitArena
+import com.github.mayblock.easylib.platform.bukkit.impl.game.arena.AbstractBukkitArenaEntity
+import com.github.mayblock.easylib.platform.bukkit.impl.game.arena.AbstractBukkitArenaPlayer
+import com.github.mayblock.easylib.platform.bukkit.impl.game.arena.bridge.BridgeEvent
 import io.mockk.mockk
 import org.bukkit.GameMode
 import org.bukkit.entity.Entity
@@ -19,12 +19,7 @@ import org.bukkit.plugin.Plugin
 import org.mockbukkit.mockbukkit.MockBukkit
 import org.mockbukkit.mockbukkit.ServerMock
 import org.mockbukkit.mockbukkit.entity.PlayerMock
-import kotlin.test.AfterTest
-import kotlin.test.BeforeTest
-import kotlin.test.Test
-import kotlin.test.assertEquals
-import kotlin.test.assertFalse
-import kotlin.test.assertTrue
+import kotlin.test.*
 import kotlin.time.Duration.Companion.milliseconds
 
 /** 手动泵调度器（不关心 Trigger 周期；checker 与 counter 任务在测试中同泵推进）。 */

@@ -1,4 +1,4 @@
-package com.github.mayblock.easylib.base.impl.bukkit.util
+package com.github.mayblock.easylib.platform.bukkit.impl.util
 
 import com.github.retrooper.packetevents.protocol.item.ItemStack
 import io.github.retrooper.packetevents.util.SpigotConversionUtil

@@ -1,4 +1,4 @@
-package com.github.mayblock.easylib.api.bukkit.prompt
+package com.github.mayblock.easylib.platform.bukkit.api.prompt
 
 import org.bukkit.entity.Player
 

@@ -1,4 +1,4 @@
-package com.github.mayblock.easylib.api.bukkit.overlay
+package com.github.mayblock.easylib.platform.bukkit.api.overlay
 
 import com.github.mayblock.easylib.base.api.event.EventSource
 import com.github.mayblock.easylib.base.api.util.Destroyable

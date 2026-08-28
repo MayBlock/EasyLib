@@ -1,4 +1,4 @@
-package com.github.mayblock.easylib.base.impl.bukkit.util
+package com.github.mayblock.easylib.platform.bukkit.impl.util
 
 import org.bukkit.entity.Player
 import java.util.concurrent.ConcurrentHashMap

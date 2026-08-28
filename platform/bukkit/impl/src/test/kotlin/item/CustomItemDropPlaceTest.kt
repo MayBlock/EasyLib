@@ -1,4 +1,4 @@
-package com.github.mayblock.easylib.base.impl.bukkit.item
+package com.github.mayblock.easylib.platform.bukkit.impl.item
 
 import org.bukkit.Material
 import org.bukkit.NamespacedKey
@@ -11,12 +11,7 @@ import org.bukkit.event.player.PlayerInteractEvent
 import org.bukkit.event.player.PlayerItemConsumeEvent
 import org.bukkit.inventory.EquipmentSlot
 import org.mockbukkit.mockbukkit.MockBukkit
-import kotlin.test.AfterTest
-import kotlin.test.BeforeTest
-import kotlin.test.Test
-import kotlin.test.assertEquals
-import kotlin.test.assertFalse
-import kotlin.test.assertTrue
+import kotlin.test.*
 
 class CustomItemDropPlaceTest {
 

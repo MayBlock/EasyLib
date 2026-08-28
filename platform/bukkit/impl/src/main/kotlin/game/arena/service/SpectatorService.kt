@@ -1,13 +1,13 @@
-package com.github.mayblock.easylib.base.impl.bukkit.game.arena.service
+package com.github.mayblock.easylib.platform.bukkit.impl.game.arena.service
 
-import com.github.mayblock.easylib.api.bukkit.game.arena.BukkitArena
-import com.github.mayblock.easylib.api.bukkit.game.arena.BukkitArenaPlayer
-import com.github.mayblock.easylib.api.bukkit.overlay.dsl.PlayerOverlayScope
 import com.github.mayblock.easylib.base.api.service.Service
 import com.github.mayblock.easylib.base.api.service.ServiceKey
-import com.github.mayblock.easylib.base.impl.bukkit.BukkitEasyLib.Companion.api
-import com.github.mayblock.easylib.base.impl.bukkit.util.gameMode
-import com.github.mayblock.easylib.base.impl.bukkit.util.sendPackets
+import com.github.mayblock.easylib.platform.bukkit.api.game.arena.BukkitArena
+import com.github.mayblock.easylib.platform.bukkit.api.game.arena.BukkitArenaPlayer
+import com.github.mayblock.easylib.platform.bukkit.api.overlay.dsl.PlayerOverlayScope
+import com.github.mayblock.easylib.platform.bukkit.impl.BukkitEasyLib.Companion.api
+import com.github.mayblock.easylib.platform.bukkit.impl.util.gameMode
+import com.github.mayblock.easylib.platform.bukkit.impl.util.sendPackets
 import org.bukkit.GameMode
 import org.bukkit.entity.Player
 import java.util.*

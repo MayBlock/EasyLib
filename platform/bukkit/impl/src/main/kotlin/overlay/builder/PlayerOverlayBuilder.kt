@@ -1,9 +1,9 @@
-package com.github.mayblock.easylib.base.impl.bukkit.overlay.builder
+package com.github.mayblock.easylib.platform.bukkit.impl.overlay.builder
 
-import com.github.mayblock.easylib.api.bukkit.overlay.PlayerOverlay
-import com.github.mayblock.easylib.api.bukkit.overlay.dsl.PlayerOverlayScope
-import com.github.mayblock.easylib.api.bukkit.overlay.slot.dsl.OverlaySlotScope
-import com.github.mayblock.easylib.base.impl.bukkit.overlay.slot.OverlaySlotSpec
+import com.github.mayblock.easylib.platform.bukkit.api.overlay.PlayerOverlay
+import com.github.mayblock.easylib.platform.bukkit.api.overlay.dsl.PlayerOverlayScope
+import com.github.mayblock.easylib.platform.bukkit.api.overlay.slot.dsl.OverlaySlotScope
+import com.github.mayblock.easylib.platform.bukkit.impl.overlay.slot.OverlaySlotSpec
 
 /** 收集 [PlayerOverlayScope] 声明为 `Map<Int, OverlaySlotSpec>`，交由 [factory] 造出覆盖层。 */
 internal class PlayerOverlayBuilder(

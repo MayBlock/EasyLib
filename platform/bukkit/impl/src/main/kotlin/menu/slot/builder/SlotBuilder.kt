@@ -1,21 +1,21 @@
-package com.github.mayblock.easylib.base.impl.bukkit.menu.slot.builder
+package com.github.mayblock.easylib.platform.bukkit.impl.menu.slot.builder
 
-import com.github.mayblock.easylib.api.bukkit.menu.slot.dsl.SlotScope
-import com.github.mayblock.easylib.api.bukkit.menu.slot.dsl.SlotUpdateScope
-import com.github.mayblock.easylib.api.bukkit.menu.slot.event.SlotClickEvent
-import com.github.mayblock.easylib.api.bukkit.menu.slot.event.SlotPlaceEvent
-import com.github.mayblock.easylib.api.bukkit.menu.slot.event.SlotTakeEvent
 import com.github.mayblock.easylib.base.api.event.Event
 import com.github.mayblock.easylib.base.api.scheduler.TaskScheduler
 import com.github.mayblock.easylib.base.api.util.Priority
-import com.github.mayblock.easylib.base.impl.bukkit.menu.slot.SlotHandler
-import com.github.mayblock.easylib.base.impl.bukkit.menu.slot.SlotSpec
-import com.github.mayblock.easylib.base.impl.bukkit.menu.slot.UpdateRule
+import com.github.mayblock.easylib.platform.bukkit.api.menu.slot.dsl.SlotScope
+import com.github.mayblock.easylib.platform.bukkit.api.menu.slot.dsl.SlotUpdateScope
+import com.github.mayblock.easylib.platform.bukkit.api.menu.slot.event.SlotClickEvent
+import com.github.mayblock.easylib.platform.bukkit.api.menu.slot.event.SlotPlaceEvent
+import com.github.mayblock.easylib.platform.bukkit.api.menu.slot.event.SlotTakeEvent
+import com.github.mayblock.easylib.platform.bukkit.impl.menu.slot.SlotHandler
+import com.github.mayblock.easylib.platform.bukkit.impl.menu.slot.SlotSpec
+import com.github.mayblock.easylib.platform.bukkit.impl.menu.slot.UpdateRule
 import org.bukkit.Material
 import org.bukkit.inventory.ItemStack
 
 /**
- * 实现 api 的 [com.github.mayblock.easylib.api.bukkit.menu.slot.dsl.SlotScope]，把用户声明收集成不可变的 [com.github.mayblock.easylib.base.impl.bukkit.menu.slot.SlotSpec]。纯声明、无运行态、无总线。
+ * 实现 api 的 [com.github.mayblock.easylib.platform.bukkit.api.menu.slot.dsl.SlotScope]，把用户声明收集成不可变的 [com.github.mayblock.easylib.platform.bukkit.impl.menu.slot.SlotSpec]。纯声明、无运行态、无总线。
  *
  * 点击处理器以 [clickType] 标注事件类型——它会被注册到菜单总线并按 `type.isInstance` 过滤，
  * 因此把 `C.()->Unit` 当作 `SlotClickEvent.()->Unit` 存储是安全的。

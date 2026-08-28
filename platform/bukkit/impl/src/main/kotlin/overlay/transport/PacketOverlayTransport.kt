@@ -1,13 +1,14 @@
-package com.github.mayblock.easylib.base.impl.bukkit.overlay.transport
+package com.github.mayblock.easylib.platform.bukkit.impl.overlay.transport
 
-import com.github.mayblock.easylib.api.bukkit.overlay.slot.event.OverlaySlotActionEvent.Interact
-import com.github.mayblock.easylib.api.bukkit.overlay.PlayerOverlay
 import com.github.mayblock.easylib.base.api.util.Disposable
-import com.github.mayblock.easylib.base.impl.bukkit.BukkitEasyLib
-import com.github.mayblock.easylib.base.impl.bukkit.overlay.slot.OverlayView
-import com.github.mayblock.easylib.base.impl.bukkit.packet.extension.getBukkitClickType
-import com.github.mayblock.easylib.base.impl.bukkit.util.sendPackets
 import com.github.mayblock.easylib.packetevents.api.packet.dsl.PacketScope
+import com.github.mayblock.easylib.platform.bukkit.api.overlay.PlayerOverlay
+import com.github.mayblock.easylib.platform.bukkit.api.overlay.slot.event.OverlaySlotActionEvent.Interact
+import com.github.mayblock.easylib.platform.bukkit.impl.BukkitEasyLib
+import com.github.mayblock.easylib.platform.bukkit.impl.overlay.slot.OverlayView
+import com.github.mayblock.easylib.platform.bukkit.impl.overlay.transport.OverlayTransport.Callbacks
+import com.github.mayblock.easylib.platform.bukkit.impl.packet.extension.getBukkitClickType
+import com.github.mayblock.easylib.platform.bukkit.impl.util.sendPackets
 import com.github.retrooper.packetevents.event.PacketListener
 import com.github.retrooper.packetevents.event.PacketReceiveEvent
 import com.github.retrooper.packetevents.event.PacketSendEvent
@@ -24,7 +25,7 @@ import org.bukkit.entity.Player
 /**
  * 基于数据包的 [OverlayTransport] 实现（覆盖玩家自身窗口 windowId=0）：
  * 出站改写 WINDOW_ITEMS/SET_SLOT 用虚拟物品遮罩真实背包；入站拦截点击/挥动/使用/丢弃并回调 [Callbacks]。
- * 唯一生产实现；overlay 协调者（[com.github.mayblock.easylib.base.impl.bukkit.overlay.PlayerOverlayImpl]）不感知任何包细节。
+ * 唯一生产实现；overlay 协调者（[com.github.mayblock.easylib.platform.bukkit.impl.overlay.PlayerOverlayImpl]）不感知任何包细节。
  */
 internal class PacketOverlayTransport(
     private val view: OverlayView,

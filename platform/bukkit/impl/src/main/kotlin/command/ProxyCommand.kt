@@ -1,8 +1,8 @@
-package com.github.mayblock.easylib.base.impl.bukkit.command
+package com.github.mayblock.easylib.platform.bukkit.impl.command
 
 import com.github.ajalt.clikt.completion.CompletionCandidates
 import com.github.ajalt.clikt.core.*
-import com.github.mayblock.easylib.api.bukkit.command.BukkitCommand
+import com.github.mayblock.easylib.platform.bukkit.api.command.BukkitCommand
 import org.bukkit.Bukkit
 import org.bukkit.ChatColor
 import org.bukkit.command.Command

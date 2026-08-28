@@ -1,4 +1,4 @@
-package com.github.mayblock.easylib.base.impl.bukkit.menu.type.chest
+package com.github.mayblock.easylib.platform.bukkit.impl.menu.type.chest
 
 import kotlin.test.Test
 import kotlin.test.assertEquals

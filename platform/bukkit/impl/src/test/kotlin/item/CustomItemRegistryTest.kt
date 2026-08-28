@@ -1,6 +1,6 @@
-package com.github.mayblock.easylib.base.impl.bukkit.item
+package com.github.mayblock.easylib.platform.bukkit.impl.item
 
-import com.github.mayblock.easylib.api.bukkit.item.meta
+import com.github.mayblock.easylib.platform.bukkit.api.item.meta
 import org.bukkit.Material
 import org.bukkit.NamespacedKey
 import org.mockbukkit.mockbukkit.MockBukkit

@@ -1,7 +1,7 @@
-package com.github.mayblock.easylib.api.bukkit.menu.slot.event
+package com.github.mayblock.easylib.platform.bukkit.api.menu.slot.event
 
-import com.github.mayblock.easylib.api.bukkit.menu.Menu
 import com.github.mayblock.easylib.base.api.event.Event
+import com.github.mayblock.easylib.platform.bukkit.api.menu.Menu
 import org.bukkit.entity.Player
 import org.bukkit.inventory.ItemStack
 

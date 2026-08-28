@@ -1,12 +1,12 @@
-package com.github.mayblock.easylib.base.impl.bukkit.game.arena.bridge
+package com.github.mayblock.easylib.platform.bukkit.impl.game.arena.bridge
 
-import com.github.mayblock.easylib.api.bukkit.game.arena.BukkitArena
-import com.github.mayblock.easylib.api.bukkit.game.arena.BukkitArenaEntity
-import com.github.mayblock.easylib.api.bukkit.game.arena.BukkitArenaPlayer
 import com.github.mayblock.easylib.base.api.event.on
-import com.github.mayblock.easylib.base.impl.bukkit.game.arena.AbstractBukkitArenaEntity
-import com.github.mayblock.easylib.base.impl.bukkit.game.arena.AbstractBukkitArenaPlayer
 import com.github.mayblock.easylib.base.impl.game.arena.AbstractEventfulArena
+import com.github.mayblock.easylib.platform.bukkit.api.game.arena.BukkitArena
+import com.github.mayblock.easylib.platform.bukkit.api.game.arena.BukkitArenaEntity
+import com.github.mayblock.easylib.platform.bukkit.api.game.arena.BukkitArenaPlayer
+import com.github.mayblock.easylib.platform.bukkit.impl.game.arena.AbstractBukkitArenaEntity
+import com.github.mayblock.easylib.platform.bukkit.impl.game.arena.AbstractBukkitArenaPlayer
 import io.mockk.mockk
 import org.bukkit.entity.Entity
 import org.bukkit.entity.Item
@@ -16,11 +16,7 @@ import org.bukkit.event.player.PlayerDropItemEvent
 import org.bukkit.event.player.PlayerMoveEvent
 import org.mockbukkit.mockbukkit.MockBukkit
 import org.mockbukkit.mockbukkit.ServerMock
-import kotlin.test.AfterTest
-import kotlin.test.BeforeTest
-import kotlin.test.Test
-import kotlin.test.assertEquals
-import kotlin.test.assertTrue
+import kotlin.test.*
 
 /**
  * 覆盖 [BukkitEventBridge] 的三个已知 BUG：

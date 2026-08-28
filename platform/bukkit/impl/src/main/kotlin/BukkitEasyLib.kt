@@ -1,19 +1,21 @@
-package com.github.mayblock.easylib.base.impl.bukkit
+package com.github.mayblock.easylib.platform.bukkit.impl
 
 import com.github.mayblock.easylib.base.api.EasyLibApi
-import com.github.mayblock.easylib.base.api.bukkit.BukkitEasyLibApi
-import com.github.mayblock.easylib.base.api.bukkit.bukkitApi
-import com.github.mayblock.easylib.base.impl.bukkit.command.BukkitCommandRegistry
-import com.github.mayblock.easylib.base.impl.bukkit.item.CustomItemRegistryImpl
-import com.github.mayblock.easylib.api.bukkit.menu.MenuRegistry
-import com.github.mayblock.easylib.base.impl.bukkit.menu.MenuManager
-import com.github.mayblock.easylib.base.impl.bukkit.overlay.OverlayManager
-import com.github.mayblock.easylib.base.impl.bukkit.packet.BukkitPacketManager
-import com.github.mayblock.easylib.base.impl.bukkit.prompt.PromptApiImpl
-import com.github.mayblock.easylib.base.impl.bukkit.scheduler.BukkitDispatcherImpl
-import com.github.mayblock.easylib.base.impl.bukkit.scheduler.BukkitTaskExecutorsImpl
-import com.github.mayblock.easylib.base.impl.bukkit.scheduler.BukkitTaskScheduler
 import com.github.mayblock.easylib.packetevents.api.PacketManager
+import com.github.mayblock.easylib.platform.bukkit.api.BukkitEasyLibApi
+import com.github.mayblock.easylib.platform.bukkit.api.bukkitApi
+import com.github.mayblock.easylib.platform.bukkit.api.menu.MenuRegistry
+import com.github.mayblock.easylib.platform.bukkit.impl.command.BukkitCommandRegistry
+import com.github.mayblock.easylib.platform.bukkit.impl.item.CustomItemRegistryImpl
+import com.github.mayblock.easylib.platform.bukkit.impl.menu.MenuManager
+import com.github.mayblock.easylib.platform.bukkit.impl.overlay.OverlayManager
+import com.github.mayblock.easylib.platform.bukkit.impl.packet.BukkitPacketManager
+import com.github.mayblock.easylib.platform.bukkit.impl.prompt.PromptApiImpl
+import com.github.mayblock.easylib.platform.bukkit.impl.scheduler.BukkitDispatcherImpl
+import com.github.mayblock.easylib.platform.bukkit.impl.scheduler.BukkitTaskExecutorsImpl
+import com.github.mayblock.easylib.platform.bukkit.impl.scheduler.BukkitTaskScheduler
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.SupervisorJob
 import org.bukkit.Bukkit
 import org.bukkit.entity.Player
 import org.bukkit.plugin.Plugin
@@ -24,6 +26,7 @@ import org.bukkit.plugin.Plugin
  */
 class BukkitEasyLib(
     plugin: Plugin,
+    scope: CoroutineScope? = null,
 ) : BukkitEasyLibApi {
 
     companion object {
@@ -43,6 +46,7 @@ class BukkitEasyLib(
     override val menuRegistry: MenuRegistry get() = menuFactory
     override val overlayFactory = OverlayManager(taskScheduler, plugin)
     override val commandRegistry = BukkitCommandRegistry(plugin)
+    val scope = scope ?: CoroutineScope(SupervisorJob() + dispatcher.sync)
 
     override fun close() {
         taskScheduler.cancelAllTasks()

@@ -1,16 +1,16 @@
-package com.github.mayblock.easylib.base.impl.bukkit.menu
+package com.github.mayblock.easylib.platform.bukkit.impl.menu
 
-import com.github.mayblock.easylib.api.bukkit.menu.*
-import com.github.mayblock.easylib.api.bukkit.menu.type.chest.ChestMenu
-import com.github.mayblock.easylib.api.bukkit.menu.type.chest.ChestMenuType
-import com.github.mayblock.easylib.api.bukkit.menu.type.chest.dsl.PageableChestMenuScope
 import com.github.mayblock.easylib.base.api.event.on
 import com.github.mayblock.easylib.base.api.scheduler.TaskScheduler
 import com.github.mayblock.easylib.base.api.util.Priority
-import com.github.mayblock.easylib.base.impl.bukkit.menu.listener.MenuInteractionListener
-import com.github.mayblock.easylib.base.impl.bukkit.menu.type.chest.RealChestMenu
-import com.github.mayblock.easylib.base.impl.bukkit.menu.type.chest.builder.PageableChestMenuBuilder
 import com.github.mayblock.easylib.packetevents.api.PacketManager
+import com.github.mayblock.easylib.platform.bukkit.api.menu.*
+import com.github.mayblock.easylib.platform.bukkit.api.menu.type.chest.ChestMenu
+import com.github.mayblock.easylib.platform.bukkit.api.menu.type.chest.ChestMenuType
+import com.github.mayblock.easylib.platform.bukkit.api.menu.type.chest.dsl.PageableChestMenuScope
+import com.github.mayblock.easylib.platform.bukkit.impl.menu.listener.MenuInteractionListener
+import com.github.mayblock.easylib.platform.bukkit.impl.menu.type.chest.RealChestMenu
+import com.github.mayblock.easylib.platform.bukkit.impl.menu.type.chest.builder.PageableChestMenuBuilder
 import org.bukkit.Bukkit
 import org.bukkit.entity.Player
 import org.bukkit.event.HandlerList

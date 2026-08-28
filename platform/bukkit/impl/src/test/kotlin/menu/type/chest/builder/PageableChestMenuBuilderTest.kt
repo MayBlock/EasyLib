@@ -1,11 +1,11 @@
-package com.github.mayblock.easylib.base.impl.bukkit.menu.type.chest.builder
+package com.github.mayblock.easylib.platform.bukkit.impl.menu.type.chest.builder
 
-import com.github.mayblock.easylib.api.bukkit.menu.slot.dsl.item
-import com.github.mayblock.easylib.api.bukkit.menu.type.chest.ChestMenuType
 import com.github.mayblock.easylib.base.api.scheduler.TaskScheduler
-import com.github.mayblock.easylib.base.impl.bukkit.menu.MenuManager
-import com.github.mayblock.easylib.base.impl.bukkit.menu.type.chest.RealChestMenu
 import com.github.mayblock.easylib.packetevents.api.PacketManager
+import com.github.mayblock.easylib.platform.bukkit.api.menu.slot.dsl.item
+import com.github.mayblock.easylib.platform.bukkit.api.menu.type.chest.ChestMenuType
+import com.github.mayblock.easylib.platform.bukkit.impl.menu.MenuManager
+import com.github.mayblock.easylib.platform.bukkit.impl.menu.type.chest.RealChestMenu
 import io.mockk.mockk
 import net.kyori.adventure.text.Component
 import org.bukkit.Material

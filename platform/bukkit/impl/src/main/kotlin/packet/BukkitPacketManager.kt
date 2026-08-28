@@ -1,4 +1,4 @@
-package com.github.mayblock.easylib.base.impl.bukkit.packet
+package com.github.mayblock.easylib.platform.bukkit.impl.packet
 
 import com.github.mayblock.easylib.packetevents.impl.AbstractPacketManager
 import com.github.retrooper.packetevents.PacketEvents

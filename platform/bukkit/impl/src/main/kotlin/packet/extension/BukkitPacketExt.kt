@@ -1,4 +1,4 @@
-package com.github.mayblock.easylib.base.impl.bukkit.packet.extension
+package com.github.mayblock.easylib.platform.bukkit.impl.packet.extension
 
 import com.github.retrooper.packetevents.wrapper.play.client.WrapperPlayClientClickWindow
 import org.bukkit.event.inventory.ClickType

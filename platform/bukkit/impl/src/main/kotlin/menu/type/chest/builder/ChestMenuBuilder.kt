@@ -1,12 +1,12 @@
-package com.github.mayblock.easylib.base.impl.bukkit.menu.type.chest.builder
+package com.github.mayblock.easylib.platform.bukkit.impl.menu.type.chest.builder
 
-import com.github.mayblock.easylib.api.bukkit.menu.slot.dsl.SlotScope
-import com.github.mayblock.easylib.api.bukkit.menu.slot.event.InventoryClickEvent
-import com.github.mayblock.easylib.api.bukkit.menu.type.chest.ChestMenu
-import com.github.mayblock.easylib.api.bukkit.menu.type.chest.ChestMenuType
-import com.github.mayblock.easylib.api.bukkit.menu.type.chest.dsl.ChestMenuScope
-import com.github.mayblock.easylib.base.impl.bukkit.menu.slot.SlotSpec
-import com.github.mayblock.easylib.base.impl.bukkit.menu.slot.builder.SlotBuilder
+import com.github.mayblock.easylib.platform.bukkit.api.menu.slot.dsl.SlotScope
+import com.github.mayblock.easylib.platform.bukkit.api.menu.slot.event.InventoryClickEvent
+import com.github.mayblock.easylib.platform.bukkit.api.menu.type.chest.ChestMenu
+import com.github.mayblock.easylib.platform.bukkit.api.menu.type.chest.ChestMenuType
+import com.github.mayblock.easylib.platform.bukkit.api.menu.type.chest.dsl.ChestMenuScope
+import com.github.mayblock.easylib.platform.bukkit.impl.menu.slot.SlotSpec
+import com.github.mayblock.easylib.platform.bukkit.impl.menu.slot.builder.SlotBuilder
 import net.kyori.adventure.text.Component
 
 internal class ChestMenuBuilder(

@@ -1,16 +1,16 @@
-package com.github.mayblock.easylib.base.impl.bukkit.menu.slot
+package com.github.mayblock.easylib.platform.bukkit.impl.menu.slot
 
-import com.github.mayblock.easylib.api.bukkit.menu.slot.dsl.SlotUpdateScope
 import com.github.mayblock.easylib.base.api.scheduler.TaskScheduler
 import com.github.mayblock.easylib.base.api.scheduler.scheduleTask
-import com.github.mayblock.easylib.base.impl.bukkit.menu.BukkitMenu
-import com.github.mayblock.easylib.base.impl.bukkit.util.SlotDisplayMap
-import com.github.mayblock.easylib.base.impl.bukkit.util.scheduleSyncTask
-import com.github.mayblock.easylib.base.impl.bukkit.util.stack
+import com.github.mayblock.easylib.platform.bukkit.api.menu.slot.dsl.SlotUpdateScope
+import com.github.mayblock.easylib.platform.bukkit.impl.menu.BukkitMenu
+import com.github.mayblock.easylib.platform.bukkit.impl.util.SlotDisplayMap
+import com.github.mayblock.easylib.platform.bukkit.impl.util.scheduleSyncTask
+import com.github.mayblock.easylib.platform.bukkit.impl.util.stack
 import org.bukkit.Material
 import org.bukkit.entity.Player
 import org.bukkit.inventory.ItemStack
-import java.util.UUID
+import java.util.*
 
 /**
  * 菜单槽显示更新调度（spec §7/§8）：对每个观察者按 (viewer, slot) 计算假显示并提交

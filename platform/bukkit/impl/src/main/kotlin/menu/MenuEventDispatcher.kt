@@ -1,14 +1,14 @@
-package com.github.mayblock.easylib.base.impl.bukkit.menu
+package com.github.mayblock.easylib.platform.bukkit.impl.menu
 
-import com.github.mayblock.easylib.api.bukkit.menu.MenuEvent
 import com.github.mayblock.easylib.base.api.event.EventBus
 import com.github.mayblock.easylib.base.api.event.EventListener
 import com.github.mayblock.easylib.base.api.event.EventSource
-import com.github.mayblock.easylib.base.impl.bukkit.menu.slot.SlotSpec
 import com.github.mayblock.easylib.base.impl.event.SimpleEventBus
+import com.github.mayblock.easylib.platform.bukkit.api.menu.MenuEvent
+import com.github.mayblock.easylib.platform.bukkit.impl.menu.slot.SlotSpec
 
 /**
- * 菜单事件面（对标 [com.github.mayblock.easylib.base.impl.bukkit.overlay.OverlayEventDispatcher]）：
+ * 菜单事件面（对标 [com.github.mayblock.easylib.platform.bukkit.impl.overlay.OverlayEventDispatcher]）：
  * 总线持有、按槽过滤的 handler 接线。对外只暴露订阅侧（[EventSource]）；emit 只能通过 [publish]。
  *
  * 没有 overlay 那个 `publishOnMainThread`：menu 事件全部产生于主线程（Bukkit 事件回调本身

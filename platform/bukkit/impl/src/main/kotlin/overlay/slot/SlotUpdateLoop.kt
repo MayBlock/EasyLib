@@ -1,9 +1,9 @@
-package com.github.mayblock.easylib.base.impl.bukkit.overlay.slot
+package com.github.mayblock.easylib.platform.bukkit.impl.overlay.slot
 
-import com.github.mayblock.easylib.api.bukkit.overlay.slot.dsl.OverlayUpdateScope
 import com.github.mayblock.easylib.base.api.scheduler.TaskScheduler
-import com.github.mayblock.easylib.base.impl.bukkit.util.SlotDisplayMap
-import com.github.mayblock.easylib.base.impl.bukkit.util.scheduleSyncTask
+import com.github.mayblock.easylib.platform.bukkit.api.overlay.slot.dsl.OverlayUpdateScope
+import com.github.mayblock.easylib.platform.bukkit.impl.util.SlotDisplayMap
+import com.github.mayblock.easylib.platform.bukkit.impl.util.scheduleSyncTask
 import org.bukkit.entity.Player
 import org.bukkit.inventory.ItemStack
 
@@ -17,7 +17,7 @@ import org.bukkit.inventory.ItemStack
  *
  * **主线程执行**：调用方在块内会拿到 [Player] 句柄并读写其 Bukkit 状态，故走 [scheduleSyncTask]。
  *
- * **按需运行语义**：仅在有观察者期间运行——由持有者（[com.github.mayblock.easylib.base.impl.bukkit.overlay.PlayerOverlayImpl]）
+ * **按需运行语义**：仅在有观察者期间运行——由持有者（[com.github.mayblock.easylib.platform.bukkit.impl.overlay.PlayerOverlayImpl]）
  * 在首个观察者出现时 [start]、最后一个观察者离开时 [stop]。[TaskScheduler.Trigger.Once] 类的规则
  * 因此会在每次「从无人到有人」的激活时重新执行一次；这是按需语义的自然结果，而非 bug。
  */

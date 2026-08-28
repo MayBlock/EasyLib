@@ -1,8 +1,8 @@
-package com.github.mayblock.easylib.base.impl.bukkit.item
+package com.github.mayblock.easylib.platform.bukkit.impl.item
 
-import com.github.mayblock.easylib.api.bukkit.item.CustomItem
-import com.github.mayblock.easylib.api.bukkit.item.CustomItemRegistry
-import com.github.mayblock.easylib.api.bukkit.item.CustomItemScope
+import com.github.mayblock.easylib.platform.bukkit.api.item.CustomItem
+import com.github.mayblock.easylib.platform.bukkit.api.item.CustomItemRegistry
+import com.github.mayblock.easylib.platform.bukkit.api.item.CustomItemScope
 import org.bukkit.Bukkit
 import org.bukkit.Material
 import org.bukkit.NamespacedKey

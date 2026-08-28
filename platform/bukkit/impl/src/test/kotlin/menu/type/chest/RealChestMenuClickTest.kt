@@ -1,19 +1,19 @@
-package com.github.mayblock.easylib.base.impl.bukkit.menu.type.chest
+package com.github.mayblock.easylib.platform.bukkit.impl.menu.type.chest
 
-import com.github.mayblock.easylib.api.bukkit.menu.slot.dsl.SlotScope
-import com.github.mayblock.easylib.api.bukkit.menu.slot.dsl.item
-import com.github.mayblock.easylib.api.bukkit.menu.slot.event.SlotPlaceEvent
-import com.github.mayblock.easylib.api.bukkit.menu.slot.event.SlotTakeEvent
-import com.github.mayblock.easylib.api.bukkit.menu.type.chest.ChestMenuType
 import com.github.mayblock.easylib.base.api.event.on
 import com.github.mayblock.easylib.base.api.scheduler.TaskScheduler
 import com.github.mayblock.easylib.base.api.util.Priority
-import com.github.mayblock.easylib.base.impl.bukkit.menu.MenuManager
-import com.github.mayblock.easylib.base.impl.bukkit.menu.listener.MenuInteractionListener
-import com.github.mayblock.easylib.base.impl.bukkit.menu.slot.SlotSpec
-import com.github.mayblock.easylib.base.impl.bukkit.menu.slot.builder.SlotBuilder
-import com.github.mayblock.easylib.base.impl.bukkit.util.stack
 import com.github.mayblock.easylib.packetevents.api.PacketManager
+import com.github.mayblock.easylib.platform.bukkit.api.menu.slot.dsl.SlotScope
+import com.github.mayblock.easylib.platform.bukkit.api.menu.slot.dsl.item
+import com.github.mayblock.easylib.platform.bukkit.api.menu.slot.event.SlotPlaceEvent
+import com.github.mayblock.easylib.platform.bukkit.api.menu.slot.event.SlotTakeEvent
+import com.github.mayblock.easylib.platform.bukkit.api.menu.type.chest.ChestMenuType
+import com.github.mayblock.easylib.platform.bukkit.impl.menu.MenuManager
+import com.github.mayblock.easylib.platform.bukkit.impl.menu.listener.MenuInteractionListener
+import com.github.mayblock.easylib.platform.bukkit.impl.menu.slot.SlotSpec
+import com.github.mayblock.easylib.platform.bukkit.impl.menu.slot.builder.SlotBuilder
+import com.github.mayblock.easylib.platform.bukkit.impl.util.stack
 import io.mockk.mockk
 import net.kyori.adventure.text.Component
 import org.bukkit.Material
@@ -26,7 +26,7 @@ import org.bukkit.inventory.InventoryView
 import org.bukkit.inventory.ItemStack
 import org.mockbukkit.mockbukkit.MockBukkit
 import kotlin.test.*
-import com.github.mayblock.easylib.api.bukkit.menu.slot.event.InventoryClickEvent as ApiInventoryClickEvent
+import com.github.mayblock.easylib.platform.bukkit.api.menu.slot.event.InventoryClickEvent as ApiInventoryClickEvent
 import org.bukkit.event.inventory.InventoryClickEvent as BukkitInventoryClickEvent
 
 class RealChestMenuClickTest {

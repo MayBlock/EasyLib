@@ -1,13 +1,13 @@
-package com.github.mayblock.easylib.base.impl.bukkit.prompt
+package com.github.mayblock.easylib.platform.bukkit.impl.prompt
 
-import com.github.mayblock.easylib.api.bukkit.prompt.PromptApi
 import com.github.mayblock.easylib.base.api.scheduler.TaskExecutor
 import com.github.mayblock.easylib.base.api.util.Disposable
 import com.github.mayblock.easylib.base.api.util.Vector
-import com.github.mayblock.easylib.base.impl.bukkit.util.sendPackets
 import com.github.mayblock.easylib.packetevents.api.PacketManager
 import com.github.mayblock.easylib.packetevents.api.packet.updateSign
 import com.github.mayblock.easylib.packetevents.api.util.toVector3i
+import com.github.mayblock.easylib.platform.bukkit.api.prompt.PromptApi
+import com.github.mayblock.easylib.platform.bukkit.impl.util.sendPackets
 import com.github.retrooper.packetevents.event.PacketListener
 import com.github.retrooper.packetevents.event.PacketReceiveEvent
 import com.github.retrooper.packetevents.protocol.packettype.PacketType
@@ -128,7 +128,7 @@ class PromptApiImpl(
     }
 
     /**
-     * 由 [com.github.mayblock.easylib.base.impl.bukkit.BukkitEasyLib] 在 `close()` 时调用：
+     * 由 [com.github.mayblock.easylib.platform.bukkit.impl.BukkitEasyLib] 在 `close()` 时调用：
      * 注销 packet listener，避免 plugin 卸载/重载后残留监听器持续持有引用；
      * 尚未提交的 prompt 以 `null` 结算，使挂起版调用方不会永久挂起。
      */

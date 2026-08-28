@@ -1,13 +1,13 @@
-package com.github.mayblock.easylib.base.api.bukkit
+package com.github.mayblock.easylib.platform.bukkit.api
 
-import com.github.mayblock.easylib.api.bukkit.item.CustomItemRegistry
-import com.github.mayblock.easylib.api.bukkit.menu.MenuFactory
-import com.github.mayblock.easylib.api.bukkit.menu.MenuRegistry
-import com.github.mayblock.easylib.api.bukkit.overlay.PlayerOverlayFactory
-import com.github.mayblock.easylib.api.bukkit.prompt.PromptApi
-import com.github.mayblock.easylib.api.bukkit.scheduler.BukkitDispatcher
-import com.github.mayblock.easylib.api.bukkit.scheduler.BukkitTaskExecutors
 import com.github.mayblock.easylib.base.api.EasyLibApi
+import com.github.mayblock.easylib.platform.bukkit.api.item.CustomItemRegistry
+import com.github.mayblock.easylib.platform.bukkit.api.menu.MenuFactory
+import com.github.mayblock.easylib.platform.bukkit.api.menu.MenuRegistry
+import com.github.mayblock.easylib.platform.bukkit.api.overlay.PlayerOverlayFactory
+import com.github.mayblock.easylib.platform.bukkit.api.prompt.PromptApi
+import com.github.mayblock.easylib.platform.bukkit.api.scheduler.BukkitDispatcher
+import com.github.mayblock.easylib.platform.bukkit.api.scheduler.BukkitTaskExecutors
 import java.io.Closeable
 
 interface BukkitEasyLibApi : EasyLibApi, Closeable {

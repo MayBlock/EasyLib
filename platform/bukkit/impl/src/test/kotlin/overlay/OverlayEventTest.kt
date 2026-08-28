@@ -1,13 +1,13 @@
-package com.github.mayblock.easylib.base.impl.bukkit.overlay
+package com.github.mayblock.easylib.platform.bukkit.impl.overlay
 
-import com.github.mayblock.easylib.api.bukkit.overlay.OverlayEvent
-import com.github.mayblock.easylib.api.bukkit.overlay.OverlayShowEvent
-import com.github.mayblock.easylib.api.bukkit.overlay.PlayerOverlay
-import com.github.mayblock.easylib.api.bukkit.overlay.slot.event.OverlaySlotActionEvent
-import com.github.mayblock.easylib.api.bukkit.overlay.slot.event.OverlaySlotEvent
 import com.github.mayblock.easylib.base.api.event.EventListener
 import com.github.mayblock.easylib.base.api.util.Priority
 import com.github.mayblock.easylib.base.impl.event.SimpleEventBus
+import com.github.mayblock.easylib.platform.bukkit.api.overlay.OverlayEvent
+import com.github.mayblock.easylib.platform.bukkit.api.overlay.OverlayShowEvent
+import com.github.mayblock.easylib.platform.bukkit.api.overlay.PlayerOverlay
+import com.github.mayblock.easylib.platform.bukkit.api.overlay.slot.event.OverlaySlotActionEvent
+import com.github.mayblock.easylib.platform.bukkit.api.overlay.slot.event.OverlaySlotEvent
 import io.mockk.mockk
 import org.bukkit.entity.Player
 import org.bukkit.event.inventory.ClickType

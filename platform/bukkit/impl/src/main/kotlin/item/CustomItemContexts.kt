@@ -1,11 +1,6 @@
-package com.github.mayblock.easylib.base.impl.bukkit.item
+package com.github.mayblock.easylib.platform.bukkit.impl.item
 
-import com.github.mayblock.easylib.api.bukkit.item.CustomItem
-import com.github.mayblock.easylib.api.bukkit.item.CustomItemClick
-import com.github.mayblock.easylib.api.bukkit.item.CustomItemConsume
-import com.github.mayblock.easylib.api.bukkit.item.CustomItemContext
-import com.github.mayblock.easylib.api.bukkit.item.CustomItemDrop
-import com.github.mayblock.easylib.api.bukkit.item.CustomItemInteraction
+import com.github.mayblock.easylib.platform.bukkit.api.item.*
 import org.bukkit.GameMode
 import org.bukkit.entity.Player
 import org.bukkit.event.Cancellable

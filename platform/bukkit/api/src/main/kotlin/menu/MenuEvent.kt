@@ -1,4 +1,4 @@
-package com.github.mayblock.easylib.api.bukkit.menu
+package com.github.mayblock.easylib.platform.bukkit.api.menu
 
 import com.github.mayblock.easylib.base.api.event.Event
 import org.bukkit.entity.Player

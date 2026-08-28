@@ -1,10 +1,10 @@
-package com.github.mayblock.easylib.base.impl.bukkit.menu.type.chest
+package com.github.mayblock.easylib.platform.bukkit.impl.menu.type.chest
 
-import com.github.mayblock.easylib.api.bukkit.menu.type.chest.ChestMenuType
 import com.github.mayblock.easylib.base.api.util.Disposable
-import com.github.mayblock.easylib.base.impl.bukkit.util.isEmptyStack
-import com.github.mayblock.easylib.base.impl.bukkit.util.stack
 import com.github.mayblock.easylib.packetevents.api.PacketManager
+import com.github.mayblock.easylib.platform.bukkit.api.menu.type.chest.ChestMenuType
+import com.github.mayblock.easylib.platform.bukkit.impl.util.isEmptyStack
+import com.github.mayblock.easylib.platform.bukkit.impl.util.stack
 import com.github.retrooper.packetevents.event.PacketListener
 import com.github.retrooper.packetevents.event.PacketSendEvent
 import com.github.retrooper.packetevents.protocol.packettype.PacketType
@@ -21,11 +21,11 @@ import org.bukkit.inventory.ItemStack
 
 /**
  * 真实容器版箱子菜单的容器视图：chest 与客户端的全部交互（真实容器持有、物品读写、hide
- * 遮罩发包）收敛于此，对标 [com.github.mayblock.easylib.base.impl.bukkit.overlay.transport.OverlayTransport] 的职责位。
+ * 遮罩发包）收敛于此，对标 [com.github.mayblock.easylib.platform.bukkit.impl.overlay.transport.OverlayTransport] 的职责位。
  *
  * 刻意是具体类而非接口——与 overlay 侧不同的取舍：MockBukkit 已能直接测真实容器，
  * [PacketManager] 也已可注入 mock，测试接缝已经存在，无需再引入接口这一层抽象；
- * 未来铁砧等新 UI 类型的扩展点在 [com.github.mayblock.easylib.base.impl.bukkit.menu.BukkitMenu] 接口
+ * 未来铁砧等新 UI 类型的扩展点在 [com.github.mayblock.easylib.platform.bukkit.impl.menu.BukkitMenu] 接口
  * （新协调者 + 新视图类），不在本类的抽象层级上。
  */
 internal class RealChestView(

@@ -1,6 +1,6 @@
-package com.github.mayblock.easylib.api.bukkit.menu.type.chest
+package com.github.mayblock.easylib.platform.bukkit.api.menu.type.chest
 
-import com.github.mayblock.easylib.api.bukkit.menu.Menu
+import com.github.mayblock.easylib.platform.bukkit.api.menu.Menu
 import net.kyori.adventure.text.Component
 import org.bukkit.inventory.ItemStack
 

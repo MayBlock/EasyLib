@@ -1,22 +1,22 @@
-package com.github.mayblock.easylib.base.impl.bukkit.overlay
+package com.github.mayblock.easylib.platform.bukkit.impl.overlay
 
 import com.github.mayblock.easylib.base.api.EasyLibApi
-import com.github.mayblock.easylib.base.api.bukkit.BukkitEasyLibApi
-import com.github.mayblock.easylib.api.bukkit.overlay.OverlayDestroyEvent
-import com.github.mayblock.easylib.api.bukkit.overlay.OverlayHideEvent
-import com.github.mayblock.easylib.api.bukkit.overlay.slot.dsl.onAction
-import com.github.mayblock.easylib.api.bukkit.overlay.slot.event.OverlaySlotActionEvent
-import com.github.mayblock.easylib.api.bukkit.scheduler.BukkitTaskExecutors
 import com.github.mayblock.easylib.base.api.event.on
 import com.github.mayblock.easylib.base.api.scheduler.TaskExecutor
 import com.github.mayblock.easylib.base.api.scheduler.TaskScheduler
 import com.github.mayblock.easylib.base.api.util.Disposable
-import com.github.mayblock.easylib.base.impl.bukkit.overlay.builder.OverlaySlotBuilder
-import com.github.mayblock.easylib.base.impl.bukkit.overlay.slot.OverlaySlotSpec
-import com.github.mayblock.easylib.base.impl.bukkit.overlay.slot.SlotMap
-import com.github.mayblock.easylib.base.impl.bukkit.overlay.transport.OverlayTransport
-import com.github.mayblock.easylib.base.impl.bukkit.util.SlotDisplayMap
-import com.github.mayblock.easylib.base.impl.bukkit.util.stack
+import com.github.mayblock.easylib.platform.bukkit.api.BukkitEasyLibApi
+import com.github.mayblock.easylib.platform.bukkit.api.overlay.OverlayDestroyEvent
+import com.github.mayblock.easylib.platform.bukkit.api.overlay.OverlayHideEvent
+import com.github.mayblock.easylib.platform.bukkit.api.overlay.slot.dsl.onAction
+import com.github.mayblock.easylib.platform.bukkit.api.overlay.slot.event.OverlaySlotActionEvent
+import com.github.mayblock.easylib.platform.bukkit.api.scheduler.BukkitTaskExecutors
+import com.github.mayblock.easylib.platform.bukkit.impl.overlay.builder.OverlaySlotBuilder
+import com.github.mayblock.easylib.platform.bukkit.impl.overlay.slot.OverlaySlotSpec
+import com.github.mayblock.easylib.platform.bukkit.impl.overlay.slot.SlotMap
+import com.github.mayblock.easylib.platform.bukkit.impl.overlay.transport.OverlayTransport
+import com.github.mayblock.easylib.platform.bukkit.impl.util.SlotDisplayMap
+import com.github.mayblock.easylib.platform.bukkit.impl.util.stack
 import io.mockk.every
 import io.mockk.mockk
 import org.bukkit.Material
@@ -29,7 +29,7 @@ import kotlin.test.*
 import kotlin.time.Duration.Companion.seconds
 
 /**
- * 记录调用、暴露 attach 时收到的 [com.github.mayblock.easylib.base.impl.bukkit.overlay.transport.OverlayTransport.Callbacks] 的假通道，
+ * 记录调用、暴露 attach 时收到的 [com.github.mayblock.easylib.platform.bukkit.impl.overlay.transport.OverlayTransport.Callbacks] 的假通道，
  * 替代旧继承切分测试里的假子类。
  */
 private class FakeTransport(

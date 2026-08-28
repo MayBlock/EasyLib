@@ -1,4 +1,4 @@
-package com.github.mayblock.easylib.api.bukkit.item
+package com.github.mayblock.easylib.platform.bukkit.api.item
 
 import org.bukkit.Material
 import org.bukkit.NamespacedKey

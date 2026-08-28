@@ -1,6 +1,6 @@
-package com.github.mayblock.easylib.api.bukkit.overlay.dsl
+package com.github.mayblock.easylib.platform.bukkit.api.overlay.dsl
 
-import com.github.mayblock.easylib.api.bukkit.overlay.slot.dsl.OverlaySlotScope
+import com.github.mayblock.easylib.platform.bukkit.api.overlay.slot.dsl.OverlaySlotScope
 
 @DslMarker
 internal annotation class PlayerOverlayDsl

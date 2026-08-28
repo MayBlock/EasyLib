@@ -1,7 +1,7 @@
-package com.github.mayblock.easylib.base.impl.bukkit.scheduler
+package com.github.mayblock.easylib.platform.bukkit.impl.scheduler
 
-import com.github.mayblock.easylib.api.bukkit.scheduler.BukkitTaskExecutors
 import com.github.mayblock.easylib.base.api.scheduler.TaskExecutor
+import com.github.mayblock.easylib.platform.bukkit.api.scheduler.BukkitTaskExecutors
 import org.bukkit.Bukkit
 import org.bukkit.plugin.Plugin
 

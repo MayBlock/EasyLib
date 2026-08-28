@@ -1,12 +1,12 @@
-package com.github.mayblock.easylib.base.impl.bukkit.menu.type.chest
+package com.github.mayblock.easylib.platform.bukkit.impl.menu.type.chest
 
-import com.github.mayblock.easylib.api.bukkit.menu.slot.dsl.item
-import com.github.mayblock.easylib.api.bukkit.menu.slot.event.InventoryClickEvent
-import com.github.mayblock.easylib.api.bukkit.menu.type.chest.ChestMenuType
 import com.github.mayblock.easylib.base.api.scheduler.TaskScheduler
-import com.github.mayblock.easylib.base.impl.bukkit.menu.slot.SlotSpec
-import com.github.mayblock.easylib.base.impl.bukkit.menu.slot.builder.SlotBuilder
 import com.github.mayblock.easylib.packetevents.api.PacketManager
+import com.github.mayblock.easylib.platform.bukkit.api.menu.slot.dsl.item
+import com.github.mayblock.easylib.platform.bukkit.api.menu.slot.event.InventoryClickEvent
+import com.github.mayblock.easylib.platform.bukkit.api.menu.type.chest.ChestMenuType
+import com.github.mayblock.easylib.platform.bukkit.impl.menu.slot.SlotSpec
+import com.github.mayblock.easylib.platform.bukkit.impl.menu.slot.builder.SlotBuilder
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.verify
@@ -15,6 +15,13 @@ import org.bukkit.Material
 import org.bukkit.entity.Player
 import org.mockbukkit.mockbukkit.MockBukkit
 import java.util.UUID
+import kotlin.collections.ArrayDeque
+import kotlin.collections.forEach
+import kotlin.collections.listOf
+import kotlin.collections.map
+import kotlin.collections.mapOf
+import kotlin.collections.plusAssign
+import kotlin.collections.toList
 import kotlin.test.*
 
 /** 手动泵：任务入队不执行，pump() 按序执行一轮（观察「同步期不执行、下一 tick 才执行」的时序）。 */

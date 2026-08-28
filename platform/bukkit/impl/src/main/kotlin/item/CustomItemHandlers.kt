@@ -1,9 +1,9 @@
-package com.github.mayblock.easylib.base.impl.bukkit.item
+package com.github.mayblock.easylib.platform.bukkit.impl.item
 
-import com.github.mayblock.easylib.api.bukkit.item.CustomItemClick
-import com.github.mayblock.easylib.api.bukkit.item.CustomItemConsume
-import com.github.mayblock.easylib.api.bukkit.item.CustomItemDrop
-import com.github.mayblock.easylib.api.bukkit.item.CustomItemInteraction
+import com.github.mayblock.easylib.platform.bukkit.api.item.CustomItemClick
+import com.github.mayblock.easylib.platform.bukkit.api.item.CustomItemConsume
+import com.github.mayblock.easylib.platform.bukkit.api.item.CustomItemDrop
+import com.github.mayblock.easylib.platform.bukkit.api.item.CustomItemInteraction
 
 /** 一个自定义物品的全部事件回调；null 表示未注册（各钩子的默认行为见 API KDoc）。 */
 internal class CustomItemHandlers(

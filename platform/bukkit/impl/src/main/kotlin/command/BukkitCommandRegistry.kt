@@ -1,9 +1,8 @@
-package com.github.mayblock.easylib.base.impl.bukkit.command
+package com.github.mayblock.easylib.platform.bukkit.impl.command
 
-import com.github.mayblock.easylib.api.bukkit.command.BukkitCommand
 import com.github.mayblock.easylib.base.api.command.Command
 import com.github.mayblock.easylib.base.api.command.CommandRegistry
-
+import com.github.mayblock.easylib.platform.bukkit.api.command.BukkitCommand
 import org.bukkit.command.SimpleCommandMap
 import org.bukkit.plugin.Plugin
 import org.slf4j.LoggerFactory

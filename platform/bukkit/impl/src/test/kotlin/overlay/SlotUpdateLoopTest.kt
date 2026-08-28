@@ -1,17 +1,17 @@
-package com.github.mayblock.easylib.base.impl.bukkit.overlay
+package com.github.mayblock.easylib.platform.bukkit.impl.overlay
 
 import com.github.mayblock.easylib.base.api.EasyLibApi
-import com.github.mayblock.easylib.base.api.bukkit.BukkitEasyLibApi
-import com.github.mayblock.easylib.api.bukkit.overlay.slot.dsl.item
-import com.github.mayblock.easylib.api.bukkit.scheduler.BukkitTaskExecutors
 import com.github.mayblock.easylib.base.api.scheduler.TaskExecutor
 import com.github.mayblock.easylib.base.api.scheduler.TaskScheduler
 import com.github.mayblock.easylib.base.api.util.Priority
-import com.github.mayblock.easylib.base.impl.bukkit.overlay.builder.OverlaySlotBuilder
-import com.github.mayblock.easylib.base.impl.bukkit.overlay.slot.SlotMap
-import com.github.mayblock.easylib.base.impl.bukkit.overlay.slot.SlotUpdateLoop
-import com.github.mayblock.easylib.base.impl.bukkit.util.SlotDisplayMap
-import com.github.mayblock.easylib.base.impl.bukkit.util.stack
+import com.github.mayblock.easylib.platform.bukkit.api.BukkitEasyLibApi
+import com.github.mayblock.easylib.platform.bukkit.api.overlay.slot.dsl.item
+import com.github.mayblock.easylib.platform.bukkit.api.scheduler.BukkitTaskExecutors
+import com.github.mayblock.easylib.platform.bukkit.impl.overlay.builder.OverlaySlotBuilder
+import com.github.mayblock.easylib.platform.bukkit.impl.overlay.slot.SlotMap
+import com.github.mayblock.easylib.platform.bukkit.impl.overlay.slot.SlotUpdateLoop
+import com.github.mayblock.easylib.platform.bukkit.impl.util.SlotDisplayMap
+import com.github.mayblock.easylib.platform.bukkit.impl.util.stack
 import io.mockk.every
 import io.mockk.mockk
 import org.bukkit.Material

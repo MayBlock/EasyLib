@@ -1,12 +1,12 @@
-package com.github.mayblock.easylib.base.impl.bukkit.overlay.slot
+package com.github.mayblock.easylib.platform.bukkit.impl.overlay.slot
 
-import com.github.mayblock.easylib.base.impl.bukkit.util.SlotDisplayMap
+import com.github.mayblock.easylib.platform.bukkit.impl.util.SlotDisplayMap
 import com.github.retrooper.packetevents.protocol.item.ItemStack
 import org.bukkit.entity.Player
 
 /**
  * 覆盖层的按接收者取物品视图：把共享基底（[SlotMap]）与 per-viewer 显示层（[SlotDisplayMap]）
- * 合成为单一只读入口，供 [com.github.mayblock.easylib.base.impl.bukkit.overlay.transport.OverlayTransport]
+ * 合成为单一只读入口，供 [com.github.mayblock.easylib.platform.bukkit.impl.overlay.transport.OverlayTransport]
  * 实现使用。
  *
  * 取物品统一公式：`display.lookup(uuid, slot) ?: map.packetItem(slot)`。

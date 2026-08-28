@@ -1,27 +1,27 @@
-package com.github.mayblock.easylib.base.impl.bukkit.menu.type.chest
+package com.github.mayblock.easylib.platform.bukkit.impl.menu.type.chest
 
-import com.github.mayblock.easylib.api.bukkit.menu.MenuCloseEvent
-import com.github.mayblock.easylib.api.bukkit.menu.MenuDestroyEvent
-import com.github.mayblock.easylib.api.bukkit.menu.MenuEvent
-import com.github.mayblock.easylib.api.bukkit.menu.MenuOpenEvent
-import com.github.mayblock.easylib.api.bukkit.menu.slot.event.InventoryClickEvent
-import com.github.mayblock.easylib.api.bukkit.menu.slot.event.SlotPlaceEvent
-import com.github.mayblock.easylib.api.bukkit.menu.slot.event.SlotTakeEvent
-import com.github.mayblock.easylib.api.bukkit.menu.type.chest.ChestMenu
-import com.github.mayblock.easylib.api.bukkit.menu.type.chest.ChestMenuType
 import com.github.mayblock.easylib.base.api.event.EventSource
 import com.github.mayblock.easylib.base.api.scheduler.TaskScheduler
 import com.github.mayblock.easylib.base.api.scheduler.scheduleTask
 import com.github.mayblock.easylib.base.api.util.Disposable
-import com.github.mayblock.easylib.base.impl.bukkit.menu.BukkitMenu
-import com.github.mayblock.easylib.base.impl.bukkit.menu.MenuEventDispatcher
-import com.github.mayblock.easylib.base.impl.bukkit.menu.slot.SlotSpec
-import com.github.mayblock.easylib.base.impl.bukkit.menu.slot.SlotUpdateLoop
-import com.github.mayblock.easylib.base.impl.bukkit.util.SlotDisplayMap
-import com.github.mayblock.easylib.base.impl.bukkit.util.ViewerRegistry
-import com.github.mayblock.easylib.base.impl.bukkit.util.isEmptyStack
-import com.github.mayblock.easylib.base.impl.bukkit.util.stack
 import com.github.mayblock.easylib.packetevents.api.PacketManager
+import com.github.mayblock.easylib.platform.bukkit.api.menu.MenuCloseEvent
+import com.github.mayblock.easylib.platform.bukkit.api.menu.MenuDestroyEvent
+import com.github.mayblock.easylib.platform.bukkit.api.menu.MenuEvent
+import com.github.mayblock.easylib.platform.bukkit.api.menu.MenuOpenEvent
+import com.github.mayblock.easylib.platform.bukkit.api.menu.slot.event.InventoryClickEvent
+import com.github.mayblock.easylib.platform.bukkit.api.menu.slot.event.SlotPlaceEvent
+import com.github.mayblock.easylib.platform.bukkit.api.menu.slot.event.SlotTakeEvent
+import com.github.mayblock.easylib.platform.bukkit.api.menu.type.chest.ChestMenu
+import com.github.mayblock.easylib.platform.bukkit.api.menu.type.chest.ChestMenuType
+import com.github.mayblock.easylib.platform.bukkit.impl.menu.BukkitMenu
+import com.github.mayblock.easylib.platform.bukkit.impl.menu.MenuEventDispatcher
+import com.github.mayblock.easylib.platform.bukkit.impl.menu.slot.SlotSpec
+import com.github.mayblock.easylib.platform.bukkit.impl.menu.slot.SlotUpdateLoop
+import com.github.mayblock.easylib.platform.bukkit.impl.util.SlotDisplayMap
+import com.github.mayblock.easylib.platform.bukkit.impl.util.ViewerRegistry
+import com.github.mayblock.easylib.platform.bukkit.impl.util.isEmptyStack
+import com.github.mayblock.easylib.platform.bukkit.impl.util.stack
 import net.kyori.adventure.text.Component
 import org.bukkit.Material
 import org.bukkit.entity.Player
@@ -29,12 +29,12 @@ import org.bukkit.inventory.Inventory
 import org.bukkit.inventory.ItemStack
 
 /**
- * 真实容器版箱子菜单的协调者（对标 [com.github.mayblock.easylib.base.impl.bukkit.overlay.PlayerOverlayImpl] 的组合切分）：
+ * 真实容器版箱子菜单的协调者（对标 [com.github.mayblock.easylib.platform.bukkit.impl.overlay.PlayerOverlayImpl] 的组合切分）：
  * 把容器视图（[RealChestView]）、观察者状态（[ViewerRegistry]）、事件面（[MenuEventDispatcher]）
  * 与更新循环（[SlotUpdateLoop]）组合起来，自身只负责编排与点击/拖拽的放行门决策。
  *
  * 自身即 [org.bukkit.inventory.InventoryHolder]；点击/拖拽/开关由
- * [com.github.mayblock.easylib.base.impl.bukkit.menu.listener.MenuInteractionListener] 按 holder 经 [BukkitMenu] 接口路由回本菜单。
+ * [com.github.mayblock.easylib.platform.bukkit.impl.menu.listener.MenuInteractionListener] 按 holder 经 [BukkitMenu] 接口路由回本菜单。
  * 菜单级事件总线仅暴露订阅侧（[EventSource]），`emit` 由 [MenuEventDispatcher] 内部持有。
  */
 internal class RealChestMenu(

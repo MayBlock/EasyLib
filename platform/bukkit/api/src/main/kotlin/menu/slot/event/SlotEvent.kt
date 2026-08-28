@@ -1,8 +1,8 @@
-package com.github.mayblock.easylib.api.bukkit.menu.slot.event
+package com.github.mayblock.easylib.platform.bukkit.api.menu.slot.event
 
-import com.github.mayblock.easylib.api.bukkit.menu.Menu
-import com.github.mayblock.easylib.api.bukkit.menu.MenuEvent
-import com.github.mayblock.easylib.api.bukkit.menu.slot.dsl.SlotDsl
+import com.github.mayblock.easylib.platform.bukkit.api.menu.Menu
+import com.github.mayblock.easylib.platform.bukkit.api.menu.MenuEvent
+import com.github.mayblock.easylib.platform.bukkit.api.menu.slot.dsl.SlotDsl
 import org.bukkit.entity.Player
 
 /**

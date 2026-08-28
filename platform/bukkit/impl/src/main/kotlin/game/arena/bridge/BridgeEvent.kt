@@ -1,9 +1,9 @@
-package com.github.mayblock.easylib.base.impl.bukkit.game.arena.bridge
+package com.github.mayblock.easylib.platform.bukkit.impl.game.arena.bridge
 
-import com.github.mayblock.easylib.api.bukkit.game.arena.BukkitArenaEntity
-import com.github.mayblock.easylib.api.bukkit.game.arena.BukkitArenaPlayer
 import com.github.mayblock.easylib.base.api.event.Event
 import com.github.mayblock.easylib.base.api.game.arena.event.ArenaEvent
+import com.github.mayblock.easylib.platform.bukkit.api.game.arena.BukkitArenaEntity
+import com.github.mayblock.easylib.platform.bukkit.api.game.arena.BukkitArenaPlayer
 import org.bukkit.Location
 import org.bukkit.Material
 import org.bukkit.World

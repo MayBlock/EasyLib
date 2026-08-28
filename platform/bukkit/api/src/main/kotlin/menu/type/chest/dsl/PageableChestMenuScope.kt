@@ -1,7 +1,7 @@
-package com.github.mayblock.easylib.api.bukkit.menu.type.chest.dsl
+package com.github.mayblock.easylib.platform.bukkit.api.menu.type.chest.dsl
 
-import com.github.mayblock.easylib.api.bukkit.menu.type.chest.ChestMenuType
-import com.github.mayblock.easylib.api.bukkit.menu.type.chest.dsl.extensions.indexOf
+import com.github.mayblock.easylib.platform.bukkit.api.menu.type.chest.ChestMenuType
+import com.github.mayblock.easylib.platform.bukkit.api.menu.type.chest.dsl.extensions.indexOf
 import net.kyori.adventure.text.Component
 import org.bukkit.Material
 import org.bukkit.inventory.ItemStack

@@ -1,11 +1,11 @@
-package com.github.mayblock.easylib.base.impl.bukkit.menu
+package com.github.mayblock.easylib.platform.bukkit.impl.menu
 
-import com.github.mayblock.easylib.api.bukkit.menu.MenuEvent
 import com.github.mayblock.easylib.base.api.event.EventSource
 import com.github.mayblock.easylib.base.api.scheduler.TaskScheduler
-import com.github.mayblock.easylib.base.impl.bukkit.menu.listener.MenuInteractionListener
 import com.github.mayblock.easylib.base.impl.event.SimpleEventBus
 import com.github.mayblock.easylib.packetevents.api.PacketManager
+import com.github.mayblock.easylib.platform.bukkit.api.menu.MenuEvent
+import com.github.mayblock.easylib.platform.bukkit.impl.menu.listener.MenuInteractionListener
 import io.mockk.mockk
 import net.kyori.adventure.text.Component
 import org.bukkit.Bukkit
@@ -21,7 +21,7 @@ import kotlin.test.*
  * 监听器 UI 无关性验收：路由只认 [BukkitMenu] 接口，归属由 [MenuManager] 查自己的名册裁定，
  * 监听器与菜单对具体 UI 类型均零感知。
  * 用一个非 chest 的第二种 [BukkitMenu] 假实现（漏斗容器）证明：新增 UI 类型
- * 只需实现 [BukkitMenu]，无需改动 [com.github.mayblock.easylib.base.impl.bukkit.menu.listener.MenuInteractionListener]。
+ * 只需实现 [BukkitMenu]，无需改动 [com.github.mayblock.easylib.platform.bukkit.impl.menu.listener.MenuInteractionListener]。
  */
 class MenuInteractionListenerTest {
 

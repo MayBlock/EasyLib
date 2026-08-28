@@ -1,4 +1,4 @@
-package com.github.mayblock.easylib.api.bukkit.command
+package com.github.mayblock.easylib.platform.bukkit.api.command
 
 import com.github.ajalt.clikt.completion.CompletionCandidates
 import com.github.ajalt.clikt.core.BaseCliktCommand

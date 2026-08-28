@@ -1,10 +1,10 @@
-package com.github.mayblock.easylib.base.impl.bukkit.overlay
+package com.github.mayblock.easylib.platform.bukkit.impl.overlay
 
-import com.github.mayblock.easylib.api.bukkit.overlay.slot.dsl.item
-import com.github.mayblock.easylib.api.bukkit.overlay.slot.dsl.onAction
-import com.github.mayblock.easylib.api.bukkit.overlay.slot.event.OverlaySlotActionEvent
 import com.github.mayblock.easylib.base.api.scheduler.TaskScheduler
-import com.github.mayblock.easylib.base.impl.bukkit.overlay.builder.OverlaySlotBuilder
+import com.github.mayblock.easylib.platform.bukkit.api.overlay.slot.dsl.item
+import com.github.mayblock.easylib.platform.bukkit.api.overlay.slot.dsl.onAction
+import com.github.mayblock.easylib.platform.bukkit.api.overlay.slot.event.OverlaySlotActionEvent
+import com.github.mayblock.easylib.platform.bukkit.impl.overlay.builder.OverlaySlotBuilder
 import org.bukkit.Material
 import org.mockbukkit.mockbukkit.MockBukkit
 import kotlin.test.AfterTest

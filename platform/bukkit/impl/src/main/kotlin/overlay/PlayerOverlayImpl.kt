@@ -1,19 +1,19 @@
-package com.github.mayblock.easylib.base.impl.bukkit.overlay
+package com.github.mayblock.easylib.platform.bukkit.impl.overlay
 
-import com.github.mayblock.easylib.api.bukkit.overlay.*
-import com.github.mayblock.easylib.api.bukkit.overlay.slot.event.OverlaySlotActionEvent
 import com.github.mayblock.easylib.base.api.event.EventSource
 import com.github.mayblock.easylib.base.api.scheduler.TaskScheduler
 import com.github.mayblock.easylib.base.api.util.Disposable
-import com.github.mayblock.easylib.base.impl.bukkit.overlay.slot.OverlaySlotSpec
-import com.github.mayblock.easylib.base.impl.bukkit.overlay.slot.SlotMap
-import com.github.mayblock.easylib.base.impl.bukkit.overlay.slot.SlotUpdateLoop
-import com.github.mayblock.easylib.base.impl.bukkit.overlay.transport.OverlayTransport
-import com.github.mayblock.easylib.base.impl.bukkit.util.SlotDisplayMap
-import com.github.mayblock.easylib.base.impl.bukkit.util.ViewerRegistry
-import com.github.mayblock.easylib.base.impl.bukkit.util.isEmptyStack
-import com.github.mayblock.easylib.base.impl.bukkit.util.stack
 import com.github.mayblock.easylib.base.impl.util.extension.ifTrue
+import com.github.mayblock.easylib.platform.bukkit.api.overlay.*
+import com.github.mayblock.easylib.platform.bukkit.api.overlay.slot.event.OverlaySlotActionEvent
+import com.github.mayblock.easylib.platform.bukkit.impl.overlay.slot.OverlaySlotSpec
+import com.github.mayblock.easylib.platform.bukkit.impl.overlay.slot.SlotMap
+import com.github.mayblock.easylib.platform.bukkit.impl.overlay.slot.SlotUpdateLoop
+import com.github.mayblock.easylib.platform.bukkit.impl.overlay.transport.OverlayTransport
+import com.github.mayblock.easylib.platform.bukkit.impl.util.SlotDisplayMap
+import com.github.mayblock.easylib.platform.bukkit.impl.util.ViewerRegistry
+import com.github.mayblock.easylib.platform.bukkit.impl.util.isEmptyStack
+import com.github.mayblock.easylib.platform.bukkit.impl.util.stack
 import org.bukkit.Material
 import org.bukkit.entity.Player
 import org.bukkit.event.inventory.ClickType
@@ -21,7 +21,7 @@ import org.bukkit.inventory.ItemStack
 
 /**
  * 覆盖层协调者（组合切分，替代原「抽象基类 + 包实现子类」的继承切分）：
- * 把观察者状态（[ViewerRegistry]）、客户端通道策略（[com.github.mayblock.easylib.base.impl.bukkit.overlay.transport.OverlayTransport]）、事件面
+ * 把观察者状态（[ViewerRegistry]）、客户端通道策略（[com.github.mayblock.easylib.platform.bukkit.impl.overlay.transport.OverlayTransport]）、事件面
  * （[OverlayEventDispatcher]）与更新循环（[SlotUpdateLoop]）组合起来，自身只负责编排。
  *
  * 「移除 viewer + 还原视觉」这一组合此前在 hide/hideIfViewing/destroy 三处各写一遍，
@@ -66,7 +66,7 @@ internal class PlayerOverlayImpl(
     }
 
     /**
-     * 玩家断线时的清理（由 [com.github.mayblock.easylib.base.impl.bukkit.overlay.listener.OverlayQuitListener] 调用）：移除观察者并派发 [OverlayHideEvent]。
+     * 玩家断线时的清理（由 [com.github.mayblock.easylib.platform.bukkit.impl.overlay.listener.OverlayQuitListener] 调用）：移除观察者并派发 [OverlayHideEvent]。
      * 不调用 `transport.restore`——客户端已断开，无需也无法还原其视觉。
      */
     internal fun onPlayerQuit(player: Player) {
@@ -74,7 +74,7 @@ internal class PlayerOverlayImpl(
     }
 
     /**
-     * 玩家打开任意其他容器界面时的兜底清理（由 [com.github.mayblock.easylib.base.impl.bukkit.overlay.listener.OverlayQuitListener] 监听 `InventoryOpenEvent` 调用）：
+     * 玩家打开任意其他容器界面时的兜底清理（由 [com.github.mayblock.easylib.platform.bukkit.impl.overlay.listener.OverlayQuitListener] 监听 `InventoryOpenEvent` 调用）：
      * 若玩家仍在观察，移除观察者并还原视觉，防止容器界面绕过覆盖层看到真实背包。
      */
     internal fun hideIfViewing(player: Player) {
@@ -121,7 +121,7 @@ internal class PlayerOverlayImpl(
     }
 
     /**
-     * 顺序契约（与菜单侧 [com.github.mayblock.easylib.base.impl.bukkit.menu.type.chest.RealChestMenu.destroy] 一致）：
+     * 顺序契约（与菜单侧 [com.github.mayblock.easylib.platform.bukkit.impl.menu.type.chest.RealChestMenu.destroy] 一致）：
      * 先置 [isDestroyed]，再派发 [OverlayDestroyEvent]，最后才关总线。
      * - 置位早于派发：订阅者看到的是一致状态（此时 show/hide 会正确 check 失败）。
      * - 派发早于 close()：close() 会 unsubscribeAll，之后派发无人收听。

@@ -1,9 +1,9 @@
-package com.github.mayblock.easylib.api.bukkit.overlay.slot.dsl
+package com.github.mayblock.easylib.platform.bukkit.api.overlay.slot.dsl
 
-import com.github.mayblock.easylib.api.bukkit.overlay.dsl.PlayerOverlayDsl
-import com.github.mayblock.easylib.api.bukkit.overlay.slot.event.OverlaySlotActionEvent
 import com.github.mayblock.easylib.base.api.scheduler.TaskScheduler
 import com.github.mayblock.easylib.base.api.util.Priority
+import com.github.mayblock.easylib.platform.bukkit.api.overlay.dsl.PlayerOverlayDsl
+import com.github.mayblock.easylib.platform.bukkit.api.overlay.slot.event.OverlaySlotActionEvent
 import org.bukkit.Material
 import org.bukkit.entity.Player
 import org.bukkit.inventory.ItemStack
