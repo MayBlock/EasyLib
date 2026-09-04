@@ -230,7 +230,7 @@ class RedisMessageBusGroupTest {
     }
 
     @Test
-    fun `destroy 后 subscribe 抛 IllegalStateException`(client: TestRedisClient) = runBlocking {
+    fun `destroy 后 subscribe 抛 IllegalStateException`(client: TestRedisClient): Unit = runBlocking {
         val b = bus(client)
         b.destroy()
 
