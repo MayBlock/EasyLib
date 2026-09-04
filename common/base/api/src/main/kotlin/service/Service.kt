@@ -12,5 +12,5 @@ interface ServiceRegistry {
     fun unregisterAll()
 }
 
-fun <F : Service> ServiceRegistry.require(key: ServiceKey<F>): F =
+fun <F : Service> ServiceRegistry.require(key: ServiceKey<in F>): F =
     get(key) ?: throw IllegalStateException("Required service ${key.name} is not registered")
