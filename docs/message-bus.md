@@ -115,14 +115,18 @@ class NetworkMessages(
 在插件生命周期中启动和关闭：
 
 ```kotlin
+import com.github.mayblock.easylib.platform.bukkit.api.scheduler.BukkitExecutionContext
+
 class MyPlugin : JavaPlugin() {
+    private lateinit var easyLib: BukkitEasyLib
     private lateinit var scope: CoroutineScope
     private lateinit var messages: NetworkMessages
 
     override fun onEnable() {
-        val api = EasyLibApi.api.bukkitApi()
+        easyLib = BukkitEasyLib(this)
         // 该作用域承载消息总线的启动、订阅和发布任务。
-        scope = CoroutineScope(SupervisorJob() + api.dispatcher.async)
+        val async = easyLib.getExecutionContext(BukkitExecutionContext.Async)
+        scope = CoroutineScope(SupervisorJob() + async.dispatcher)
         messages = NetworkMessages(scope)
 
         scope.launch {
@@ -139,6 +143,7 @@ class MyPlugin : JavaPlugin() {
         // 先阻止新的协程工作，再按 NetworkMessages 的内部顺序释放资源。
         scope.cancel()
         messages.close()
+        easyLib.close()
     }
 }
 ```

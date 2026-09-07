@@ -1,13 +1,13 @@
 # 玩家背包覆盖层
 
-`PlayerOverlayFactory`（`EasyLibApi.api.bukkitApi().overlayFactory`）创建 **PlayerOverlay**：用数据包在玩家自己的背包窗口上叠加虚拟物品并捕获点击/交互，**不改动真实背包**。典型用途：大厅/等待房间的功能物品栏、小游戏 HUD 式快捷栏。
+`PlayerOverlayFactory`（例如持有实例上的 `easyLib.overlayFactory`）创建 **PlayerOverlay**：用数据包在玩家自己的背包窗口上叠加虚拟物品并捕获点击/交互，**不改动真实背包**。典型用途：大厅/等待房间的功能物品栏、小游戏 HUD 式快捷栏。
 
 与[箱子菜单](menus.md)的区别：覆盖层没有真实容器，也没有取出/放入的搬运语义——只有「展示 + 交互」。
 
 ## 基本用法
 
 ```kotlin
-val overlay = api.overlayFactory.create {
+val overlay = easyLib.overlayFactory.create {
     // 槽位下标使用玩家背包窗口的 46 格布局：
     // 0 合成结果, 1-4 合成格, 5-8 盔甲, 9-35 主背包, 36-44 热键栏, 45 副手
     slot(36) {                                   // 热键栏第 1 格
@@ -26,15 +26,35 @@ val overlay = api.overlayFactory.create {
     slot(9..35) { item(Material.GRAY_STAINED_GLASS_PANE) }            // 主背包全部盖住
 }
 
-overlay.show(player)     // 主线程；对该玩家显示
-overlay.hide(player)     // 主线程；还原真实背包渲染
+overlay.show(player)     // 对该玩家显示，支持同步和异步调用
+overlay.hide(player)     // 立即移除逻辑状态，再还原真实背包渲染
 overlay.destroy()        // 对所有玩家 hide 并拆除
 ```
 
-- 同一个覆盖层可对多名玩家 `show`；未声明的槽位显示玩家真实物品。
-- `show` / `hide` / `setItem` **必须在主线程调用**。
+- 同一个覆盖层可对多名玩家 `show`；未声明的槽位显示为空白。
+- `show` / `hide` / `setItem` / `destroy` 支持同步和异步调用；逻辑状态与共享基底立即生效，渲染和回调可能稍后完成。`hide()` 返回实际是否移除了观察状态。
 - 玩家打开任意其它容器界面（箱子、工作台等）时覆盖层自动隐藏，防止绕过覆盖层操作真实背包；断线时视为 hide。
-- `onAction` 回调发生在数据包线程，EasyLib 会转发到主线程再执行。
+- 数据包线程即时拦截操作，`onAction`、`onUpdate` 和生命周期事件统一转发到所选上下文，同一覆盖层内串行执行；默认使用 Sync。
+
+只消费线程安全数据快照的回调可显式选择 Async：
+
+```kotlin
+val async = easyLib.getExecutionContext(BukkitExecutionContext.Async)
+val overlay = easyLib.overlayFactory.create(context = async) {
+    slot(36) {
+        item(Material.PAPER)
+        onUpdate(Trigger.Interval(1.seconds)) {
+            displayItem.amount = publishedCount.get().coerceIn(1, 64) // 例如 AtomicInteger 快照
+        }
+    }
+}
+```
+
+首帧 seed、定时更新和 `setItem` 重算遵守同一上下文。异步回调不能直接读取要求主线程的 Bukkit 状态，也不能并发修改传给库的可变物品对象。库只在初始化手持槽快照、恢复真实背包等边界使用 Sync；纯数据包路径直接执行，不等待主线程。
+
+同一覆盖层的旧计算不会覆盖新基底，也不会在 hide/destroy 后恢复显示。首帧就绪前的交互只拦截、不派发用户回调。正常开启时先提交首帧，再通知 Show；若首帧被提前隐藏取消，则仍按 Show → Hide 顺序通知逻辑状态变化。destroy 的 Hide 通知早于 Destroy，订阅者看到的 `isDestroyed` 已为 true。
+
+Async 可减轻主线程上的计算负担，但不保证吞吐量提升；回调仍按序执行，触发器仍使用服务端 tick。是否改善性能需在实际负载下测量。
 
 ## 运行时改物品
 

@@ -22,11 +22,18 @@ class GamePlayer(bukkitPlayer: Player, arena: BukkitArena<*, *>) : AbstractBukki
 
 class GameEntity(entity: Entity) : AbstractBukkitArenaEntity(entity)
 
-class GameArena(plugin: Plugin, private val world: World) :
+class GameArena(
+    plugin: Plugin,
+    private val world: World,
+    taskScheduler: TaskScheduler,
+    private val refreshExecutor: TaskExecutor,
+    private val overlayFactory: PlayerOverlayFactory,
+    private val packetManager: PacketManager<Player>,
+) :
     AbstractBukkitArena<GamePlayer, GameEntity>("game-1", plugin),
     // 内置的 ScoreboardFeature / WaitingLobbyFeature 要求 Arena 同时是 TaskScheduler：
-    // 直接委托给 EasyLib 的全局调度器即可
-    TaskScheduler by EasyLibApi.api.taskScheduler {
+    // 由组合根传入并委托，Arena 不再回读全局状态。
+    TaskScheduler by taskScheduler {
 
     // 只认领本世界的实体；返回 null 表示忽略该实体的生成事件
     override fun createArenaEntity(entity: Entity): GameEntity? =
@@ -44,7 +51,16 @@ class GameArena(plugin: Plugin, private val world: World) :
 ## 生命周期
 
 ```kotlin
-val arena = GameArena(plugin, world)
+import com.github.mayblock.easylib.platform.bukkit.api.scheduler.BukkitExecutionContext
+
+val arena = GameArena(
+    plugin,
+    world,
+    easyLib.taskScheduler,
+    easyLib.getExecutionContext(BukkitExecutionContext.Async).taskExecutor,
+    easyLib.overlayFactory,
+    BukkitPacketManager,
+)
 arena.isArenaEnabled = true              // 触发 onEnableArena；之后才能 addPlayer / spawnEntity
 arena.addPlayer(GamePlayer(player, arena))
 arena.isArenaEnabled = false             // onDisableArena → 移除全部玩家/实体 → 卸载全部 feature/service → 拆桥、清空事件订阅
@@ -106,19 +122,23 @@ features.require(KillCounterFeature)          // 取回；未安装抛 IllegalSt
 | `GuardFeature(plugin, isActive, no…开关, worldGuardScope)` | 一揽子保护：禁止被怪物锁定、破坏方块、受伤、交互、丢弃/拾取、饥饿；可选 `worldGuardScope { scope { loc -> ... }; explode(false) }` 阻止范围内爆炸破坏 | 各开关默认 `true`；`isActive()` 为 false 时全部放行 |
 | `PlayerJoinLeaveFeature.Server(plugin, onJoin, onQuit, onRejoin)` | 监听全服 `PlayerJoinEvent` / `PlayerQuitEvent`：非本 Arena 玩家进服 → `onJoin`，本 Arena 玩家进服 → `onRejoin`，离服 → `onQuit` | 适合「整个服务器就是一个大厅」 |
 | `PlayerJoinLeaveFeature.SingleWorld(world, plugin, …)` | 同上，但以「进入/离开指定世界」为界，含 `PlayerChangedWorldEvent` | 适合按世界划分的 Arena |
-| `ScoreboardFeature(period) { onView { accepts {}; title {}; lines {} } }` | 基于 FastBoard 的周期刷新计分板；多个 `onView` 按 `priority` 选第一个 `accepts` 的 | 要求 Arena 实现 `TaskScheduler`；刷新在异步线程 |
-| `WaitingLobbyFeature(minPlayers, maxPlayers, playerCount, isActive, startCountdown, onComplete)` | 等待大厅倒计时：人数达标开始倒计时（标题 + 提示），不足则中止；到点回调 `onComplete` | 要求 Arena 实现 `TaskScheduler` |
-| `SpectatorService(arena) { /* 观战者背包覆盖层 DSL */ }` | 观战者管理：`addSpectator` / `removeSpectator` / `getSpectator`，观战者隐身、可跟随目标 | 与 `SpectatorFeature` 配合 |
-| `SpectatorFeature()` | 观战者玩家离开 Arena 时自动移除；潜行退出跟随；处理观战者的攻击/交互封包以切换跟随目标 | 要求 `SpectatorService` 已注册 |
+| `ScoreboardFeature(refreshExecutor, period) { onView { accepts {}; title {}; lines {} } }` | 基于 FastBoard 的周期刷新计分板；多个 `onView` 按 `priority` 选第一个 `accepts` 的 | 要求 Arena 实现 `TaskScheduler`；执行器由调用方显式选择 |
+| `WaitingLobbyFeature(…, packetManager)` | 等待大厅倒计时：人数达标开始倒计时（标题 + 提示），不足则中止；到点回调 `onComplete` | 要求 Arena 实现 `TaskScheduler`；HUD 发包依赖显式注入 |
+| `SpectatorService(arena, overlayFactory, packetManager) { /* 观战者背包覆盖层 DSL */ }` | 观战者管理：`addSpectator` / `removeSpectator` / `getSpectator`，观战者隐身、可跟随目标 | 与 `SpectatorFeature` 配合 |
+| `SpectatorFeature(packetManager)` | 观战者玩家离开 Arena 时自动移除；潜行退出跟随；处理观战者的攻击/交互封包以切换跟随目标 | 要求 `SpectatorService` 已注册 |
 
 ```kotlin
 override fun onEnableArena() {
     super.onEnableArena()
-    services.register(SpectatorService) { SpectatorService(this) { slot(44) { item(Material.RED_BED) } } }
-    features.install(SpectatorFeature) { SpectatorFeature() }
+    services.register(SpectatorService) {
+        SpectatorService(this, overlayFactory, packetManager) {
+            slot(44) { item(Material.RED_BED) }
+        }
+    }
+    features.install(SpectatorFeature) { SpectatorFeature(packetManager) }
     features.install(GuardFeature) { GuardFeature(plugin, isActive = { state == State.WAITING }) }
     features.install(ScoreboardFeature) {
-        ScoreboardFeature<GameArena, GamePlayer>(1.seconds) {
+        ScoreboardFeature<GameArena, GamePlayer>(refreshExecutor, 1.seconds) {
             onView {
                 title { "§6§lGame" }
                 lines { listOf("Kills: $kills", "Players: ${arena.players.size}") }
@@ -127,5 +147,7 @@ override fun onEnableArena() {
     }
 }
 ```
+
+`packetManager` 属于 PacketEvents 能力，不在 `BukkitEasyLibApi` 上暴露。使用这些封包型 Feature / Service 的调用方需要显式依赖相应实现模块，并把 `BukkitPacketManager`（或自己的 `PacketManager<Player>` 实现）传入。
 
 `GuardFeature` 是 Bukkit `Listener`（用于爆炸保护），会随安装/卸载注册/注销。

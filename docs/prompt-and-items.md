@@ -2,18 +2,18 @@
 
 ## Prompt：告示牌文本输入
 
-`PromptApi`（`EasyLibApi.api.bukkitApi().promptApi`）用一块**只在客户端可见**的假告示牌向玩家索要一行文本：打开告示牌编辑器，玩家确认后拿到第一行内容，方块随即恢复原样。
+`PromptApi`（例如持有实例上的 `easyLib.promptApi`）用一块**只在客户端可见**的假告示牌向玩家索要一行文本：打开告示牌编辑器，玩家确认后拿到第一行内容，方块随即恢复原样。
 
 ```kotlin
 // 回调风格
-api.promptApi.openPrompt(player, prompt1 = "§7Enter arena name", prompt2 = "§7then press Done") { text ->
+easyLib.promptApi.openPrompt(player, prompt1 = "§7Enter arena name", prompt2 = "§7then press Done") { text ->
     if (text == null) player.sendMessage("Cancelled")
     else createArena(text)
 }
 
 // 挂起风格
 scope.launch {
-    val name = api.promptApi.openPrompt(player, "§7Enter arena name") ?: return@launch
+    val name = easyLib.promptApi.openPrompt(player, "§7Enter arena name") ?: return@launch
     createArena(name)
 }
 ```
@@ -24,14 +24,14 @@ scope.launch {
 
 ## 自定义物品
 
-`CustomItemRegistry`（`EasyLibApi.api.bukkitApi().customItemRegistry`）定义带持久身份的物品：身份以 `NamespacedKey` 写入物品的 PDC，与外观无关、跨重启稳定——重启后用同一 key 再次 `define` 即可继续识别旧物品栈。
+`CustomItemRegistry`（例如持有实例上的 `easyLib.customItemRegistry`）定义带持久身份的物品：身份以 `NamespacedKey` 写入物品的 PDC，与外观无关、跨重启稳定——重启后用同一 key 再次 `define` 即可继续识别旧物品栈。
 
 ### 定义
 
 ```kotlin
 val key = NamespacedKey(plugin, "teleport_wand")
 
-val wand = api.customItemRegistry.define(Material.BLAZE_ROD, key) {
+val wand = easyLib.customItemRegistry.define(Material.BLAZE_ROD, key) {
     meta {                                   // 外观；可多次调用，按顺序应用
         setDisplayName("§dTeleport Wand")
         lore = listOf("§7Right click to teleport")
@@ -67,9 +67,9 @@ wand.give(player, 1)                         // 发放；放不下的掉在脚�
 wand.matches(stack)                          // 是否本物品（看 PDC，不看外观）
 wand.take(player, 2)                         // 扣除；不足则不动并返回 false（含盔甲/副手槽）
 
-api.customItemRegistry.fromStack(stack)      // 由任意物品栈反查已注册的自定义物品
-api.customItemRegistry.get(key)
-api.customItemRegistry.unregister(key)       // 注销后回调立即停止
+easyLib.customItemRegistry.fromStack(stack)      // 由任意物品栈反查已注册的自定义物品
+easyLib.customItemRegistry.get(key)
+easyLib.customItemRegistry.unregister(key)       // 注销后回调立即停止
 ```
 
 `BukkitEasyLib.close()` 会注销全部自定义物品并卸下监听器。

@@ -1,11 +1,11 @@
 # 箱子菜单
 
-`MenuFactory`（`EasyLibApi.api.bukkitApi().menuFactory`）用 DSL 构建箱子式 GUI。菜单基于**真实容器**（Bukkit `Inventory`），点击、拖拽、开关由 EasyLib 统一拦截并转成菜单事件；玩家背包区域默认用数据包屏蔽，防止误操作。
+`MenuFactory`（例如持有实例上的 `easyLib.menuFactory`）用 DSL 构建箱子式 GUI。菜单基于**真实容器**（Bukkit `Inventory`），点击、拖拽、开关由 EasyLib 统一拦截并转成菜单事件；玩家背包区域默认用数据包屏蔽，防止误操作。
 
 ## 基本用法
 
 ```kotlin
-val menu = api.menuFactory.createChestMenu(ChestMenuType.GENERIC_9X3) {
+val menu = easyLib.menuFactory.createChestMenu(ChestMenuType.GENERIC_9X3) {
     page(Component.text("Shop")) {
         slot(10) {
             item(Material.DIAMOND_SWORD) { setDisplayName("§bSword  §7(100 coins)") }
@@ -46,7 +46,7 @@ menu.open(player)
 菜单槽位**默认锁定**：`SlotTakeEvent` / `SlotPlaceEvent` 初始 `isCancelled = true`，只有处理器显式改成 `false` 才放行。这让「是否允许搬运」可以按玩家/物品动态决定：
 
 ```kotlin
-val menu = api.menuFactory.createChestMenu(ChestMenuType.GENERIC_9X3, hidePlayerInventory = false) {
+val menu = easyLib.menuFactory.createChestMenu(ChestMenuType.GENERIC_9X3, hidePlayerInventory = false) {
     page(Component.text("Trade")) {
         slot(13) {
             item(Material.AIR)
@@ -85,7 +85,7 @@ slot(4) {
 ## 多页菜单
 
 ```kotlin
-api.menuFactory.createChestMenu(ChestMenuType.GENERIC_9X6) {
+easyLib.menuFactory.createChestMenu(ChestMenuType.GENERIC_9X6) {
     setNextPageItem(Material.ARROW) { setDisplayName("§aNext") }        // 默认槽位 size-4
     setPreviousPageItem(Material.ARROW, slot = type.size - 6)           // 默认槽位 size-6
     repeat(3) { i ->
@@ -118,4 +118,4 @@ val handle = menu.on("shop") {
 
 ## 查询活跃菜单
 
-`EasyLibApi.api.bukkitApi().menuRegistry`（`MenuRegistry`）提供只读查询：`getActiveMenu(player)`、`hasActiveMenu(player)`、`getViewers(menu)`。
+`easyLib.menuRegistry`（`MenuRegistry`）提供只读查询：`getActiveMenu(player)`、`hasActiveMenu(player)`、`getViewers(menu)`。

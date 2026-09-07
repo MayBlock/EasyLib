@@ -2,7 +2,7 @@
 
 EasyLib 是一个面向 Bukkit/Spigot/Paper（Minecraft **26.1.2+**）的 Kotlin 库，提供命令、调度/协程、事件总线、配置委托、箱子菜单、玩家背包覆盖层、聊天输入 Prompt、自定义物品、Arena 游戏框架，以及基于 Redis 的分布式缓存与跨服消息总线。
 
-它采用 **API / 实现分离**：你的插件只依赖 `*-api` 模块编写代码，运行时由对应的 `*-impl` 提供实现，并通过全局单例 `EasyLibApi.api` 访问。
+它采用 **API / 实现分离**：你的插件可面向 `*-api` 模块编写业务代码，运行时由对应的 `*-impl` 提供实现。Bukkit 平台由插件自行构造并持有 `BukkitEasyLib`，再把所需的窄接口显式传给业务组件。
 
 > 目标平台只支持 Minecraft 26.1.2 及以上（协议 775+），不做向下兼容。
 
@@ -12,7 +12,7 @@ EasyLib 是一个面向 Bukkit/Spigot/Paper（Minecraft **26.1.2+**）的 Kotlin
 | --- | --- |
 | [快速开始](getting-started.md) | 添加依赖、运行时接入方式、一个最小可运行插件示例（命令 + 协程调度 + 菜单） |
 | [命令系统](commands.md) | 基于 Clikt 的 `BukkitCommand`：参数/选项、子命令、别名、权限、Tab 补全 |
-| [调度器与协程](scheduler.md) | `TaskScheduler` / `TaskExecutor` / `BukkitDispatcher`，主线程与异步切换 |
+| [调度器与协程](scheduler.md) | `TaskScheduler` / `BukkitExecutionContext`，普通任务与协程的主线程/异步执行 |
 | [事件总线](events.md) | `EventBus` / `EventSource`、`on` DSL、优先级、可取消事件 |
 | [配置委托](config.md) | `ConfigDelegate` 属性委托、`YamlConfig`、自动保存 |
 | [箱子菜单](menus.md) | `MenuFactory` DSL：槽位、点击、取出/放入把关、显示更新、分页、事件 |
@@ -29,7 +29,7 @@ EasyLib 是一个面向 Bukkit/Spigot/Paper（Minecraft **26.1.2+**）的 Kotlin
 
 | 模块 | 坐标（artifactId） | 说明 |
 | --- | --- | --- |
-| `common:base:api` | `EasyLib-common-base-api` | 平台无关核心接口：`EasyLibApi`、`Command`、`TaskScheduler`、`EventBus`、`ConfigDelegate`、`Feature`/`Service`、`Arena` 等 |
+| `common:base:api` | `EasyLib-common-base-api` | 平台无关核心接口：`Command`、`TaskScheduler`、`EventBus`、`ConfigDelegate`、`Feature`/`Service`、`Arena` 等 |
 | `common:base:impl` | `EasyLib-common-base-impl` | 上述接口的平台无关实现（`SimpleEventBus`、`YamlConfig`、`AbstractArena` 等） |
 | `common:packetevents:api` / `impl` | `EasyLib-common-packetevents-api` / `-impl` | 基于 [PacketEvents](https://github.com/retrooper/packetevents) 的封包构建/发送 DSL |
 | `common:cache:api` / `impl` | `EasyLib-common-cache-api` / `-impl` | 分布式缓存 `DistributedCache`（挂起接口）；impl 基于 Redis |

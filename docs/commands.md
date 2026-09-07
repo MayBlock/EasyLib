@@ -8,7 +8,7 @@ EasyLib 的命令建立在 [Clikt](https://ajalt.github.io/clikt/) 之上：参�
 | --- | --- | --- |
 | `Command` | `common:base:api` | 平台无关基类，继承 Clikt 的 `CoreCliktCommand` |
 | `BukkitCommand` | `platform:bukkit:api` | Bukkit 版基类：权限、仅玩家、`execute(sender)`、`player()` 参数转换 |
-| `CommandRegistry` | `common:base:api` | 注册/注销；经 `EasyLibApi.api.commandRegistry` 取得 |
+| `CommandRegistry` | `common:base:api` | 注册/注销；由调用方从持有的 `BukkitEasyLibApi` 取得或直接注入 |
 
 > Bukkit 平台的注册表只接受 `BukkitCommand` 子类，传入其它 `Command` 会被跳过并打警告。
 
@@ -71,7 +71,7 @@ override fun aliases() = mapOf(
 ## 注册与注销
 
 ```kotlin
-val registry = EasyLibApi.api.commandRegistry
+val registry = easyLib.commandRegistry
 registry.register(GiveCoinsCommand(), ArenaCommand())   // 已存在同名命令时跳过并打警告
 registry.isRegistered("arena")
 registry.unregister("arena")

@@ -62,14 +62,18 @@ class PlayerProfileCache {
 在插件中通过可取消的协程作用域调用缓存：
 
 ```kotlin
+import com.github.mayblock.easylib.platform.bukkit.api.scheduler.BukkitExecutionContext
+
 class MyPlugin : JavaPlugin() {
+    private lateinit var easyLib: BukkitEasyLib
     private lateinit var scope: CoroutineScope
     private lateinit var profiles: PlayerProfileCache
 
     override fun onEnable() {
-        val api = EasyLibApi.api.bukkitApi()
+        easyLib = BukkitEasyLib(this)
         // 作用域归插件所有，停用时统一取消尚未完成的缓存操作。
-        scope = CoroutineScope(SupervisorJob() + api.dispatcher.sync)
+        val sync = easyLib.getExecutionContext(BukkitExecutionContext.Sync)
+        scope = CoroutineScope(SupervisorJob() + sync.dispatcher)
         profiles = PlayerProfileCache()
 
         scope.launch {
@@ -88,6 +92,7 @@ class MyPlugin : JavaPlugin() {
         // 先停止可能仍在使用连接的协程，再关闭 RedisClient。
         scope.cancel()
         profiles.close()
+        easyLib.close()
     }
 }
 ```
