@@ -59,7 +59,7 @@ abstract class RedisClient : Destroyable {
     ): T {
         check(!redisson.isShutdown && !redisson.isShuttingDown) { "Redisson client is shutdown" }
         return withContext(dispatcher) {
-            RedisScopeImpl(redisson, metrics).block()
+            DefaultRedisScope(redisson, metrics).block()
         }
     }
 

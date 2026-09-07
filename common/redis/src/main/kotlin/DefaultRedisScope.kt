@@ -17,7 +17,7 @@ import kotlin.time.Duration
  * 每次 [RedisClient.execute] 新建一个实例；它只持有两个引用、不含可变状态，
  * 因此不跨调用共享。
  */
-internal class RedisScopeImpl(
+internal class DefaultRedisScope(
     private val redisson: RedissonClient,
     private val metrics: MetricsRecorder,
 ) : RedisScope, RedissonClient by redisson {
@@ -81,6 +81,6 @@ internal class RedisScopeImpl(
     ): T = metrics.recordSuspending(operation) { block() }
 
     private companion object {
-        private val logger: Logger = LoggerFactory.getLogger(RedisScopeImpl::class.java)
+        private val logger: Logger = LoggerFactory.getLogger(DefaultRedisScope::class.java)
     }
 }

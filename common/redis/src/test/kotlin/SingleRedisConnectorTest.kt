@@ -1,5 +1,6 @@
 package com.github.mayblock.easylib.redis
 
+import com.github.mayblock.easylib.redis.connector.SingleRedisConnector
 import com.github.mayblock.easylib.redis.testing.RedisTestSupport
 import com.github.mayblock.easylib.redis.testing.RequiresRedis
 import kotlinx.coroutines.future.await

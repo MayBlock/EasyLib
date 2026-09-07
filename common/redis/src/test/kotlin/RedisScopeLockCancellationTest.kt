@@ -52,7 +52,7 @@ class RedisScopeLockCancellationTest {
         val redisson = mockk<RedissonClient>()
         every { redisson.getLock("L") } returns lock
 
-        val scope = RedisScopeImpl(redisson, NoOpMetricsRecorder)
+        val scope = DefaultRedisScope(redisson, NoOpMetricsRecorder)
         val enteredBlock = CompletableDeferred<Unit>()
 
         val job = launch {

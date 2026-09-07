@@ -1,4 +1,4 @@
-package com.github.mayblock.easylib.redis
+package com.github.mayblock.easylib.redis.connector
 
 interface RedisConnector {
 

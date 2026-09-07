@@ -1,7 +1,8 @@
-package com.github.mayblock.easylib.redis
+package com.github.mayblock.easylib.redis.connector
 
 import com.github.mayblock.easylib.base.api.metrics.MetricsRecorder
 import com.github.mayblock.easylib.base.impl.metrics.NoOpMetricsRecorder
+import com.github.mayblock.easylib.redis.RedisClient
 import org.redisson.Redisson
 import org.redisson.api.RedissonClient
 import org.redisson.config.Config

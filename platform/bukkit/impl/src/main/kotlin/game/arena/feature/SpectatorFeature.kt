@@ -29,8 +29,10 @@ class SpectatorFeature<T : BukkitArena<*, *>>(
 
     override fun onInstall(context: T) {
         val spectatorService = context.services.require(SpectatorService)
-        offArenaListeners = onArenaListener(context, spectatorService)
-        offPacketListeners = onPacketListener(spectatorService)
+        context(spectatorService) {
+            offArenaListeners = onArenaListener(context)
+            offPacketListeners = onPacketListener()
+        }
     }
 
     override fun onUninstall(context: T) {
@@ -38,7 +40,8 @@ class SpectatorFeature<T : BukkitArena<*, *>>(
         offPacketListeners?.dispose()
     }
 
-    private fun onArenaListener(arena: BukkitArena<*, *>, service: SpectatorService<*>): Disposable {
+    context(service: SpectatorService<*>)
+    private fun onArenaListener(arena: T): Disposable {
         return arena.on {
             on<ArenaLeaveEvent> { // when player removed
                 val spectator = service.getSpectator(player.uuid) ?: return@on
@@ -59,7 +62,8 @@ class SpectatorFeature<T : BukkitArena<*, *>>(
         }
     }
 
-    private fun onPacketListener(service: SpectatorService<*>): Disposable {
+    context(service: SpectatorService<*>)
+    private fun onPacketListener(): Disposable {
         return object : PacketListener {
             override fun onPacketReceive(e: PacketReceiveEvent) {
                 val type = e.packetType
@@ -67,7 +71,7 @@ class SpectatorFeature<T : BukkitArena<*, *>>(
                     return
                 }
                 val spectator = service.getSpectator(e.user.uuid) ?: return
-                val target = resolveTarget(e, service) ?: return
+                val target = resolveTarget(e) ?: return
                 spectator.watch(target)
                 spectator.arenaPlayer.bukkitPlayer?.sendTitle(
                     title = "你正在观察 ${target.name}",
@@ -79,9 +83,9 @@ class SpectatorFeature<T : BukkitArena<*, *>>(
         }.let(packetManager::registerListener)
     }
 
+    context(service: SpectatorService<*>)
     private fun resolveTarget(
-        e: PacketReceiveEvent,
-        service: SpectatorService<*>
+        e: PacketReceiveEvent
     ): Player? {
         if (e.packetType != PacketType.Play.Client.ATTACK) {
             return null

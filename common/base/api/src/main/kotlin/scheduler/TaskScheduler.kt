@@ -33,10 +33,8 @@ fun TaskScheduler.scheduleTask(
     trigger: Trigger = Trigger.Once,
     executor: TaskExecutor = TaskExecutor.Direct,
     block: TaskScope.() -> Unit
-): Int {
-    return object : Task {
-        override val trigger: Trigger = trigger
-        override val executor: TaskExecutor = executor
-        override val onTick: TaskScope.() -> Unit = block
-    }.let(::scheduleTask)
-}
+): Int = object : Task {
+    override val trigger: Trigger = trigger
+    override val executor: TaskExecutor = executor
+    override val onTick: TaskScope.() -> Unit = block
+}.let(::scheduleTask)

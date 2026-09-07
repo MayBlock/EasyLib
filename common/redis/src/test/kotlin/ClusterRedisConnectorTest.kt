@@ -2,6 +2,7 @@ package com.github.mayblock.easylib.redis
 
 import com.github.mayblock.easylib.base.api.metrics.MetricsRecorder
 import com.github.mayblock.easylib.base.impl.metrics.NoOpMetricsRecorder
+import com.github.mayblock.easylib.redis.connector.ClusterRedisConnector
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertSame
