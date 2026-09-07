@@ -73,8 +73,7 @@ internal class RealChestView(
      * 玩家背包区（>= topSize）的物品替换为空气，只对 [isViewer] 判定为真的玩家生效。
      * 与 PacketOverlayTransport 相同模式，但 windowId 判定相反。
      *
-     * 不再懒初始化：packetManager 已经过构造注入，MockBukkit 环境下可直接 mock，
-     * 不存在原实现「避免构造期访问 BukkitEasyLib.api」需要规避的问题。
+     * `packetManager` 由构造器显式注入，MockBukkit 环境下可直接替换为 mock。
      */
     fun attachHideMask(isViewer: (Player) -> Boolean): Disposable =
         packetManager.registerListener(object : PacketListener {

@@ -3,6 +3,7 @@ package com.github.mayblock.easylib.platform.bukkit.impl.menu
 import com.github.mayblock.easylib.base.api.event.on
 import com.github.mayblock.easylib.base.api.scheduler.TaskScheduler
 import com.github.mayblock.easylib.packetevents.api.PacketManager
+import com.github.mayblock.easylib.platform.bukkit.impl.testing.TestSyncContext
 import com.github.mayblock.easylib.platform.bukkit.api.menu.MenuCloseEvent
 import com.github.mayblock.easylib.platform.bukkit.api.menu.MenuDestroyEvent
 import com.github.mayblock.easylib.platform.bukkit.api.menu.slot.dsl.item
@@ -26,6 +27,7 @@ class MenuManagerChestTest {
 
     private fun manager() = MenuManager(
         mockk<TaskScheduler>(relaxed = true),
+        TestSyncContext(),
         mockk<PacketManager<*>>(relaxed = true),
         MockBukkit.createMockPlugin()
     )

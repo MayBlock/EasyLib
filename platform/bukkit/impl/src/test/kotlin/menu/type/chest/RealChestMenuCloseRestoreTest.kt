@@ -1,5 +1,6 @@
 package com.github.mayblock.easylib.platform.bukkit.impl.menu.type.chest
 
+import com.github.mayblock.easylib.base.api.scheduler.TaskExecutor
 import com.github.mayblock.easylib.base.api.scheduler.TaskScheduler
 import com.github.mayblock.easylib.packetevents.api.PacketManager
 import com.github.mayblock.easylib.platform.bukkit.api.menu.slot.dsl.item
@@ -7,6 +8,7 @@ import com.github.mayblock.easylib.platform.bukkit.api.menu.slot.event.Inventory
 import com.github.mayblock.easylib.platform.bukkit.api.menu.type.chest.ChestMenuType
 import com.github.mayblock.easylib.platform.bukkit.impl.menu.slot.SlotSpec
 import com.github.mayblock.easylib.platform.bukkit.impl.menu.slot.builder.SlotBuilder
+import com.github.mayblock.easylib.platform.bukkit.impl.testing.TestSyncContext
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.verify
@@ -52,6 +54,7 @@ private class ClosePumpScheduler : TaskScheduler {
 class RealChestMenuCloseRestoreTest {
 
     private lateinit var server: org.mockbukkit.mockbukkit.ServerMock
+    private val syncExecutor = TaskExecutor { it() }
     @BeforeTest fun setUp() { server = MockBukkit.mock() }
     @AfterTest fun tearDown() { MockBukkit.unmock() }
 
@@ -60,6 +63,7 @@ class RealChestMenuCloseRestoreTest {
 
     private fun menu(scheduler: TaskScheduler, hide: Boolean) = RealChestMenu(
         scheduler,
+        TestSyncContext(syncExecutor),
         mockk<PacketManager<*>>(relaxed = true),
         Component.text("t"),
         ChestMenuType.GENERIC_9X3,
@@ -84,7 +88,7 @@ class RealChestMenuCloseRestoreTest {
         verify(exactly = 1) { p.updateInventory() } // 下一 tick 经 RealChestView.refreshBottom 恢复恰一次
     }
 
-    @Test fun `hide 模式：恢复任务用 Once 触发器（下一 tick 一次性执行）`() {
+    @Test fun `hide 模式：恢复任务用同步上下文与 Once 触发器（下一 tick 一次性执行）`() {
         val scheduler = ClosePumpScheduler()
         val m = menu(scheduler, hide = true)
         val p = player()
@@ -95,6 +99,7 @@ class RealChestMenuCloseRestoreTest {
             scheduler.queue.map { it.trigger },
             "恢复任务应以 Trigger.Once 调度"
         )
+        assertSame(syncExecutor, scheduler.queue.single().executor)
     }
 
     @Test fun `非 hide 模式：handleClose 不调度也不执行任何恢复`() {

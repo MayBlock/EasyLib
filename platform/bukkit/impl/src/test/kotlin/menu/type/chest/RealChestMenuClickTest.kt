@@ -9,6 +9,7 @@ import com.github.mayblock.easylib.platform.bukkit.api.menu.slot.dsl.item
 import com.github.mayblock.easylib.platform.bukkit.api.menu.slot.event.SlotPlaceEvent
 import com.github.mayblock.easylib.platform.bukkit.api.menu.slot.event.SlotTakeEvent
 import com.github.mayblock.easylib.platform.bukkit.api.menu.type.chest.ChestMenuType
+import com.github.mayblock.easylib.platform.bukkit.impl.testing.TestSyncContext
 import com.github.mayblock.easylib.platform.bukkit.impl.menu.MenuManager
 import com.github.mayblock.easylib.platform.bukkit.impl.menu.listener.MenuInteractionListener
 import com.github.mayblock.easylib.platform.bukkit.impl.menu.slot.SlotSpec
@@ -46,6 +47,7 @@ class RealChestMenuClickTest {
     private fun menu(specs: Map<Int, SlotSpec>): RealChestMenu =
         RealChestMenu(
             mockk<TaskScheduler>(relaxed = true),
+            TestSyncContext(),
             mockk<PacketManager<*>>(relaxed = true),
             Component.text("t"),
             ChestMenuType.GENERIC_9X3,
@@ -240,6 +242,7 @@ class RealChestMenuClickTest {
         // 因此这里显式把 m 挂到一个 manager 名下，再用同一 manager 构造监听器。
         val mgr = MenuManager(
             mockk<TaskScheduler>(relaxed = true),
+            TestSyncContext(),
             mockk<PacketManager<*>>(relaxed = true),
             MockBukkit.createMockPlugin()
         )

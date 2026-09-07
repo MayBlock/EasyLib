@@ -4,6 +4,7 @@ import com.github.mayblock.easylib.base.api.scheduler.TaskScheduler
 import com.github.mayblock.easylib.packetevents.api.PacketManager
 import com.github.mayblock.easylib.platform.bukkit.api.menu.slot.dsl.item
 import com.github.mayblock.easylib.platform.bukkit.api.menu.type.chest.ChestMenuType
+import com.github.mayblock.easylib.platform.bukkit.impl.testing.TestSyncContext
 import com.github.mayblock.easylib.platform.bukkit.impl.menu.MenuManager
 import com.github.mayblock.easylib.platform.bukkit.impl.menu.type.chest.RealChestMenu
 import io.mockk.mockk
@@ -28,7 +29,12 @@ class PageableChestMenuBuilderTest {
     @BeforeTest fun setUp() { server = MockBukkit.mock() }
     @AfterTest fun tearDown() { MockBukkit.unmock() }
 
-    private fun manager() = MenuManager(mockk<TaskScheduler>(relaxed = true), mockk<PacketManager<*>>(relaxed = true), MockBukkit.createMockPlugin())
+    private fun manager() = MenuManager(
+        mockk<TaskScheduler>(relaxed = true),
+        TestSyncContext(),
+        mockk<PacketManager<*>>(relaxed = true),
+        MockBukkit.createMockPlugin(),
+    )
 
     private fun click(view: InventoryView, rawSlot: Int, action: InventoryAction): BukkitInventoryClickEvent =
         BukkitInventoryClickEvent(view, InventoryType.SlotType.CONTAINER, rawSlot, ClickType.LEFT, action)

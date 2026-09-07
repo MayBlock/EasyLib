@@ -6,8 +6,8 @@ import com.github.mayblock.easylib.base.api.feature.FeatureKey
 import com.github.mayblock.easylib.base.api.game.arena.event.ArenaLeaveEvent
 import com.github.mayblock.easylib.base.api.service.require
 import com.github.mayblock.easylib.base.api.util.Disposable
+import com.github.mayblock.easylib.packetevents.api.PacketManager
 import com.github.mayblock.easylib.platform.bukkit.api.game.arena.BukkitArena
-import com.github.mayblock.easylib.platform.bukkit.impl.BukkitEasyLib.Companion.api
 import com.github.mayblock.easylib.platform.bukkit.impl.game.arena.bridge.BridgeEvent
 import com.github.mayblock.easylib.platform.bukkit.impl.game.arena.service.SpectatorService
 import com.github.mayblock.easylib.platform.bukkit.impl.util.sendTitle
@@ -18,9 +18,9 @@ import com.github.retrooper.packetevents.wrapper.play.client.WrapperPlayClientAt
 import io.github.retrooper.packetevents.util.SpigotConversionUtil
 import org.bukkit.entity.Player
 
-class SpectatorFeature<T : BukkitArena<*, *>> : Feature<T> {
-
-    private val manager = api.packetManager
+class SpectatorFeature<T : BukkitArena<*, *>>(
+    private val packetManager: PacketManager<Player>,
+) : Feature<T> {
 
     companion object Key : FeatureKey<SpectatorFeature<*>>("SpectatorFeature")
 
@@ -76,7 +76,7 @@ class SpectatorFeature<T : BukkitArena<*, *>> : Feature<T> {
                     stay = 60,
                 )
             }
-        }.let(manager::registerListener)
+        }.let(packetManager::registerListener)
     }
 
     private fun resolveTarget(

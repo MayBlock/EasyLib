@@ -1,23 +1,19 @@
 package com.github.mayblock.easylib.platform.bukkit.impl.scheduler
 
 import com.github.mayblock.easylib.base.api.scheduler.TaskExecutor
-import com.github.mayblock.easylib.platform.bukkit.api.scheduler.BukkitTaskExecutors
 import org.bukkit.Bukkit
 import org.bukkit.plugin.Plugin
 
-class BukkitTaskExecutorsImpl internal constructor(plugin: Plugin): BukkitTaskExecutors {
+class BukkitTaskExecutors internal constructor(private val plugin: Plugin) {
 
-    override val sync = SyncExecutor(plugin)
-    override val async = AsyncExecutor(plugin)
-
-    class SyncExecutor(private val plugin: Plugin) : TaskExecutor {
+    inner class SyncExecutor internal constructor(): TaskExecutor {
         override fun execute(task: () -> Unit) {
             if (Bukkit.isPrimaryThread()) task()
             else Bukkit.getScheduler().runTask(plugin, Runnable { task() })
         }
     }
 
-    class AsyncExecutor(private val plugin: Plugin) : TaskExecutor {
+    inner class AsyncExecutor internal constructor(): TaskExecutor {
         override fun execute(task: () -> Unit) {
             Bukkit.getScheduler().runTaskAsynchronously(plugin, Runnable { task() })
         }

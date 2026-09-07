@@ -4,6 +4,7 @@ import com.github.mayblock.easylib.base.api.event.EventSource
 import com.github.mayblock.easylib.base.api.scheduler.TaskScheduler
 import com.github.mayblock.easylib.base.impl.event.SimpleEventBus
 import com.github.mayblock.easylib.packetevents.api.PacketManager
+import com.github.mayblock.easylib.platform.bukkit.impl.testing.TestSyncContext
 import com.github.mayblock.easylib.platform.bukkit.api.menu.MenuEvent
 import com.github.mayblock.easylib.platform.bukkit.impl.menu.listener.MenuInteractionListener
 import io.mockk.mockk
@@ -32,6 +33,7 @@ class MenuInteractionListenerTest {
     private fun manager() =
         MenuManager(
             mockk<TaskScheduler>(relaxed = true),
+            TestSyncContext(),
             mockk<PacketManager<*>>(relaxed = true),
             MockBukkit.createMockPlugin()
         )

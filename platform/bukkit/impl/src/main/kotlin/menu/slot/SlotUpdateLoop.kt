@@ -1,11 +1,11 @@
 package com.github.mayblock.easylib.platform.bukkit.impl.menu.slot
 
 import com.github.mayblock.easylib.base.api.scheduler.TaskScheduler
-import com.github.mayblock.easylib.base.api.scheduler.scheduleTask
 import com.github.mayblock.easylib.platform.bukkit.api.menu.slot.dsl.SlotUpdateScope
+import com.github.mayblock.easylib.platform.bukkit.api.scheduler.BukkitExecutionContext
+import com.github.mayblock.easylib.platform.bukkit.api.scheduler.scheduleTask
 import com.github.mayblock.easylib.platform.bukkit.impl.menu.BukkitMenu
 import com.github.mayblock.easylib.platform.bukkit.impl.util.SlotDisplayMap
-import com.github.mayblock.easylib.platform.bukkit.impl.util.scheduleSyncTask
 import com.github.mayblock.easylib.platform.bukkit.impl.util.stack
 import org.bukkit.Material
 import org.bukkit.entity.Player
@@ -26,6 +26,7 @@ import java.util.*
  */
 internal class SlotUpdateLoop(
     private val taskScheduler: TaskScheduler,
+    private val syncExecutionContext: BukkitExecutionContext.Sync,
     specs: Map<Int, SlotSpec>,
     private val menu: BukkitMenu,
     private val viewers: () -> List<Player>,
@@ -60,7 +61,7 @@ internal class SlotUpdateLoop(
         fired.clear()
         groupsBySlot.forEach { (index, groups) ->
             groups.forEach { (trigger, ordered) ->
-                taskIds += taskScheduler.scheduleSyncTask(trigger) { // 主线程（默认执行器）
+                taskIds += taskScheduler.scheduleTask(trigger, syncExecutionContext) {
                     fired += GroupKey(index, trigger)
                     viewers().forEach { player ->
                         if (compute(index, ordered, player)) markDirty(player.uniqueId)
@@ -110,7 +111,7 @@ internal class SlotUpdateLoop(
     fun invalidateSlot(index: Int) {
         if (index !in groupsBySlot) return
         display.invalidate(index)
-        taskScheduler.scheduleTask(TaskScheduler.Trigger.Once) { recomputeSlot(index) }
+        taskScheduler.scheduleTask(TaskScheduler.Trigger.Once, syncExecutionContext) { recomputeSlot(index) }
     }
 
     private fun shouldRun(index: Int, trigger: TaskScheduler.Trigger): Boolean =
@@ -128,7 +129,7 @@ internal class SlotUpdateLoop(
         dirty += viewerId
         if (flushScheduled) return
         flushScheduled = true
-        taskScheduler.scheduleTask(TaskScheduler.Trigger.Once) { flush() } // 同 tick 多槽/多组合并
+        taskScheduler.scheduleTask(TaskScheduler.Trigger.Once, syncExecutionContext) { flush() } // 同 tick 多槽/多组合并
     }
 
     private fun flush() {

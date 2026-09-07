@@ -1,12 +1,11 @@
 package com.github.mayblock.easylib.platform.bukkit.impl.game.arena.feature
 
-import com.github.mayblock.easylib.base.api.EasyLibApi
 import com.github.mayblock.easylib.base.api.scheduler.TaskScheduler
 import com.github.mayblock.easylib.base.impl.util.Counter
+import com.github.mayblock.easylib.packetevents.api.PacketManager
 import com.github.mayblock.easylib.platform.bukkit.api.game.arena.BukkitArena
 import com.github.mayblock.easylib.platform.bukkit.api.game.arena.BukkitArenaEntity
 import com.github.mayblock.easylib.platform.bukkit.api.game.arena.BukkitArenaPlayer
-import com.github.mayblock.easylib.platform.bukkit.impl.BukkitEasyLib
 import com.github.mayblock.easylib.platform.bukkit.impl.game.arena.AbstractBukkitArena
 import com.github.mayblock.easylib.platform.bukkit.impl.game.arena.AbstractBukkitArenaEntity
 import com.github.mayblock.easylib.platform.bukkit.impl.game.arena.AbstractBukkitArenaPlayer
@@ -60,22 +59,13 @@ class WaitingLobbyFeatureTest {
         pump = PumpScheduler()
         arena = TestArena(plugin, pump)
         arena.isArenaEnabled = true
-        // sendPackets 走 EasyLibApi.api 单例；注入 relaxed mock 使 HUD 包发送成为无害 no-op。
-        previousApi = try { EasyLibApi.api } catch (_: UninitializedPropertyAccessException) { null }
-        EasyLibApi.api = mockk<BukkitEasyLib>(relaxed = true)
     }
 
     @AfterTest
     fun tearDown() {
         arena.isArenaEnabled = false
-        // 尽量恢复全局单例，避免 mock 泄漏到同 JVM 的后续测试类；
-        // lateinit 无法退回未初始化态，若此前未初始化则 mock 残留（后续误触 sendPackets
-        // 会静默 no-op 而非快速失败）——已知取舍，见终审 Minor #2。
-        previousApi?.let { EasyLibApi.api = it }
         MockBukkit.unmock()
     }
-
-    private var previousApi: EasyLibApi? = null
 
     internal class TestPlayer(
         bukkitPlayer: Player,
@@ -107,6 +97,7 @@ class WaitingLobbyFeatureTest {
             isActive = { true },
             startCountdown = 150.milliseconds,
             onComplete = { completed++ },
+            packetManager = mockk<PacketManager<Player>>(relaxed = true),
             counter = counter,
         )
     }

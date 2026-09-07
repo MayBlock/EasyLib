@@ -9,6 +9,7 @@ import com.github.mayblock.easylib.base.api.scheduler.TaskScheduler
 import com.github.mayblock.easylib.base.api.scheduler.scheduleTask
 import com.github.mayblock.easylib.base.api.util.Disposable
 import com.github.mayblock.easylib.base.impl.util.Counter
+import com.github.mayblock.easylib.packetevents.api.PacketManager
 import com.github.mayblock.easylib.platform.bukkit.api.game.arena.BukkitArena
 import com.github.mayblock.easylib.platform.bukkit.api.game.arena.BukkitArenaEntity
 import com.github.mayblock.easylib.platform.bukkit.api.game.arena.BukkitArenaPlayer
@@ -30,6 +31,7 @@ class WaitingLobbyFeature<T>(
     private val isActive: () -> Boolean,
     private val startCountdown: Duration,
     private val onComplete: () -> Unit,
+    private val packetManager: PacketManager<Player>,
     private val counter: Counter = Counter(
         interval = 1.ticks,
         initialValue = startCountdown.toTicks(),
@@ -137,18 +139,22 @@ class WaitingLobbyFeature<T>(
 
     // 倒计时用 level/exp 借位显示进度条；完成或中止时必须复位，否则玩家的经验条/等级 HUD 会残留倒计时数字。
     private fun Player.resetCountdownHud() {
-        this.sendPackets {
-            forPlayer {
-                setExperience(exp, level, totalExperience)
+        context(packetManager) {
+            this@resetCountdownHud.sendPackets {
+                forPlayer {
+                    setExperience(exp, level, totalExperience)
+                }
             }
         }
     }
 
     private fun Player.updateCountdownHud(remaining: Duration) {
         val remainingSeconds = ceil(remaining.toDouble(DurationUnit.SECONDS)).toInt()
-        this.sendPackets {
-            forPlayer {
-                setExperience((remaining / startCountdown).toFloat(), remainingSeconds, totalExperience)
+        context(packetManager) {
+            this@updateCountdownHud.sendPackets {
+                forPlayer {
+                    setExperience((remaining / startCountdown).toFloat(), remainingSeconds, totalExperience)
+                }
             }
         }
         this.sendActionBar("${remainingSeconds}s 即将开始！ ($playerStatus)")

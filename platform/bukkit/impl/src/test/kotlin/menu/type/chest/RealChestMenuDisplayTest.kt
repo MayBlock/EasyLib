@@ -1,5 +1,6 @@
 package com.github.mayblock.easylib.platform.bukkit.impl.menu.type.chest
 
+import com.github.mayblock.easylib.base.api.scheduler.TaskExecutor
 import com.github.mayblock.easylib.base.api.scheduler.TaskScheduler
 import com.github.mayblock.easylib.packetevents.api.PacketManager
 import com.github.mayblock.easylib.platform.bukkit.api.menu.slot.dsl.item
@@ -7,6 +8,7 @@ import com.github.mayblock.easylib.platform.bukkit.api.menu.slot.event.Inventory
 import com.github.mayblock.easylib.platform.bukkit.api.menu.type.chest.ChestMenuType
 import com.github.mayblock.easylib.platform.bukkit.impl.menu.slot.SlotSpec
 import com.github.mayblock.easylib.platform.bukkit.impl.menu.slot.builder.SlotBuilder
+import com.github.mayblock.easylib.platform.bukkit.impl.testing.TestSyncContext
 import com.github.mayblock.easylib.platform.bukkit.impl.util.stack
 import io.mockk.mockk
 import io.mockk.verify
@@ -45,6 +47,7 @@ private class DisplayPumpScheduler : TaskScheduler {
 class RealChestMenuDisplayTest {
 
     private lateinit var server: org.mockbukkit.mockbukkit.ServerMock
+    private val syncExecutor = TaskExecutor { it() }
     @BeforeTest fun setUp() { server = MockBukkit.mock() }
     @AfterTest fun tearDown() { MockBukkit.unmock() }
 
@@ -60,7 +63,15 @@ class RealChestMenuDisplayTest {
         }.build()
 
     private fun menu(scheduler: TaskScheduler, specs: Map<Int, SlotSpec>, pm: PacketManager<*> = mockk(relaxed = true)) =
-        RealChestMenu(scheduler, pm, Component.text("t"), ChestMenuType.GENERIC_9X3, specs, hidePlayerInventory = false)
+        RealChestMenu(
+            scheduler,
+            TestSyncContext(syncExecutor),
+            pm,
+            Component.text("t"),
+            ChestMenuType.GENERIC_9X3,
+            specs,
+            hidePlayerInventory = false,
+        )
 
     private fun click(view: InventoryView, rawSlot: Int, action: InventoryAction): BukkitInventoryClickEvent =
         BukkitInventoryClickEvent(view, InventoryType.SlotType.CONTAINER, rawSlot, ClickType.LEFT, action)
@@ -113,6 +124,8 @@ class RealChestMenuDisplayTest {
         m.handleClick(e)
         assertFalse(e.isCancelled)
         assertNull(m.displayMap.lookup(p.uniqueId, 5)) // 立即失效，改写层透传真实
+        val recomputeTask = scheduler.queue.single { it.trigger == TaskScheduler.Trigger.Once }
+        assertSame(syncExecutor, recomputeTask.executor)
         scheduler.pump() // 下一 tick：重算（MockBukkit 不执行原生移动，容器仍旧值 → 条目恢复）
         assertNotNull(m.displayMap.lookup(p.uniqueId, 5))
     }

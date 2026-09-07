@@ -8,6 +8,7 @@ import com.github.mayblock.easylib.platform.bukkit.api.menu.*
 import com.github.mayblock.easylib.platform.bukkit.api.menu.type.chest.ChestMenu
 import com.github.mayblock.easylib.platform.bukkit.api.menu.type.chest.ChestMenuType
 import com.github.mayblock.easylib.platform.bukkit.api.menu.type.chest.dsl.PageableChestMenuScope
+import com.github.mayblock.easylib.platform.bukkit.api.scheduler.BukkitExecutionContext
 import com.github.mayblock.easylib.platform.bukkit.impl.menu.listener.MenuInteractionListener
 import com.github.mayblock.easylib.platform.bukkit.impl.menu.type.chest.RealChestMenu
 import com.github.mayblock.easylib.platform.bukkit.impl.menu.type.chest.builder.PageableChestMenuBuilder
@@ -21,6 +22,7 @@ import java.util.*
 
 class MenuManager(
     private val taskScheduler: TaskScheduler,
+    private val syncExecutionContext: BukkitExecutionContext.Sync,
     private val packetManager: PacketManager<*>,
     plugin: Plugin,
 ) : MenuFactory, MenuRegistry, Closeable {
@@ -47,6 +49,7 @@ class MenuManager(
             // 因此每页都会在这里被登记，而不仅仅是 build() 返回的第 1 页。
             RealChestMenu(
                 taskScheduler,
+                syncExecutionContext,
                 packetManager,
                 title,
                 type,

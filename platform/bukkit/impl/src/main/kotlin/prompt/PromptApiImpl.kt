@@ -1,12 +1,13 @@
 package com.github.mayblock.easylib.platform.bukkit.impl.prompt
 
-import com.github.mayblock.easylib.base.api.scheduler.TaskExecutor
 import com.github.mayblock.easylib.base.api.util.Disposable
 import com.github.mayblock.easylib.base.api.util.Vector
 import com.github.mayblock.easylib.packetevents.api.PacketManager
 import com.github.mayblock.easylib.packetevents.api.packet.updateSign
 import com.github.mayblock.easylib.packetevents.api.util.toVector3i
 import com.github.mayblock.easylib.platform.bukkit.api.prompt.PromptApi
+import com.github.mayblock.easylib.platform.bukkit.api.scheduler.BukkitExecutionContext
+import com.github.mayblock.easylib.platform.bukkit.api.scheduler.execute
 import com.github.mayblock.easylib.platform.bukkit.impl.util.sendPackets
 import com.github.retrooper.packetevents.event.PacketListener
 import com.github.retrooper.packetevents.event.PacketReceiveEvent
@@ -31,14 +32,9 @@ import kotlin.coroutines.resume
 /**
  * 告示牌式输入提示：借 PacketEvents 给玩家发一块只在客户端可见的假告示牌并打开编辑器，
  * 客户端回填文本后经 [WrapperPlayClientUpdateSign] 收包拿到结果、把方块还原为它本来的样子、回调结果。
- *
- * 线程契约：无论是 [openPrompt] 的回调版本还是 suspend 版本，结果回调与方块恢复都
- * 经 [mainThread]（主线程执行器）回到 Bukkit 主线程执行——调用方无需（也不应该）自行切线程。
- * PacketEvents 的收包发生在网络线程而非主线程，直接在其中调用 `Player#sendBlockChange` 等 Bukkit API 是不安全的。
  */
 class PromptApiImpl(
-    packetManager: PacketManager<*>,
-    private val mainThread: TaskExecutor,
+    private val packetManager: PacketManager<Player>
 ) : PromptApi, Listener {
 
     private val logger = LoggerFactory.getLogger(PromptApiImpl::class.java)
@@ -56,33 +52,26 @@ class PromptApiImpl(
                 return
             }
             val uuid = e.user.uuid
-            // 非本 API 发起的 pending：说明玩家在编辑一块真实告示牌，直接放行，不拦截也不清空它。
-            val pending = promptList[uuid] ?: return
+            val (position, callback) = promptList[uuid] ?: return
             val packet = WrapperPlayClientUpdateSign(e)
-            if (packet.blockPosition != pending.first) {
-                // 玩家手上确实有个 pending prompt，但这个包编辑的是别的坐标（真实告示牌），与本次 prompt 无关。
-                return
-            }
-            // 先移除再处理：防止同一 pending 被握手期间的重复包/竞态触发两次 resume。
+            if (packet.blockPosition != position) return
             promptList.remove(uuid)
             val result = packet.textLines[0].ifBlank { null }
-            val (position, callback) = pending
-            // 收包在 Netty 线程：方块还原与回调都要回到主线程，调用方才能安全操作 Bukkit 状态。
-            mainThread.execute {
-                val player = Bukkit.getPlayer(uuid)
-                // 不再无脑发 AIR：把客户端此前看到的假告示牌还原为服务端此刻的真实方块状态。
-                if (player != null && player.isOnline) {
-                    val block = player.world.getBlockAt(position.x, position.y, position.z)
+            val player = Bukkit.getPlayer(uuid)
+            // 不再无脑发 AIR：把客户端此前看到的假告示牌还原为服务端此刻的真实方块状态。
+            if (player != null && player.isOnline) {
+                val block = player.world.getBlockAt(position.x, position.y, position.z)
+                context(packetManager) {
                     player.sendPackets {
                         forBlock(position) {
                             blockChange(SpigotConversionUtil.fromBukkitBlockData(block.blockData))
                         }
                     }
-                } else {
-                    logger.debug("Player {} went offline before prompt block restore could run", uuid)
                 }
-                callback(result)
+            } else {
+                logger.debug("Player {} went offline before prompt block restore could run", uuid)
             }
+            callback(result)
         }
     })
 
@@ -96,21 +85,23 @@ class PromptApiImpl(
         // 也防止旧告示牌位置的后续回包错误地命中已经被替换的新 prompt。
         promptList.remove(player.uniqueId)?.second?.invoke(null)
 
-        val position = player.location.block.let {
-            Vector(it.x, (it.y + 10).coerceAtMost(player.world.maxHeight - 1), it.z)
+        val position = player.location.let {
+            Vector(it.blockX, (it.blockY + 10).coerceAtMost(player.world.maxHeight - 1), it.blockZ)
         }
         val vector3i = position.toVector3i()
-        player.sendPackets {
-            forBlock(position) {
-                blockChange(WrappedBlockState.getDefaultState(StateTypes.OAK_SIGN))
-                updateSign(
-                    null,
-                    "^^^^^^^^^^^^^^^",
-                    prompt1,
-                    prompt2,
-                    isFrontText = true
-                )
-                openSignEditor(isFrontText = true)
+        context(packetManager) {
+            player.sendPackets {
+                forBlock(position) {
+                    blockChange(WrappedBlockState.getDefaultState(StateTypes.OAK_SIGN))
+                    updateSign(
+                        null,
+                        "^^^^^^^^^^^^^^^",
+                        prompt1,
+                        prompt2,
+                        isFrontText = true
+                    )
+                    openSignEditor(isFrontText = true)
+                }
             }
         }
         promptList[player.uniqueId] = vector3i to block

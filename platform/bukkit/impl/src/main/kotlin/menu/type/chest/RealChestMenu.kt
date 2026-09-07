@@ -2,7 +2,6 @@ package com.github.mayblock.easylib.platform.bukkit.impl.menu.type.chest
 
 import com.github.mayblock.easylib.base.api.event.EventSource
 import com.github.mayblock.easylib.base.api.scheduler.TaskScheduler
-import com.github.mayblock.easylib.base.api.scheduler.scheduleTask
 import com.github.mayblock.easylib.base.api.util.Disposable
 import com.github.mayblock.easylib.packetevents.api.PacketManager
 import com.github.mayblock.easylib.platform.bukkit.api.menu.MenuCloseEvent
@@ -14,6 +13,8 @@ import com.github.mayblock.easylib.platform.bukkit.api.menu.slot.event.SlotPlace
 import com.github.mayblock.easylib.platform.bukkit.api.menu.slot.event.SlotTakeEvent
 import com.github.mayblock.easylib.platform.bukkit.api.menu.type.chest.ChestMenu
 import com.github.mayblock.easylib.platform.bukkit.api.menu.type.chest.ChestMenuType
+import com.github.mayblock.easylib.platform.bukkit.api.scheduler.BukkitExecutionContext
+import com.github.mayblock.easylib.platform.bukkit.api.scheduler.scheduleTask
 import com.github.mayblock.easylib.platform.bukkit.impl.menu.BukkitMenu
 import com.github.mayblock.easylib.platform.bukkit.impl.menu.MenuEventDispatcher
 import com.github.mayblock.easylib.platform.bukkit.impl.menu.slot.SlotSpec
@@ -39,6 +40,7 @@ import org.bukkit.inventory.ItemStack
  */
 internal class RealChestMenu(
     private val taskScheduler: TaskScheduler,
+    private val syncExecutionContext: BukkitExecutionContext.Sync,
     packetManager: PacketManager<*>,
     override val title: Component,
     override val type: ChestMenuType,
@@ -51,7 +53,7 @@ internal class RealChestMenu(
     private val viewers = ViewerRegistry()
     internal val displayMap = SlotDisplayMap() // internal：供同模块测试观察显示缓存
     private val updateLoop = SlotUpdateLoop(
-        taskScheduler, specs, this, viewers::snapshot, displayMap
+        taskScheduler, syncExecutionContext, specs, this, viewers::snapshot, displayMap
     ) { it.updateInventory() }
     private var hideMask: Disposable? = null
     private var displayMask: Disposable? = null
@@ -112,7 +114,7 @@ internal class RealChestMenu(
         // 遮罩写空的背包区就永远得不到恢复。下一 tick 时 containerMenu 已回到 window 0，重发必达。
         // （服务端主动关闭路径下内容包先于关窗包到达、同步重发碰巧有效，但统一走延迟路径无害。）
         if (hidePlayerInventory) {
-            taskScheduler.scheduleTask(TaskScheduler.Trigger.Once) {
+            taskScheduler.scheduleTask(TaskScheduler.Trigger.Once, syncExecutionContext) {
                 view.refreshBottom(player)
             }
         }

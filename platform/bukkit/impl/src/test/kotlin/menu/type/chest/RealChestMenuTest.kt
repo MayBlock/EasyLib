@@ -9,6 +9,7 @@ import com.github.mayblock.easylib.platform.bukkit.api.menu.MenuOpenEvent
 import com.github.mayblock.easylib.platform.bukkit.api.menu.slot.dsl.item
 import com.github.mayblock.easylib.platform.bukkit.api.menu.slot.event.InventoryClickEvent
 import com.github.mayblock.easylib.platform.bukkit.api.menu.type.chest.ChestMenuType
+import com.github.mayblock.easylib.platform.bukkit.impl.testing.TestSyncContext
 import com.github.mayblock.easylib.platform.bukkit.impl.menu.slot.SlotSpec
 import com.github.mayblock.easylib.platform.bukkit.impl.menu.slot.builder.SlotBuilder
 import com.github.mayblock.easylib.platform.bukkit.impl.util.stack
@@ -30,6 +31,7 @@ class RealChestMenuTest {
     private fun menu(specs: Map<Int, SlotSpec>) =
         RealChestMenu(
             mockk<TaskScheduler>(relaxed = true),
+            TestSyncContext(),
             mockk<PacketManager<*>>(relaxed = true),
             Component.text("交易"),
             ChestMenuType.GENERIC_9X3,

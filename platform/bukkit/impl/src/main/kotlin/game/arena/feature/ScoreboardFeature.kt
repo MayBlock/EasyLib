@@ -2,12 +2,13 @@ package com.github.mayblock.easylib.platform.bukkit.impl.game.arena.feature
 
 import com.github.mayblock.easylib.base.api.feature.Feature
 import com.github.mayblock.easylib.base.api.feature.FeatureKey
+import com.github.mayblock.easylib.base.api.scheduler.TaskExecutor
 import com.github.mayblock.easylib.base.api.scheduler.TaskScheduler
+import com.github.mayblock.easylib.base.api.scheduler.scheduleTask
 import com.github.mayblock.easylib.base.api.util.Priority
 import com.github.mayblock.easylib.platform.bukkit.api.game.arena.BukkitArena
 import com.github.mayblock.easylib.platform.bukkit.api.game.arena.BukkitArenaEntity
 import com.github.mayblock.easylib.platform.bukkit.api.game.arena.BukkitArenaPlayer
-import com.github.mayblock.easylib.platform.bukkit.impl.util.scheduleAsyncTask
 import fr.mrmicky.fastboard.FastBoard
 import net.md_5.bungee.api.ChatColor
 import kotlin.time.Duration
@@ -22,12 +23,16 @@ interface ScoreboardProvider<Player : BukkitArenaPlayer> {
 }
 
 class ScoreboardFeature<A, Player : BukkitArenaPlayer> private constructor(
+    private val refreshExecutor: TaskExecutor,
     private val period: Duration,
     private val providers: List<ScoreboardProvider<Player>>
 ) : Feature<A> where A : BukkitArena<Player, out BukkitArenaEntity>, A : TaskScheduler {
 
-    constructor(period: Duration = 1.seconds, block: Builder<Player>.() -> Unit)
-            : this(period, Builder<Player>().apply(block).toList())
+    constructor(
+        refreshExecutor: TaskExecutor,
+        period: Duration = 1.seconds,
+        block: Builder<Player>.() -> Unit,
+    ) : this(refreshExecutor, period, Builder<Player>().apply(block).toList())
 
     companion object Key : FeatureKey<ScoreboardFeature<*, *>>("ScoreboardFeature")
 
@@ -35,7 +40,7 @@ class ScoreboardFeature<A, Player : BukkitArenaPlayer> private constructor(
     private val fastboardCache = mutableMapOf<BukkitArenaPlayer, FastBoard>()
 
     override fun onInstall(context: A) {
-        taskId = context.scheduleAsyncTask(TaskScheduler.Trigger.Interval(period)) {
+        taskId = context.scheduleTask(TaskScheduler.Trigger.Interval(period), refreshExecutor) {
             refresh(context)
         }
     }

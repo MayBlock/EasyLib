@@ -1,5 +1,6 @@
 package com.github.mayblock.easylib.platform.bukkit.impl.menu.type.chest
 
+import com.github.mayblock.easylib.base.api.scheduler.TaskExecutor
 import com.github.mayblock.easylib.base.api.scheduler.TaskScheduler
 import com.github.mayblock.easylib.base.api.util.Priority
 import com.github.mayblock.easylib.packetevents.api.PacketManager
@@ -8,7 +9,7 @@ import com.github.mayblock.easylib.platform.bukkit.api.menu.slot.event.Inventory
 import com.github.mayblock.easylib.platform.bukkit.api.menu.type.chest.ChestMenuType
 import com.github.mayblock.easylib.platform.bukkit.impl.menu.slot.SlotSpec
 import com.github.mayblock.easylib.platform.bukkit.impl.menu.slot.builder.SlotBuilder
-import com.github.mayblock.easylib.platform.bukkit.impl.scheduler.BukkitTaskExecutorsImpl
+import com.github.mayblock.easylib.platform.bukkit.impl.testing.TestSyncContext
 import io.mockk.mockk
 import net.kyori.adventure.text.Component
 import org.bukkit.Material
@@ -17,14 +18,13 @@ import org.mockbukkit.mockbukkit.MockBukkit
 import kotlin.test.*
 import kotlin.time.Duration.Companion.seconds
 
-/** 立即同步执行每个被排的任务一次的假调度器（断言 isAsync=false）。 */
-private class AsyncTrackingScheduler(
-    val asyncFlags: MutableList<Boolean> = mutableListOf()
-) : TaskScheduler {
+/** 通过任务指定的执行器立即执行一次，并记录实际选择的执行器。 */
+private class ExecutorTrackingScheduler : TaskScheduler {
+    val executors = mutableListOf<TaskExecutor>()
     override fun scheduleTask(task: TaskScheduler.Task): Int {
-        asyncFlags += task.executor is BukkitTaskExecutorsImpl.AsyncExecutor; task.onTick(
-            mockk<TaskScheduler.TaskScope>(relaxed = true)
-        ); return 0
+        executors += task.executor
+        task.executor.execute { task.onTick(mockk<TaskScheduler.TaskScope>(relaxed = true)) }
+        return 0
     }
     override fun cancelTask(taskId: Int): Boolean = true
     override fun cancelAllTasks() {}
@@ -59,18 +59,27 @@ private class PumpScheduler : TaskScheduler {
 class RealChestMenuUpdateTest {
 
     private lateinit var server: org.mockbukkit.mockbukkit.ServerMock
+    private val syncExecutor = TaskExecutor { it() }
 
     @BeforeTest fun setUp() { server = MockBukkit.mock() }
     @AfterTest fun tearDown() { MockBukkit.unmock() }
 
     private fun menu(scheduler: TaskScheduler, specs: Map<Int, SlotSpec>) =
-        RealChestMenu(scheduler, mockk<PacketManager<*>>(relaxed = true), Component.text("t"), ChestMenuType.GENERIC_9X3, specs, hidePlayerInventory = false)
+        RealChestMenu(
+            scheduler,
+            TestSyncContext(syncExecutor),
+            mockk<PacketManager<*>>(relaxed = true),
+            Component.text("t"),
+            ChestMenuType.GENERIC_9X3,
+            specs,
+            hidePlayerInventory = false,
+        )
 
     private fun spec(block: SlotBuilder<InventoryClickEvent>.() -> Unit): SlotSpec =
         SlotBuilder(InventoryClickEvent::class.java).apply(block).build()
 
     @Test fun `更新规则在主线程 tick，写显示缓存而非真实容器`() {
-        val scheduler = AsyncTrackingScheduler()
+        val scheduler = ExecutorTrackingScheduler()
         val s = spec {
             item(Material.PAPER)
             onUpdate(trigger = TaskScheduler.Trigger.Interval(1.seconds)) {
@@ -84,11 +93,12 @@ class RealChestMenuUpdateTest {
         assertEquals(Material.PAPER, m.inventory.getItem(4)!!.type)
         // 显示缓存有该 viewer 的假物品
         assertEquals(Material.CLOCK, m.displayMap.lookup(p.uniqueId, 4)!!.bukkitItem.type)
-        assertEquals(listOf(false), scheduler.asyncFlags.take(1)) // 更新任务在主线程
+        assertEquals(2, scheduler.executors.size) // 更新任务和显示刷新都使用注入的同步上下文
+        scheduler.executors.forEach { assertSame(syncExecutor, it) }
     }
 
     @Test fun `事件携带正确 player，双 viewer 显示独立`() {
-        val scheduler = AsyncTrackingScheduler()
+        val scheduler = ExecutorTrackingScheduler()
         val s = spec {
             item(Material.PAPER)
             onUpdate(trigger = TaskScheduler.Trigger.Interval(1.seconds)) {
@@ -120,7 +130,7 @@ class RealChestMenuUpdateTest {
     }
 
     @Test fun `同槽同 trigger 规则合并，按 priority 串行`() {
-        val scheduler = AsyncTrackingScheduler()
+        val scheduler = ExecutorTrackingScheduler()
         val s = spec {
             item(Material.PAPER)
             onUpdate(trigger = TaskScheduler.Trigger.Interval(1.seconds), priority = Priority(20)) {
@@ -139,7 +149,7 @@ class RealChestMenuUpdateTest {
     }
 
     @Test fun `规则无修改则不留条目（透传真实）`() {
-        val scheduler = AsyncTrackingScheduler()
+        val scheduler = ExecutorTrackingScheduler()
         val s = spec {
             item(Material.PAPER)
             onUpdate(trigger = TaskScheduler.Trigger.Interval(1.seconds)) { /* 观察但不改 */ }
@@ -160,8 +170,11 @@ class RealChestMenuUpdateTest {
         val p = server.addPlayer()
         m.handleOpen(p)                       // 种子不标脏 → 队列里只有 2 个 Interval 任务
         assertEquals(2, scheduler.queue.size)
+        scheduler.queue.forEach { assertSame(syncExecutor, it.executor) }
         scheduler.pump()                      // 两槽各判脏 → 各 markDirty → 只排 1 个 flush 任务
         assertEquals(1, scheduler.queue.size) // 合并证据：不是 2 个 flush（重绘副作用为 PlayerMock.updateInventory，空实现）
+        assertSame(syncExecutor, scheduler.queue.single().executor)
+        assertEquals(TaskScheduler.Trigger.Once, scheduler.queue.single().trigger)
         scheduler.pump()                      // flush 执行，队列清空
         assertEquals(0, scheduler.queue.size)
     }

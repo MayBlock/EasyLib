@@ -2,10 +2,11 @@ package com.github.mayblock.easylib.platform.bukkit.impl.game.arena.service
 
 import com.github.mayblock.easylib.base.api.service.Service
 import com.github.mayblock.easylib.base.api.service.ServiceKey
+import com.github.mayblock.easylib.packetevents.api.PacketManager
 import com.github.mayblock.easylib.platform.bukkit.api.game.arena.BukkitArena
 import com.github.mayblock.easylib.platform.bukkit.api.game.arena.BukkitArenaPlayer
+import com.github.mayblock.easylib.platform.bukkit.api.overlay.PlayerOverlayFactory
 import com.github.mayblock.easylib.platform.bukkit.api.overlay.dsl.PlayerOverlayScope
-import com.github.mayblock.easylib.platform.bukkit.impl.BukkitEasyLib.Companion.api
 import com.github.mayblock.easylib.platform.bukkit.impl.util.gameMode
 import com.github.mayblock.easylib.platform.bukkit.impl.util.sendPackets
 import org.bukkit.GameMode
@@ -14,10 +15,12 @@ import java.util.*
 
 class SpectatorService<A : BukkitArena<out BukkitArenaPlayer, *>>(
     private val arena: A,
+    overlayFactory: PlayerOverlayFactory,
+    private val packetManager: PacketManager<Player>,
     playerInventory: (PlayerOverlayScope.() -> Unit)? = null,
 ) : Service {
 
-    val playerOverlay = api.overlayFactory.create(playerInventory ?: {})
+    val playerOverlay = overlayFactory.create(playerInventory ?: {})
 
     companion object Key : ServiceKey<SpectatorService<*>>("SpectatorService")
 
@@ -66,9 +69,11 @@ class SpectatorService<A : BukkitArena<out BukkitArenaPlayer, *>>(
         internal fun watch(target: Player): Boolean {
             if (!target.isOnline) return false
             val player = arenaPlayer.bukkitPlayer ?: return false
-            player.sendPackets {
-                forPlayer {
-                    camera(target.entityId)
+            context(packetManager) {
+                player.sendPackets {
+                    forPlayer {
+                        camera(target.entityId)
+                    }
                 }
             }
             watching = target
@@ -78,9 +83,13 @@ class SpectatorService<A : BukkitArena<out BukkitArenaPlayer, *>>(
         internal fun stopWatching() {
             if (watching == null) return
             val player = arenaPlayer.bukkitPlayer
-            player?.sendPackets {
-                forPlayer {
-                    camera(player.entityId)
+            if (player != null) {
+                context(packetManager) {
+                    player.sendPackets {
+                        forPlayer {
+                            camera(player.entityId)
+                        }
+                    }
                 }
             }
             watching = null
@@ -91,16 +100,16 @@ class SpectatorService<A : BukkitArena<out BukkitArenaPlayer, *>>(
             previousGameMode = player.gameMode
             previousAllowFlight = player.allowFlight
             previousFlying = player.isFlying
-            player.apply {
-                gameMode = GameMode.SPECTATOR
-                sendPackets {
+            player.gameMode = GameMode.SPECTATOR
+            context(packetManager) {
+                player.sendPackets {
                     forPlayer {
                         gameMode(GameMode.ADVENTURE)
                     }
                 }
-                isFlying = true
-                allowFlight = true
             }
+            player.isFlying = true
+            player.allowFlight = true
             playerOverlay.show(player)
         }
 
