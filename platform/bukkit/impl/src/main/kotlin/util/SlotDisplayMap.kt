@@ -5,7 +5,7 @@ import java.util.*
 import java.util.concurrent.ConcurrentHashMap
 
 /**
- * 显示层缓存：按 (viewer, slot) 存假显示物品（spec §7）。主线程写（计算/提交），
+ * 显示层缓存：按 (viewer, slot) 存假显示物品。菜单主线程或覆盖层回调上下文提交，
  * netty 线程只读（出站改写查表），故用并发容器；条目不可变、整体替换。
  * menu 与 overlay 共用（与 [ViewerRegistry] 同定位）。
  *

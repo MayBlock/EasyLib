@@ -1,12 +1,10 @@
 package com.github.mayblock.easylib.platform.bukkit.impl.overlay
 
-import com.github.mayblock.easylib.base.api.EasyLibApi
+import com.github.mayblock.easylib.platform.bukkit.impl.testing.TestSyncContext
 import com.github.mayblock.easylib.base.api.scheduler.TaskExecutor
 import com.github.mayblock.easylib.base.api.scheduler.TaskScheduler
 import com.github.mayblock.easylib.base.api.util.Priority
-import com.github.mayblock.easylib.platform.bukkit.api.BukkitEasyLibApi
 import com.github.mayblock.easylib.platform.bukkit.api.overlay.slot.dsl.item
-import com.github.mayblock.easylib.platform.bukkit.api.scheduler.BukkitTaskExecutors
 import com.github.mayblock.easylib.platform.bukkit.impl.overlay.builder.OverlaySlotBuilder
 import com.github.mayblock.easylib.platform.bukkit.impl.overlay.slot.SlotMap
 import com.github.mayblock.easylib.platform.bukkit.impl.overlay.slot.SlotUpdateLoop
@@ -28,22 +26,14 @@ private object NoopScope : TaskScheduler.TaskScope {
 
 /**
  * 哨兵执行器：行为与 [TaskExecutor.Direct] 相同（直接执行），但**身份不同**。
- * scheduleSyncTask/scheduleAsyncTask 扩展函数在排程时把全局 `taskExecutors.sync/async`
- * 盖进 [TaskScheduler.Task.executor]；把哨兵注入全局单例后，断言
- * `task.executor === SyncMarker` 即证明 loop 确实经 scheduleSyncTask 排程——
- * 若它绕道裸 scheduleTask（默认 Direct）或误走 async 路径，身份断言当场失败。
+ * 将它显式注入更新循环后，断言 `task.executor === SyncMarker` 即可证明循环
+ * 使用了指定的主线程执行器；若它绕道裸 `scheduleTask`（默认 Direct），身份断言会失败。
  *
  * 注意这只钉住**排程路径**，不代表**线程落地**：生产环境的 `BukkitTaskScheduler` 在 Bukkit 调度器
  * 触发后再把回调交给 `Task.executor` 执行（见 `BukkitTaskSchedulerTest`），本测试用假调度器内联执行，
  * 实际执行线程与本断言无关。
  */
 private val SyncMarker = TaskExecutor { it() }
-private val AsyncMarker = TaskExecutor { it() }
-
-private val MarkerExecutors = object : BukkitTaskExecutors {
-    override val sync: TaskExecutor get() = SyncMarker
-    override val async: TaskExecutor get() = AsyncMarker
-}
 
 /** 记录被排程的 Task 并立即内联执行的假调度器（扩展函数最终都落到成员 scheduleTask）。 */
 private class InlineScheduler : TaskScheduler {
@@ -82,29 +72,34 @@ private class CountingScheduler : TaskScheduler {
 
 class SlotUpdateLoopTest {
 
-    private var previousApi: EasyLibApi? = null
-
     @BeforeTest
     fun setUp() {
         MockBukkit.mock()
-        // scheduleSyncTask 扩展在排程时读全局单例取 executor；注入哨兵使 sync 路径可被身份断言。
-        // 非 relaxed mock：除 taskExecutors 外的任何触碰都会快速失败，测试不静默依赖全局状态。
-        previousApi = try { EasyLibApi.api } catch (_: UninitializedPropertyAccessException) { null }
-        EasyLibApi.api = mockk<BukkitEasyLibApi> { every { taskExecutors } returns MarkerExecutors }
     }
 
     @AfterTest
     fun tearDown() {
-        previousApi?.let { EasyLibApi.api = it }
         MockBukkit.unmock()
     }
+
+    private fun buildLoop(
+        map: SlotMap,
+        scheduler: TaskScheduler,
+        context: TestSyncContext,
+        viewers: () -> List<Player>,
+        display: SlotDisplayMap,
+        repaint: (Player, Int) -> Unit,
+    ) = SlotUpdateLoop(map, scheduler, context.taskExecutor, viewers, { player, index, compute ->
+        val base = map[index]!!.item
+        display.commit(player.uniqueId, index, base, compute(base.clone()))
+    }, repaint)
 
     private fun player(): Player = mockk<Player>(relaxed = true).also {
         every { it.uniqueId } returns UUID.randomUUID()
     }
 
     @Test
-    fun `update 规则经 scheduleSyncTask 排程，对每个 viewer 各跑一次并提交显示层`() {
+    fun `update 规则经注入执行器排程，对每个 viewer 各跑一次并提交显示层`() {
         val scheduler = InlineScheduler()
         val spec = OverlaySlotBuilder().apply {
             item(Material.PAPER)
@@ -115,7 +110,7 @@ class SlotUpdateLoopTest {
         val a = player()
         val b = player()
         val repaints = mutableListOf<Pair<Player, Int>>()
-        SlotUpdateLoop(map, scheduler, { listOf(a, b) }, display) { p, i -> repaints += p to i }.start()
+        buildLoop(map, scheduler, TestSyncContext(SyncMarker), { listOf(a, b) }, display) { p, i -> repaints += p to i }.start()
 
         // 基底未被写回（本设计的核心：onUpdate 不再改共享态）
         assertEquals(Material.PAPER, map[4]!!.item.type)
@@ -123,8 +118,8 @@ class SlotUpdateLoopTest {
         assertEquals(Material.CLOCK, display.lookup(a.uniqueId, 4)!!.bukkitItem.type)
         assertEquals(Material.CLOCK, display.lookup(b.uniqueId, 4)!!.bukkitItem.type)
         assertEquals(listOf(a to 4, b to 4), repaints)
-        // 本类的契约是「overlay 更新走 scheduleSyncTask 排程路径」：executor 必须命中全局 sync 哨兵。
-        // 这证明的是排程路径而非线程落地——生产 scheduler 忽略 Task.executor（见上方 SyncMarker KDoc）。
+        // 本类的契约是「overlay 更新使用注入的主线程执行器」。
+        // 这证明的是排程路径而非线程落地——生产 scheduler 的线程行为由 Task.executor 决定。
         assertEquals(listOf(SyncMarker), scheduler.tasks.map { it.executor })
     }
 
@@ -141,7 +136,7 @@ class SlotUpdateLoopTest {
         }.build()
         val map = SlotMap(mapOf(4 to spec))
         val display = SlotDisplayMap()
-        SlotUpdateLoop(map, scheduler, { listOf(a, b) }, display) { _, _ -> }.start()
+        buildLoop(map, scheduler, TestSyncContext(SyncMarker), { listOf(a, b) }, display) { _, _ -> }.start()
 
         assertEquals(Material.DIAMOND, display.lookup(a.uniqueId, 4)!!.bukkitItem.type)
         assertEquals(Material.EMERALD, display.lookup(b.uniqueId, 4)!!.bukkitItem.type)
@@ -156,7 +151,7 @@ class SlotUpdateLoopTest {
             item(Material.PAPER)
             onUpdate(TaskScheduler.Trigger.Interval(1.seconds)) { seen += index to viewer }
         }.build()
-        SlotUpdateLoop(SlotMap(mapOf(4 to spec)), scheduler, { listOf(a) }, SlotDisplayMap()) { _, _ -> }.start()
+        buildLoop(SlotMap(mapOf(4 to spec)), scheduler, TestSyncContext(SyncMarker), { listOf(a) }, SlotDisplayMap()) { _, _ -> }.start()
 
         assertEquals(listOf(4 to a), seen)
     }
@@ -177,7 +172,7 @@ class SlotUpdateLoopTest {
         val display = SlotDisplayMap()
         val a = player()
         val repaints = mutableListOf<Pair<Player, Int>>()
-        SlotUpdateLoop(SlotMap(mapOf(4 to spec)), scheduler, { listOf(a) }, display) { p, i -> repaints += p to i }
+        buildLoop(SlotMap(mapOf(4 to spec)), scheduler, TestSyncContext(SyncMarker), { listOf(a) }, display) { p, i -> repaints += p to i }
             .start()
 
         val shown = display.lookup(a.uniqueId, 4)!!.bukkitItem
@@ -197,7 +192,7 @@ class SlotUpdateLoopTest {
         val display = SlotDisplayMap()
         val a = player()
         val repaints = mutableListOf<Pair<Player, Int>>()
-        SlotUpdateLoop(SlotMap(mapOf(4 to spec)), scheduler, { listOf(a) }, display) { p, i -> repaints += p to i }
+        buildLoop(SlotMap(mapOf(4 to spec)), scheduler, TestSyncContext(SyncMarker), { listOf(a) }, display) { p, i -> repaints += p to i }
             .start()
 
         assertNull(display.lookup(a.uniqueId, 4)) // 与基底一致 → 无条目 → 出站回落基底
@@ -215,7 +210,7 @@ class SlotUpdateLoopTest {
         val late = player()
         val repaints = mutableListOf<Pair<Player, Int>>()
         // 启动时无观察者；随后 late 才加入
-        val loop = SlotUpdateLoop(SlotMap(mapOf(4 to spec)), scheduler, { emptyList() }, display) { p, i ->
+        val loop = buildLoop(SlotMap(mapOf(4 to spec)), scheduler, TestSyncContext(SyncMarker), { emptyList() }, display) { p, i ->
             repaints += p to i
         }
         loop.start()
@@ -237,13 +232,13 @@ class SlotUpdateLoopTest {
         val late = player()
 
         // CountingScheduler 不执行任务块 ⇒ Delay 组尚未触发过
-        val notFired = SlotUpdateLoop(SlotMap(mapOf(4 to spec)), CountingScheduler(), { emptyList() }, display) { _, _ -> }
+        val notFired = buildLoop(SlotMap(mapOf(4 to spec)), CountingScheduler(), TestSyncContext(SyncMarker), { emptyList() }, display) { _, _ -> }
         notFired.start()
         notFired.seed(late)
         assertNull(display.lookup(late.uniqueId, 4)) // 未到期 → 尊重延迟语义
 
         // InlineScheduler 立即执行任务块 ⇒ Delay 组已触发过
-        val fired = SlotUpdateLoop(SlotMap(mapOf(4 to spec)), InlineScheduler(), { emptyList() }, display) { _, _ -> }
+        val fired = buildLoop(SlotMap(mapOf(4 to spec)), InlineScheduler(), TestSyncContext(SyncMarker), { emptyList() }, display) { _, _ -> }
         fired.start()
         fired.seed(late)
         assertEquals(Material.CLOCK, display.lookup(late.uniqueId, 4)!!.bukkitItem.type)
@@ -261,7 +256,7 @@ class SlotUpdateLoopTest {
         val display = SlotDisplayMap()
         val a = player()
         val repaints = mutableListOf<Pair<Player, Int>>()
-        val loop = SlotUpdateLoop(map, scheduler, { listOf(a) }, display) { p, i -> repaints += p to i }
+        val loop = buildLoop(map, scheduler, TestSyncContext(SyncMarker), { listOf(a) }, display) { p, i -> repaints += p to i }
         loop.start()
         assertEquals(2, display.lookup(a.uniqueId, 4)!!.bukkitItem.amount)
 
@@ -280,7 +275,7 @@ class SlotUpdateLoopTest {
             item(Material.AIR)
             onUpdate(TaskScheduler.Trigger.Interval(1.seconds)) { }
         }.build()
-        val loop = SlotUpdateLoop(SlotMap(mapOf(4 to spec)), scheduler, { emptyList() }, SlotDisplayMap()) { _, _ -> }
+        val loop = buildLoop(SlotMap(mapOf(4 to spec)), scheduler, TestSyncContext(SyncMarker), { emptyList() }, SlotDisplayMap()) { _, _ -> }
 
         loop.start()
         assertEquals(1, scheduler.scheduleCount)
@@ -290,7 +285,7 @@ class SlotUpdateLoopTest {
     }
 
     @Test
-    fun `stop 后可重新 start，且 stop 清空显示层`() {
+    fun `stop 后可重新 start`() {
         val scheduler = CountingScheduler()
         val spec = OverlaySlotBuilder().apply {
             item(Material.AIR)
@@ -299,14 +294,28 @@ class SlotUpdateLoopTest {
         val display = SlotDisplayMap()
         val a = player()
         display.commit(a.uniqueId, 4, stack(Material.AIR), stack(Material.CLOCK))
-        val loop = SlotUpdateLoop(SlotMap(mapOf(4 to spec)), scheduler, { emptyList() }, display) { _, _ -> }
+        val loop = buildLoop(SlotMap(mapOf(4 to spec)), scheduler, TestSyncContext(SyncMarker), { emptyList() }, display) { _, _ -> }
 
         loop.start()
         assertEquals(1, scheduler.scheduleCount)
         loop.stop()
         assertEquals(1, scheduler.cancelCount)
-        assertNull(display.lookup(a.uniqueId, 4)) // 停机即清显示层，防陈旧条目跨激活周期存活
         loop.start() // 停止后重启：重新调度
         assertEquals(2, scheduler.scheduleCount)
+    }
+
+    @Test
+    fun `关闭后晚到的 start 不能重新建立任务`() {
+        val scheduler = CountingScheduler()
+        val spec = OverlaySlotBuilder().apply {
+            onUpdate(TaskScheduler.Trigger.Once) { }
+        }.build()
+        val loop = buildLoop(SlotMap(mapOf(4 to spec)), scheduler, TestSyncContext(SyncMarker),
+            { emptyList() }, SlotDisplayMap()) { _, _ -> }
+        loop.start()
+        loop.close()
+        loop.start()
+        assertEquals(1, scheduler.scheduleCount)
+        assertEquals(1, scheduler.cancelCount)
     }
 }

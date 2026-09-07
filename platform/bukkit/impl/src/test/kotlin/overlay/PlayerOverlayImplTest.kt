@@ -1,16 +1,17 @@
 package com.github.mayblock.easylib.platform.bukkit.impl.overlay
 
-import com.github.mayblock.easylib.base.api.EasyLibApi
 import com.github.mayblock.easylib.base.api.event.on
+import com.github.mayblock.easylib.platform.bukkit.impl.testing.TestSyncContext
+import com.github.mayblock.easylib.platform.bukkit.impl.testing.TestAsyncContext
+import com.github.mayblock.easylib.platform.bukkit.api.scheduler.BukkitExecutionContext
 import com.github.mayblock.easylib.base.api.scheduler.TaskExecutor
 import com.github.mayblock.easylib.base.api.scheduler.TaskScheduler
 import com.github.mayblock.easylib.base.api.util.Disposable
-import com.github.mayblock.easylib.platform.bukkit.api.BukkitEasyLibApi
 import com.github.mayblock.easylib.platform.bukkit.api.overlay.OverlayDestroyEvent
 import com.github.mayblock.easylib.platform.bukkit.api.overlay.OverlayHideEvent
+import com.github.mayblock.easylib.platform.bukkit.api.overlay.OverlayShowEvent
 import com.github.mayblock.easylib.platform.bukkit.api.overlay.slot.dsl.onAction
 import com.github.mayblock.easylib.platform.bukkit.api.overlay.slot.event.OverlaySlotActionEvent
-import com.github.mayblock.easylib.platform.bukkit.api.scheduler.BukkitTaskExecutors
 import com.github.mayblock.easylib.platform.bukkit.impl.overlay.builder.OverlaySlotBuilder
 import com.github.mayblock.easylib.platform.bukkit.impl.overlay.slot.OverlaySlotSpec
 import com.github.mayblock.easylib.platform.bukkit.impl.overlay.slot.SlotMap
@@ -25,6 +26,10 @@ import org.bukkit.event.inventory.ClickType
 import org.bukkit.inventory.ItemStack
 import org.mockbukkit.mockbukkit.MockBukkit
 import java.util.*
+import java.util.concurrent.CountDownLatch
+import java.util.concurrent.Executors
+import java.util.concurrent.TimeUnit
+import java.util.concurrent.atomic.AtomicInteger
 import kotlin.test.*
 import kotlin.time.Duration.Companion.seconds
 
@@ -37,6 +42,7 @@ private class FakeTransport(
     // 用于钉「seed 必须先于 paintAll」这类时序契约（不传则退化为原有的纯记录行为）。
     private val display: SlotDisplayMap? = null,
     private val watchSlot: Int? = null,
+    private val prepareBlock: (() -> Unit) -> Unit = { it() },
 ) : OverlayTransport {
     val paintAllCalls = mutableListOf<Player>()
     val paintAllSnapshots = mutableListOf<Material?>()
@@ -46,6 +52,8 @@ private class FakeTransport(
         private set
     var disposed = false
         private set
+
+    override fun prepare(player: Player, ready: () -> Unit) { prepareBlock(ready) }
 
     override fun paintAll(player: Player) {
         paintAllCalls += player
@@ -94,28 +102,13 @@ private class NeverRunScheduler : TaskScheduler {
 
 class PlayerOverlayImplTest {
 
-    private var previousApi: EasyLibApi? = null
-
     @BeforeTest
     fun setUp() {
         MockBukkit.mock()
-        // TaskExt 的 scheduleSyncTask/scheduleAsyncTask 排程时会读全局单例取 executor；
-        // 本类的 RecordingScheduler 直接内联调用 task.onTick(...)，从不咨询 executor，
-        // 所以这里只需保证读取不抛异常即可，executor 的具体行为对断言无关。
-        // 非 relaxed mock：除 taskExecutors 外的任何触碰都会快速失败，测试不静默依赖全局状态。
-        previousApi = try { EasyLibApi.api } catch (_: UninitializedPropertyAccessException) { null }
-        EasyLibApi.api = mockk<BukkitEasyLibApi> {
-            every { taskExecutors } returns object : BukkitTaskExecutors {
-                override val sync: TaskExecutor = TaskExecutor { it() }
-                override val async: TaskExecutor = TaskExecutor { it() }
-            }
-        }
     }
 
     @AfterTest
     fun tearDown() {
-        // 尽量恢复全局单例，避免 mock 泄漏到同 JVM 的后续测试类（lateinit 无法退回未初始化态）。
-        previousApi?.let { EasyLibApi.api = it }
         MockBukkit.unmock()
     }
 
@@ -134,13 +127,204 @@ class PlayerOverlayImplTest {
         scheduler: TaskScheduler = RecordingScheduler(),
         transport: FakeTransport = FakeTransport(),
         display: SlotDisplayMap = SlotDisplayMap(),
+        executionContext: BukkitExecutionContext = TestSyncContext(),
     ): Triple<PlayerOverlayImpl, FakeTransport, TaskScheduler> {
         val map = SlotMap(specs)
-        val overlay = PlayerOverlayImpl(specs, map, display, scheduler, transport)
+        val overlay = PlayerOverlayImpl(specs, map, display, scheduler, executionContext, transport)
         return Triple(overlay, transport, scheduler)
     }
 
     // ---- getItem/setItem：语义照搬原 AbstractPlayerOverlayTest ----
+
+    @Test
+    fun `首帧准备期间的点击不能先于 Show 事件派发`() {
+        lateinit var ready: () -> Unit
+        val transport = FakeTransport(prepareBlock = { ready = it })
+        val (overlay, _, _) = build(mapOf(4 to specOf(stack(Material.PAPER))), transport = transport)
+        val player = mockPlayer()
+        val events = mutableListOf<String>()
+        overlay.on {
+            on<OverlayShowEvent> { events += "show" }
+            on<OverlaySlotActionEvent.Click> { events += "click" }
+        }
+        overlay.show(player)
+        transport.callbacks!!.onClick(player, 4, ClickType.LEFT)
+        assertTrue(events.isEmpty())
+        ready()
+        transport.callbacks!!.onClick(player, 4, ClickType.LEFT)
+        assertEquals(listOf("show", "click"), events)
+    }
+
+    @Test
+    fun `Async 线程池中首帧与 setItem 回调仍然串行`() {
+        val pool = Executors.newFixedThreadPool(2)
+        val entered = CountDownLatch(1)
+        val release = CountDownLatch(1)
+        val completed = CountDownLatch(2)
+        val active = AtomicInteger()
+        val peak = AtomicInteger()
+        val (overlay, _, _) = build(mapOf(4 to specOf(stack(Material.PAPER)) {
+            onUpdate(TaskScheduler.Trigger.Once) {
+                peak.accumulateAndGet(active.incrementAndGet(), ::maxOf)
+                try {
+                    if (entered.count > 0) {
+                        entered.countDown()
+                        check(release.await(5, TimeUnit.SECONDS))
+                    }
+                    displayItem.amount++
+                } finally { active.decrementAndGet(); completed.countDown() }
+            }
+        }), scheduler = NeverRunScheduler(),
+            executionContext = TestAsyncContext(TaskExecutor { pool.execute(it) }))
+        try {
+            overlay.show(mockPlayer())
+            assertTrue(entered.await(5, TimeUnit.SECONDS))
+            overlay.setItem(4, stack(Material.DIAMOND))
+            release.countDown()
+            assertTrue(completed.await(5, TimeUnit.SECONDS))
+            assertEquals(1, peak.get())
+            overlay.destroy()
+        } finally {
+            release.countDown()
+            pool.shutdown()
+            assertTrue(pool.awaitTermination(5, TimeUnit.SECONDS))
+        }
+    }
+
+    @Test
+    fun `异步上下文统一承载首帧 重算和交互回调`() {
+        val queue = ArrayDeque<() -> Unit>()
+        var updates = 0
+        var actions = 0
+        val (overlay, transport, _) = build(
+            mapOf(4 to specOf(stack(Material.PAPER)) {
+                onUpdate(TaskScheduler.Trigger.Interval(1.seconds)) { updates++ }
+                onAction { actions++ }
+            }),
+            scheduler = NeverRunScheduler(),
+            executionContext = TestAsyncContext(TaskExecutor { queue.addLast(it) }),
+        )
+        fun drain() { while (queue.isNotEmpty()) queue.removeFirst()() }
+        val player = mockPlayer()
+        overlay.show(player)
+        assertEquals(0, updates)
+        assertTrue(transport.paintAllCalls.isEmpty())
+        drain()
+        assertEquals(1, updates)
+        assertEquals(listOf(player), transport.paintAllCalls)
+
+        overlay.setItem(4, stack(Material.DIAMOND))
+        transport.callbacks!!.onClick(player, 4, ClickType.LEFT)
+        assertEquals(1, updates)
+        assertEquals(0, actions)
+        drain()
+        assertEquals(2, updates)
+        assertEquals(1, actions)
+    }
+
+    @Test
+    fun `异步首帧尚未执行时 hide 立即返回实际移除结果且不再显示`() {
+        val queue = ArrayDeque<() -> Unit>()
+        var updates = 0
+        val (overlay, transport, _) = build(
+            mapOf(4 to specOf(stack(Material.PAPER)) {
+                onUpdate(TaskScheduler.Trigger.Once) { updates++ }
+            }),
+            scheduler = NeverRunScheduler(),
+            executionContext = TestAsyncContext(TaskExecutor { queue.addLast(it) }),
+        )
+        val player = mockPlayer()
+        val events = mutableListOf<String>()
+        overlay.on {
+            on<OverlayShowEvent> { events += "show" }
+            on<OverlayHideEvent> { events += "hide" }
+            on<OverlayDestroyEvent> { events += "destroy" }
+        }
+        overlay.show(player)
+        assertTrue(overlay.hide(player))
+        assertFalse(overlay.hide(player))
+        overlay.destroy()
+        while (queue.isNotEmpty()) queue.removeFirst()()
+        assertEquals(0, updates)
+        assertTrue(transport.paintAllCalls.isEmpty())
+        assertEquals(listOf("show", "hide", "destroy"), events)
+    }
+
+    @Test
+    fun `回调内 hide 后旧显示计算不得重新提交`() {
+        val display = SlotDisplayMap()
+        lateinit var overlay: PlayerOverlayImpl
+        var hideDuringUpdate = false
+        val built = build(
+            mapOf(4 to specOf(stack(Material.PAPER)) {
+                onUpdate(TaskScheduler.Trigger.Once) {
+                    if (hideDuringUpdate) overlay.hide(viewer)
+                    displayItem = stack(Material.CLOCK)
+                }
+            }), scheduler = NeverRunScheduler(), display = display,
+        )
+        overlay = built.first
+        val player = mockPlayer()
+        overlay.show(player)
+        hideDuringUpdate = true
+        overlay.setItem(4, stack(Material.DIAMOND))
+        assertNull(display.lookup(player.uniqueId, 4))
+    }
+
+    @Test
+    fun `回调改写基底后旧计算不得覆盖新基底的显示`() {
+        val display = SlotDisplayMap()
+        lateinit var overlay: PlayerOverlayImpl
+        var replaceBase = false
+        val built = build(
+            mapOf(4 to specOf(stack(Material.PAPER)) {
+                onUpdate(TaskScheduler.Trigger.Once) {
+                    if (replaceBase) {
+                        replaceBase = false
+                        overlay.setItem(4, stack(Material.DIAMOND))
+                    }
+                    displayItem.amount *= 2
+                }
+            }), scheduler = NeverRunScheduler(), display = display,
+        )
+        overlay = built.first
+        val player = mockPlayer()
+        overlay.show(player)
+        replaceBase = true
+        overlay.setItem(4, stack(Material.PAPER, 3))
+        val shown = assertNotNull(display.lookup(player.uniqueId, 4)).bukkitItem
+        assertEquals(Material.DIAMOND, shown.type)
+        assertEquals(2, shown.amount)
+    }
+
+    @Test
+    fun `首帧计算期间其他线程能 hide 且旧帧不会重新显示`() {
+        val entered = CountDownLatch(1)
+        val release = CountDownLatch(1)
+        val worker = Executors.newSingleThreadExecutor()
+        val display = SlotDisplayMap()
+        val (overlay, transport, _) = build(
+            mapOf(4 to specOf(stack(Material.PAPER)) {
+                onUpdate(TaskScheduler.Trigger.Once) {
+                    entered.countDown()
+                    check(release.await(5, TimeUnit.SECONDS))
+                    displayItem = stack(Material.CLOCK)
+                }
+            }), scheduler = NeverRunScheduler(), display = display,
+        )
+        val player = mockPlayer()
+        val showing = worker.submit { overlay.show(player) }
+        try {
+            assertTrue(entered.await(5, TimeUnit.SECONDS))
+            assertTrue(overlay.hide(player))
+        } finally {
+            release.countDown()
+            showing.get(5, TimeUnit.SECONDS)
+            worker.shutdownNow()
+        }
+        assertNull(display.lookup(player.uniqueId, 4))
+        assertTrue(transport.paintAllCalls.isEmpty())
+    }
 
     @Test
     fun `getItem 返回声明槽当前物品，未声明或 AIR 返回 null`() {
@@ -300,8 +484,9 @@ class PlayerOverlayImplTest {
     @Test
     fun `声明的 onAction 处理器经总线按 index 过滤派发`() {
         var actions = 0
-        val (_, transport, _) = build(mapOf(3 to specOf(stack(Material.STONE)) { onAction { actions++ } }))
+        val (overlay, transport, _) = build(mapOf(3 to specOf(stack(Material.STONE)) { onAction { actions++ } }))
         val player = mockPlayer()
+        overlay.show(player)
         transport.callbacks!!.onClick(player, 3, ClickType.LEFT)
         transport.callbacks!!.onClick(player, 4, ClickType.LEFT)
         assertEquals(1, actions)
@@ -310,7 +495,7 @@ class PlayerOverlayImplTest {
     @Test
     fun `onAction 块内可用 when 区分 Click 与 Interact 来源`() {
         val kinds = mutableListOf<String>()
-        val (_, transport, _) = build(mapOf(3 to specOf(stack(Material.STONE)) {
+        val (overlay, transport, _) = build(mapOf(3 to specOf(stack(Material.STONE)) {
             onAction {
                 kinds += when (this) {
                     is OverlaySlotActionEvent.Click -> "click:$clickType"
@@ -319,6 +504,7 @@ class PlayerOverlayImplTest {
             }
         }))
         val player = mockPlayer()
+        overlay.show(player)
         transport.callbacks!!.onClick(player, 3, ClickType.LEFT)
         transport.callbacks!!.onInteract(player, 3, OverlaySlotActionEvent.Interact.Action.RIGHT_CLICK)
         assertEquals(listOf("click:LEFT", "interact:RIGHT_CLICK"), kinds)
@@ -329,6 +515,7 @@ class PlayerOverlayImplTest {
         val (o, transport, _) = build(mapOf(3 to specOf(stack(Material.STONE))))
         val player = mockPlayer()
         var received: OverlaySlotActionEvent.Click? = null
+        o.show(player)
         o.on { on<OverlaySlotActionEvent.Click> { received = this } }
         transport.callbacks!!.onClick(player, 3, ClickType.RIGHT)
         assertEquals(3, received?.index)
@@ -389,12 +576,15 @@ class PlayerOverlayImplTest {
         val transport = FakeTransport(display, watchSlot = 4)
         val (o, t, _) = build(mapOf(4 to spec), scheduler = NeverRunScheduler(), transport = transport, display = display)
         val p = mockPlayer()
+        var framesAtShow = -1
+        o.on { on<OverlayShowEvent> { framesAtShow = t.paintAllCalls.size } }
 
         o.show(p)
 
         assertEquals(Material.CLOCK, assertNotNull(display.lookup(p.uniqueId, 4)).bukkitItem.type)
         assertEquals(listOf(p), t.paintAllCalls)
         assertEquals(listOf<Material?>(Material.CLOCK), t.paintAllSnapshots) // paintAll 时刻，显示层已可见种子条目
+        assertEquals(1, framesAtShow)
     }
 
     @Test

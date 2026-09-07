@@ -11,6 +11,12 @@ import org.bukkit.event.inventory.ClickType
  * 客户端协议相关类型（如 PacketEvents）。
  */
 internal interface OverlayTransport {
+    /** 准备玩家的线程相关快照；完成后在实现选择的线程调用 [ready]，不阻塞调用方。 */
+    fun prepare(player: Player, ready: () -> Unit) { ready() }
+
+    /** 丢弃该玩家的通道快照，不访问真实背包。 */
+    fun forget(player: Player) {}
+
     /** 向该玩家全量渲染覆盖层（show 时调用）。 */
     fun paintAll(player: Player)
 

@@ -14,16 +14,19 @@ import org.bukkit.inventory.ItemStack
  *
  * 打开任意容器界面（箱子、工作台等，玩家自己背包视图除外）会自动隐藏覆盖层，防止绕过覆盖层
  * 直接看到/操作真实背包。
+ *
+ * 支持同步和异步调用。逻辑状态立即生效，显示计算与事件在工厂选定的上下文中串行执行
+ * （默认 Sync）；方法返回不表示客户端已完成渲染。真实背包访问由实现局部桥接到 Sync。
  */
 interface PlayerOverlay : Destroyable, EventSource<OverlayEvent> {
     /**
-     * 对该玩家开启覆盖层。**须在主线程调用**。
+     * 对该玩家开启覆盖层，准备快照后计算并发送首帧。
      * @throws IllegalStateException 覆盖层已销毁
      */
     fun show(player: Player)
 
     /**
-     * 对该玩家关闭覆盖层并还原真实背包渲染；此前未开启返回 false。**须在主线程调用**。
+     * 立即移除该玩家的逻辑观察状态，并安排还原真实背包渲染；实际移除返回 true，否则 false。
      * @throws IllegalStateException 覆盖层已销毁
      */
     fun hide(player: Player): Boolean
@@ -35,7 +38,7 @@ interface PlayerOverlay : Destroyable, EventSource<OverlayEvent> {
     fun getItem(index: Int): ItemStack?
 
     /**
-     * 改写某声明槽位**共享基底**（存入拷贝）并重绘给所有观察者；`null` 等价清空。**须在主线程调用**。
+     * 立即改写某声明槽位**共享基底**（存入拷贝），再重算并重绘给所有观察者；`null` 等价清空。
      * @throws IllegalArgumentException 槽位未在构建时声明
      */
     fun setItem(index: Int, item: ItemStack?)
